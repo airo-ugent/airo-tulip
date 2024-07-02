@@ -6,11 +6,11 @@ def clip(value: float, maximum: float, minimum: float) -> float:
     return min(max(value, minimum), maximum)
 
 def clip_angle(angle: float) -> float:
-    if angle < -math.PI:
-        return angle + (2 * math.PI)
-    else if angle > math.PI:
-        return angle - (2 * math.PI)
-    else
+    if angle < -math.pi:
+        return angle + (2 * math.pi)
+    elif angle > math.pi:
+        return angle - (2 * math.pi)
+    else:
         return angle
 
 def get_shortest_angle(angle1: float, angle2: float) -> float:
@@ -50,6 +50,19 @@ class PlatformLimits:
         self.max_acc_angular = 0.8
         self.max_dec_linear = 0.5
         self.max_dec_angular = 0.8
+
+class WheelConfig:
+    """
+    Class for storing the details and geometry of each drive as a part of the complete mobile platform.
+    """
+    def __init__(self):
+        self.ethercat_number: int
+        self.x: float
+        self.y: float
+        self.a: float
+        self.critical: bool
+        self.enable: bool
+        self.reverseVelocity: bool
 
 class WheelParamVelocity:
     """
@@ -100,7 +113,7 @@ class VelocityPlatformController:
 
             wheel_param.pivot_kp = 0.2
             wheel_param.wheel_diameter = wheel_diameter
-            wheel_param.max_pivot_error = math.PI * 0.25
+            wheel_param.max_pivot_error = math.pi * 0.25
 
             wheel_param.pivot_position.x = wheel_config.x
             wheel_param.pivot_position.y = wheel_config.y
@@ -129,7 +142,7 @@ class VelocityPlatformController:
         now = time.time()
 
         # Skip first time this function is called because time_delta does not make sense otherwise
-        if time_last_ramping is None:
+        if self._time_last_ramping is None:
             self._time_last_ramping = now
 
         time_delta = now - self._time_last_ramping
@@ -187,7 +200,7 @@ class VelocityPlatformController:
         # Command 0 angular vel when platform has been commanded 0 vel
         # If this is not done, then the wheels pivot to face front of platform
         # even when the platform is commanded zero velocity.
-        if self._form_ramped_vel.x == 0 and self._form_ramped_vel.y == 0 and self._form_ramped_vel.a == 0:
+        if self._platform_ramped_vel.x == 0 and self._platform_ramped_vel.y == 0 and self._platform_ramped_vel.a == 0:
             return 0.0, 0.0
 
         wheel_param = self._wheel_params[wheel_index];
@@ -202,20 +215,12 @@ class VelocityPlatformController:
 
         # Position of wheels relative to platform centre
         position_l = Point2D()
-        position_l.x = (wheel_param.relative_position_l.x * unit_pivot_vector.x
-                        - wheel_param.relative_position_l.y * unit_pivot_vector.y)
-                       + wheel_param.pivot_position.x
-        position_l.y = (wheel_param.relative_position_l.x * unit_pivot_vector.y
-                        + wheel_param.relative_position_l.y * unit_pivot_vector.x)
-                       + wheel_param.pivot_position.y
+        position_l.x = (wheel_param.relative_position_l.x * unit_pivot_vector.x - wheel_param.relative_position_l.y * unit_pivot_vector.y) + wheel_param.pivot_position.x
+        position_l.y = (wheel_param.relative_position_l.x * unit_pivot_vector.y + wheel_param.relative_position_l.y * unit_pivot_vector.x) + wheel_param.pivot_position.y
 
         position_r = Point2D()
-        position_r.x = (wheel_param.relative_position_r.x * unit_pivot_vector.x
-                        - wheel_param.relative_position_r.y * unit_pivot_vector.y)
-                       + wheel_param.pivot_position.x
-        position_r.y = (wheel_param.relative_position_r.x * unit_pivot_vector.y
-                        + wheel_param.relative_position_r.y * unit_pivot_vector.x)
-                       + wheel_param.pivot_position.y
+        position_r.x = (wheel_param.relative_position_r.x * unit_pivot_vector.x - wheel_param.relative_position_r.y * unit_pivot_vector.y) + wheel_param.pivot_position.x
+        position_r.y = (wheel_param.relative_position_r.x * unit_pivot_vector.y + wheel_param.relative_position_r.y * unit_pivot_vector.x) + wheel_param.pivot_position.y
 
         # Velocity target vector at pivot position
         target_vel_at_pivot = Point2D()
@@ -256,4 +261,59 @@ class VelocityPlatformController:
         target_ang_vel_r = target_vel_r * wheel_param.linear_to_angular_velocity
 
         return target_ang_vel_l, target_ang_vel_r
+
+# Tests
+if __name__ == "__main__":
+    # Make a new Controller object
+    vpc = VelocityPlatformController()
+
+    # Initialise the platform configuration
+    wheel_configs = []
+    num_wheels = 4
+
+    wc0 = WheelConfig()
+    wc0.ethercat_number = 2
+    wc0.x = 0.175
+    wc0.y = 0.1605
+    wc0.a = -2.50
+    wheel_configs.append(wc0)
+
+    wc1 = WheelConfig()
+    wc1.ethercat_number = 3
+    wc1.x = -0.175
+    wc1.y = 0.1605
+    wc1.a = -1.25
+    wheel_configs.append(wc1)
+
+    wc2 = WheelConfig()
+    wc2.ethercat_number = 5
+    wc2.x = -0.175
+    wc2.y = -0.1605
+    wc2.a = -2.14
+    wheel_configs.append(wc2)
+
+    wc3 = WheelConfig()
+    wc3.ethercat_number = 6
+    wc3.x = 0.175
+    wc3.y = -0.1605
+    wc3.a = 1.49
+    wheel_configs.append(wc3)
+
+    vpc.initialise(wheel_configs)
+
+    # Set some target velocity
+    vpc.set_platform_velocity_target(1.0, 0.0, 0.0)
+
+    # Calculate velocities for each wheel
+    while True:
+        vpc.calculate_platform_ramped_velocities()
+        for i in range(num_wheels):
+            raw_pivot_angle = 0.0
+            ang_vel_l, ang_vel_r = vpc.calculate_wheel_target_velocity(i, raw_pivot_angle)
+            print(f"wheel {i} l ang vel: {ang_vel_l}")
+            print(f"wheel {i} r ang vel: {ang_vel_r}")
+
+        input()
+
+
 
