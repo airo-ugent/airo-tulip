@@ -282,21 +282,21 @@ if __name__ == "__main__":
     wc1.ethercat_number = 3
     wc1.x = -0.175
     wc1.y = 0.1605
-    wc1.a = -1.25
+    wc1.a = 0.0
     wheel_configs.append(wc1)
 
     wc2 = WheelConfig()
     wc2.ethercat_number = 5
     wc2.x = -0.175
     wc2.y = -0.1605
-    wc2.a = -2.14
+    wc2.a = 0.0
     wheel_configs.append(wc2)
 
     wc3 = WheelConfig()
     wc3.ethercat_number = 6
     wc3.x = 0.175
     wc3.y = -0.1605
-    wc3.a = 1.49
+    wc3.a = 0.0
     wheel_configs.append(wc3)
 
     vpc.initialise(wheel_configs)
@@ -305,7 +305,7 @@ if __name__ == "__main__":
     vpc.set_platform_velocity_target(1.0, 0.0, 0.0)
 
     # Calculate velocities for each wheel
-    while True:
+    for j in range(5):
         vpc.calculate_platform_ramped_velocities()
         for i in range(num_wheels):
             raw_pivot_angle = 0.0
@@ -315,5 +315,18 @@ if __name__ == "__main__":
 
         input()
 
+    # Set zero target velocity
+    vpc.set_platform_velocity_target(0.0, 0.0, 0.0)
+
+    # Calculate velocities for each wheel
+    for j in range(5):
+        vpc.calculate_platform_ramped_velocities()
+        for i in range(num_wheels):
+            raw_pivot_angle = 0.0
+            ang_vel_l, ang_vel_r = vpc.calculate_wheel_target_velocity(i, raw_pivot_angle)
+            print(f"wheel {i} l ang vel: {ang_vel_l}")
+            print(f"wheel {i} r ang vel: {ang_vel_r}")
+
+        input()
 
 
