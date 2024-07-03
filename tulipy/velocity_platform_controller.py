@@ -184,7 +184,7 @@ class VelocityPlatformController:
         target_ang_vel_l = target_vel_l * wheel_param.linear_to_angular_velocity
         target_ang_vel_r = target_vel_r * wheel_param.linear_to_angular_velocity
 
-        return target_ang_vel_l, target_ang_vel_r
+        return target_ang_vel_r, target_ang_vel_l
 
 # Tests
 if __name__ == "__main__":
