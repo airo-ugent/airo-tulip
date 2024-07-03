@@ -1,9 +1,13 @@
 from dataclasses import dataclass
 import pysoem
 from typing import List
+from enum import Enum
+import math
 
 from tulipy.ethercat import *
 from tulipy.structs import WheelConfig, WheelData
+from tulipy.velocity_platform_controller import VelocityPlatformController
+from tulipy.util import *
 
 class PlatformDriverState(Enum):
     UNDEFINED = 0x00
@@ -20,8 +24,8 @@ class PlatformDriver:
         self._num_wheels = len(wheel_configs)
 
         self._state = PlatformDriverState.INIT
-        self._prev_encoder = [(0.0, 0.0)] * self._num_wheels
-        self._sum_encoder = [(0.0, 0.0)] * self._num_wheels
+        self._prev_encoder = [[0.0, 0.0]] * self._num_wheels
+        self._sum_encoder = [[0.0, 0.0]] * self._num_wheels
         self._encoder_initialized = False
         self._current_ts = 0
         self._process_data = []
@@ -44,13 +48,18 @@ class PlatformDriver:
         self._vpc = VelocityPlatformController()
         self._vpc.initialise(self._wheel_configs)
 
-    def set_platform_target_velocity(self, vel_x: float, vel_y: float, vel_a: float) -> None:
-        self._vpc.set_platform_target_velocity(vel_x, vel_y, vel_a)
+    def set_platform_velocity_target(self, vel_x: float, vel_y: float, vel_a: float) -> None:
+        self._vpc.set_platform_velocity_target(vel_x, vel_y, vel_a)
 
     def step(self) -> bool:
         self._step_count += 1
 
         self._process_data = [self._get_process_data(i) for i in range(self._num_wheels)]
+
+        for i in range(len(self._process_data)):
+            pd = self._process_data[i]
+            print(f"pd {i} sensor_ts {pd.sensor_ts} vel_1 {pd.velocity_1} vel_2 {pd.velocity_2}")
+
         self._current_ts = self._process_data[0].sensor_ts
 
         self._update_encoders()
@@ -104,7 +113,7 @@ class PlatformDriver:
         return True
 
     def _has_wheel_status_enabled(self, wheel: int) -> bool:
-        status1 = self._get_process_data(wheel).status1
+        status1 = self._process_data[wheel].status1
         return (status1 & STAT1_ENABLED1) > 0 and (status1 & STAT1_ENABLED2) > 0
     
     def _has_wheel_status_error(self, wheel: int) -> bool:
@@ -113,7 +122,7 @@ class PlatformDriver:
         STATUS1disabled = 60
         STATUS2 = 2051
     
-        process_data = self._get_process_data(wheel)
+        process_data = self._process_data[wheel]
         status1 = process_data.status1
         status2 = process_data.status2
     
@@ -157,7 +166,7 @@ class PlatformDriver:
                 data.command1 |= COM1_ENABLE1 | COM1_ENABLE2
 
             # Calculate wheel target velocities
-            setpoint1, setpoint2 = self._vpc.calculate_wheel_target_velocity(i, self._get_process_data(i).encoder_pivot)
+            setpoint1, setpoint2 = self._vpc.calculate_wheel_target_velocity(i, self._process_data[i].encoder_pivot)
             setpoint1 *= -1  # because of inverted frame
 
             # Avoid sending close to zero values
@@ -174,20 +183,24 @@ class PlatformDriver:
             data.setpoint1 = setpoint1
             data.setpoint2 = setpoint2
 
+            print(f"wheel {i} enabled {self._wheel_enabled[i]} sp1 {setpoint1} sp2 {setpoint2} enc {self._process_data[i].encoder_pivot}")
+
             self._set_process_data(i, data)
+
+        print("")
 
 
     def _update_encoders(self):
         if not self._encoder_initialized:
             for i in range(self._num_wheels):
-                data = self._get_process_data(i)
+                data = self._process_data[i]
                 self._prev_encoder[i][0] = data.encoder_1
                 self._prev_encoder[i][1] = data.encoder_2
             encoder_initialized = True
     
         # count accumulative encoder value
         for i in range(self._num_wheels):
-            data = self._get_process_data(i)
+            data = self._process_data[i]
             curr_encoder1 = data.encoder_1
             curr_encoder2 = data.encoder_2
 
@@ -213,7 +226,7 @@ class PlatformDriver:
 
     def _get_process_data(self, wheel_index: int) -> TxPDO1:
         ethercat_index = self._wheel_configs[wheel_index].ethercat_number
-        return TxPDO1.from_buffer(self._master.slaves[ethercat_index-1].input)
+        return TxPDO1.from_buffer_copy(self._master.slaves[ethercat_index-1].input)
 
     def _set_process_data(self, wheel_index: int, data: RxPDO1) -> None:
         ethercat_index = self._wheel_configs[wheel_index].ethercat_number

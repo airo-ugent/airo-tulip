@@ -4,11 +4,16 @@ from tulipy.platform_driver import PlatformDriver
 from tulipy.ethercat import EC_STATE_SAFE_OP, EC_STATE_OPERATIONAL
 
 class EtherCATMaster():
-    def __init__(self, device: str, driver: PlatformDriver):
+    def __init__(self, device: str):
         self._device = device
-        self._driver = driver
         self._ethercat_initialized = False
         self._master = pysoem.Master()
+
+    def set_driver(self, driver: PlatformDriver) -> None:
+        self._driver = driver
+
+    def get_master(self) -> pysoem.Master:
+        return self._master
 
     def init_ethercat(self) -> bool:
         """
@@ -28,15 +33,9 @@ class EtherCATMaster():
             return False
 
         self._master.config_map()
-        print(f"Found {len(master.slaves)} slaves")
+        print(f"Found {len(self._master.slaves)} slaves")
         for slave in self._master.slaves:
             print(slave.id, slave.man, slave.name)
-
-        # Initialize driver
-        ok = self._driver.init()
-        if not ok:
-            print("Cannot initialize PlatformDriver.")
-            return False
 
         # Check if all slaves reached SAFE_OP state
         self._master.read_state()

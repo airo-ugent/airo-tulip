@@ -39,9 +39,6 @@ class WheelConfig:
     x: float
     y: float
     a: float
-    critical: bool
-    enable: bool
-    reverseVelocity: bool
 
 @dataclass
 class WheelData:
