@@ -1,8 +1,16 @@
+import time
+
 import pysoem
 import yaml
 
-
 import ctypes
+
+COM1_ENABLE1 = 0x0001
+COM1_ENABLE2 = 0x0002
+COM1_MODE_VELOCITY = (0x2 << 2)
+
+from velocity_platform_controller import VelocityPlatformController
+
 
 class RxPDO1(ctypes.Structure):
     _pack_ = 1
@@ -11,13 +19,14 @@ class RxPDO1(ctypes.Structure):
         ('command2', ctypes.c_uint16),  # Command bits as defined in COM2_
         ('setpoint1', ctypes.c_float),  # Setpoint 1
         ('setpoint2', ctypes.c_float),  # Setpoint 2
-        ('limit1_p', ctypes.c_float),   # Upper limit 1
-        ('limit1_n', ctypes.c_float),   # Lower limit 1
-        ('limit2_p', ctypes.c_float),   # Upper limit 2
-        ('limit2_n', ctypes.c_float),   # Lower limit 2
+        ('limit1_p', ctypes.c_float),  # Upper limit 1
+        ('limit1_n', ctypes.c_float),  # Lower limit 1
+        ('limit2_p', ctypes.c_float),  # Upper limit 2
+        ('limit2_n', ctypes.c_float),  # Lower limit 2
         ('timestamp', ctypes.c_uint64)  # EtherCAT timestamp (ns) setpoint execution
 
     ]
+
 
 ECAT_DEVICE = "eno1"
 EC_STATE_SAFE_OP = 0x04
@@ -28,6 +37,7 @@ with open("example.yaml") as f:
 
 num_wheels = config['num_wheels']
 wheel_configs = [config[f'wheel{i}'] for i in range(num_wheels)]
+
 
 def main():
     master = pysoem.Master()
@@ -86,7 +96,7 @@ def main():
 
     # Check if all slaves are actually operational.
     requested_state = EC_STATE_OPERATIONAL
-    found_state = master.state_check(requested_state, 10000000)
+    found_state = master.state_check(requested_state)
     print('master', master.state)
     if found_state == requested_state:
         print("All EtherCAT slaves reached a safe operational state.")
@@ -105,7 +115,39 @@ def main():
 
     # AT THIS POINT READY
 
+    data = RxPDO1()
+    data.timestamp = 100 * 1000  # TODO
+    data.command1 = COM1_ENABLE1 | COM1_ENABLE2 | COM1_MODE_VELOCITY
+    data.limit1_p = 20
+    data.limit1_n = -20
+    data.limit2_p = 20
+    data.limit2_n = -20
+    data.setpoint1 = 0
+    data.setpoint2 = 0
+
+    while True:
+        for i in range(num_wheels):
+            print(master.slaves[wheel_configs[i]['ethercat_number'] - 1].name)
+            print(len(master.slaves[wheel_configs[i]['ethercat_number'] - 1].output), len(bytes(data)))
+            master.slaves[wheel_configs[i]['ethercat_number'] - 1].output = bytes(data)
+        wkc = master.send_processdata()
+        print(wkc)
+
+    # velocity_platform_controller = VelocityPlatformController()
+    # velocity_platform_controller.initialise(wheel_configs)
+    # # Initialize time and state of VPC
+    # # TODO: put this in set_platform_velocity_target instead for safety
+    # velocity_platform_controller.calculate_platform_ramped_velocities()
+    # velocity_platform_controller.set_platform_velocity_target(.0,.0,.0)
+    # # for each wheel
+    # velocity_platform_controller.calculate_platform_ramped_velocities()
+    # setpoint_l, setpoint_r = velocity_platform_controller.calculate_wheel_target_velocity()
+    # # TODO invert?
+
+    time.sleep(2)
+
     master.close()
+
 
 if __name__ == '__main__':
     main()
