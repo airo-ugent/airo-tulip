@@ -54,7 +54,7 @@ extern "C"
 /** timeout value in us for tx frame to return to rx */
 #define EC_TIMEOUTRET      2000
 /** timeout value in us for safe data transfer, max. triple retry */
-#define EC_TIMEOUTRET3     (EC_TIMEOUTRET * 3)
+#define EC_TIMEOUTRET3     (EC_TIMEOUTRET * 10)
 /** timeout value in us for return "safe" variant (f.e. wireless) */
 #define EC_TIMEOUTSAFE     20000
 /** timeout value in us for EEPROM access */
@@ -290,6 +290,7 @@ enum
    ECT_SII_MANUF       = 0x0008,
    ECT_SII_ID          = 0x000a,
    ECT_SII_REV         = 0x000c,
+   ECT_SII_SER         = 0x000e,
    ECT_SII_BOOTRXMBX   = 0x0014,
    ECT_SII_BOOTTXMBX   = 0x0016,
    ECT_SII_MBXSIZE     = 0x0019,

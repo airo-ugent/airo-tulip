@@ -41,28 +41,53 @@
  *
  ******************************************************************************/
 
-#ifndef ETHERCATMODULE_H
-#define ETHERCATMODULE_H
 
-extern "C" {
-#include "kelo_tulip/soem/ethercattype.h"
-#include "nicdrv.h"
-#include "kelo_tulip/soem/ethercatbase.h"
-#include "kelo_tulip/soem/ethercatmain.h"
-}
+#ifndef MODULES_ROBILEMASTERBATTERYROS_H
+#define MODULES_ROBILEMASTERBATTERYROS_H
+
+#include "kelo_tulip/modules/RobileMasterBattery.h"
+#include "kelo_tulip/EtherCATModuleROS.h"
+#include <std_msgs/Empty.h>
+#include <std_msgs/Int32.h>
 
 namespace kelo {
 
-class EtherCATModule {
+//! ROS interface for RobileMasterBattery
+//! Currently only provides two topics, for shutdown and to get battery voltage.
+
+class RobileMasterBatteryROS : public EtherCATModuleROS {
 public:
-	EtherCATModule();
-	virtual ~EtherCATModule();
+	RobileMasterBatteryROS();
+	virtual ~RobileMasterBatteryROS();
+
+	virtual bool init(ros::NodeHandle& nh, std::string configPrefix);
+
+	virtual bool step();
+
+	virtual std::string getType();
+
+	virtual EtherCATModule* getEtherCATModule();
 	
-	virtual bool initEtherCAT(ec_slavet* ecx_slaves, int ecx_slavecount) = 0;
-	virtual bool initEtherCAT2(ecx_contextt* ecx_context, int ecx_slavecount) = 0;
-	virtual bool step() = 0;
+protected:
+	void callbackResetError(const std_msgs::Empty& msg);
+	void callbackShutdown(const std_msgs::Int32& msg);
+	void callbackChargerStart(const std_msgs::Int32& msg);
+	void callbackChargerStop(const std_msgs::Int32& msg);
+
+	void publishEthercatInput();
+
+	RobileMasterBattery* battery;
+	
+	ros::Publisher batteryPublisher;
+	ros::Publisher processDataInputPublisher;
+	ros::Subscriber resetErrorSubscriber;
+	ros::Subscriber shutdownSubscriber;
+	ros::Subscriber chargerStartSubscriber;
+	ros::Subscriber chargerStopSubscriber;
+		
+	std::string topicPrefix;
 };
 
 } // namespace kelp
 
-#endif // ETHERCATMODULE_H
+#endif // MODULES_ROBILEMASTERBATTERYROS_H

@@ -42,70 +42,213 @@
  ******************************************************************************/
 
 
-#include "kelo_tulip/PlatformDriver.h"
-#include "kelo_tulip/modules/RobileMasterBattery.h"
-#include <ros/ros.h>
+#include "kelo_tulip/PlatformDriverROS.h"
+#include "kelo_tulip/KeloDrivesInput.h"
 #include <nav_msgs/Odometry.h>
 #include <sensor_msgs/Imu.h>
 #include <sensor_msgs/Joy.h>
-#include <tf/transform_broadcaster.h>
 
 #include <std_msgs/Empty.h>
 #include <std_msgs/Float32.h>
-//#include <std_msgs/Float64MultiArray.h>
 #include <std_msgs/Int32.h>
-//#include <std_msgs/Int32MultiArray.h>
-//#include <std_msgs/String.h>
-//#include <std_msgs/UInt64MultiArray.h>
-//#include <std_msgs/UInt8.h>
-//#include <std_msgs/UInt8MultiArray.h>
-//#include <tf/transform_broadcaster.h>
+#include <std_msgs/Int32MultiArray.h>
 
-kelo::PlatformDriver* driver;
-std::vector<kelo::WheelConfig> wheelConfigs;
-std::vector<kelo::WheelData> wheelData;
-kelo::RobileMasterBattery* robileMasterBattery = 0;
+namespace kelo {
 
-ros::Publisher odomPublisher;
-ros::Publisher odomInitializedPublisher;
-ros::Publisher mileagePublisher;
-ros::Publisher imuPublisher;
-//ros::Publisher valuesPublisher;
-ros::Publisher batteryPublisher;
-ros::Publisher errorPublisher;
-//ros::Publisher timestampPublisher;
-ros::Publisher statusPublisher;
+PlatformDriverROS::PlatformDriverROS()
+	: driver(NULL)
+	, odom_broadcaster(NULL)
+{
+	s_w = 0.01; //caster offset of a smartWheel
+	d_w = 0.0775; //distance between the left and the right wheel
+	s_d_ratio = s_w / d_w;	
+	r_w = 0.0524; //the radius of the wheel
 
-nav_msgs::Odometry odom;
-tf::TransformBroadcaster* odom_broadcaster;
+	nWheels = 0;
 
+	useJoy = false;
+	debugMode = false;
+	activeByJoypad = false;
 
-//PARAMETERS
-double s_w = 0.01; //caster offset of a smartWheel
-double d_w = 0.0775; //distance between the left and the right wheel
-double s_d_ratio = s_w / d_w;	
-//double r_w = 0.074; //the radius of the wheel
-double r_w = 0.0524; //the radius of the wheel
+	currentMax = 20;
 
-int nWheels = 0;
+	joyVlinMax = 1.0;
+	joyVaMax = 1.0;
+	joyScale = 1.0;
 
-bool useJoy = false;
-bool debugMode = false;
-bool activeByJoypad = false;
+	odomx = 0;
+	odomy = 0;
+	odoma = 0;
+}
 
-double currentMax = 20;
+PlatformDriverROS::~PlatformDriverROS() {
+	if (driver)
+		delete driver;
 
-double joyVlinMax = 1.0;
-double joyVaMax = 1.0;
-double joyScale = 1.0;
+	if (odom_broadcaster)
+		delete odom_broadcaster;
+}
 
-std::vector<double> prev_left_enc;
-std::vector<double> prev_right_enc;
-double odomx = 0;
-double odomy = 0;
-double odoma = 0;
+bool PlatformDriverROS::init(ros::NodeHandle& nh, std::string configPrefix) {
+	if (!nh.getParam("num_wheels", nWheels)) {
+		ROS_ERROR("Missing number of wheels in config file");
+		return -1;
+	}
+	
+	if (nWheels < 0) {
+		ROS_ERROR("Invalid number of wheels in config file");
+		return -1;
+	}
 
-void readWheelConfig(const ros::NodeHandle& nh) {
+	wheelConfigs.resize(nWheels);
+	kelo::WheelData data = {};
+	data.enable = true;
+	data.error = false;
+	data.errorTimestamp = false;
+	wheelData.resize(nWheels, data);
+
+	// read all wheel configs
+	readWheelModels(nh);
+	readWheelConfig(nh);
+
+	driver = createDriver();
+
+	// set driver control parameters		
+	double x;
+	if (nh.getParam("current_stop", x))
+		driver->setCurrentStop(x);
+	if (nh.getParam("current_drive", x))
+		driver->setCurrentDrive(x);
+
+	if (nh.getParam("vlin_max", x))
+		driver->setMaxvlin(x);
+	if (nh.getParam("va_max", x))
+		driver->setMaxva(x);
+	if (nh.getParam("vlin_acc_max", x))
+		driver->setMaxvlinacc(x);
+	if (nh.getParam("vlin_dec_max", x))
+		driver->setMaxvlindec(x);
+	if (nh.getParam("angle_acc_max", x))
+		driver->setMaxangleacc(x);
+	if (nh.getParam("va_acc_max", x))
+		driver->setMaxvaacc(x);
+	if (nh.getParam("va_dec_max", x))
+		driver->setMaxvadec(x);
+
+	joyVlinMax = driver->getMaxvlin();
+	joyVaMax = driver->getMaxva();
+	if (nh.getParam("joy_vlin_max", x))
+		joyVlinMax = x;
+	if (nh.getParam("joy_va_max", x))
+		joyVaMax = x;
+	if (nh.getParam("joy_scale", x))
+		if (x > 0 && x <= 1.0)
+			joyScale = x;
+
+	bool b;
+	if (nh.getParam("active_by_joypad", b))
+		activeByJoypad = b;
+	if (!activeByJoypad)
+		driver->setCanChangeActive();
+		
+	if (nh.getParam("current_max", x)) {
+		currentMax = x;
+	}
+
+	ros::NodeHandle nhGlobal("");
+	odomPublisher = nhGlobal.advertise<nav_msgs::Odometry>("odom", 10);
+	odomInitializedPublisher = nhGlobal.advertise<std_msgs::Empty>("odom_initialized", 10);
+//	timestampPublisher = nh.advertise<std_msgs::UInt64MultiArray>("timestamp", 10);
+	imuPublisher = nh.advertise<sensor_msgs::Imu>("imu", 10);
+	processDataInputPublisher = nh.advertise<kelo_tulip::KeloDrivesInput>("wheels_input", 10);
+	batteryPublisher = nh.advertise<std_msgs::Float32>("battery", 10);
+	errorPublisher = nh.advertise<std_msgs::Int32>("error", 10);
+	statusPublisher = nh.advertise<std_msgs::Int32>("status", 10);
+	joySubscriber = nh.subscribe("/joy", 1000, &PlatformDriverROS::joyCallback, this);
+	cmdVelSubscriber = nh.subscribe("/cmd_vel", 1000, &PlatformDriverROS::cmdVelCallback, this);
+	resetSubscriber = nh.subscribe("reset", 1, &PlatformDriverROS::resetCallback, this);
+	enableSubscriber = nh.subscribe("wheels_enable", 1, &PlatformDriverROS::enableCallback, this);
+//	ros::Subscriber currentMaxSubscriber = nh.subscribe("current_max", 1, currentMaxCallback);
+	odom_broadcaster = new tf::TransformBroadcaster();
+
+	initializeEncoderValue();
+
+	return true;
+}
+
+bool PlatformDriverROS::step() {
+	checkAndPublishSmartWheelStatus();
+
+	//calculate robot velocity
+	double vx, vy, va, encDisplacement;
+	calculateRobotVelocity(vx, vy, va, encDisplacement);
+
+	//calculate robot displacement and current pose
+	calculateRobotPose(vx, vy, va);
+			
+	//publish the odometry
+	publishOdometry(vx, vy, va);
+
+	//broadcast odom-base_link transform
+	geometry_msgs::TransformStamped odom_trans;
+	createOdomToBaseLinkTransform(odom_trans);
+	odom_broadcaster->sendTransform(odom_trans);
+		
+/*
+		//publish smartwheel values
+		std_msgs::Float64MultiArray processDataValues;
+		for (unsigned int i = 0; i < wheelConfigs.size(); i++) {
+			addToWheelDataMsg(processDataValues, driver->getWheelData(i));
+			addToProcessDataMsg(processDataValues, driver->getProcessData(wheelConfigs[i].ethercatNumber));
+			processDataValues.data.push_back(driver->getCurrentDrive());
+			processDataValues.data.push_back(driver->getThreadPhase());
+		}
+		valuesPublisher.publish(processDataValues);
+*/
+
+	publishProcessDataInput();
+
+	publishBattery();
+
+	//publish IMU data
+	publishIMU();
+
+	return true;
+}
+
+std::string PlatformDriverROS::getType() {
+	return "platform_driver";
+}
+
+EtherCATModule* PlatformDriverROS::getEtherCATModule() {
+	return driver;
+}
+
+kelo::PlatformDriver* PlatformDriverROS::createDriver() {
+	return new kelo::PlatformDriver(wheelConfigs, wheelData);
+}
+
+void PlatformDriverROS::readWheelModels(const ros::NodeHandle& nh) {
+	XmlRpc::XmlRpcValue xmllist;
+	nh.getParam("wheel_models", xmllist);
+	for (XmlRpc::XmlRpcValue::iterator it = xmllist.begin(); it != xmllist.end(); ++it) {
+		std::string name = it->first;
+		std::string prefix = "wheel_models/" + name + "/";
+		WheelModel wm;
+		wm.name = name;
+		nh.getParam(prefix + "active", wm.active);
+		nh.getParam(prefix + "diameter", wm.diameter);
+		nh.getParam(prefix + "width", wm.width);
+		nh.getParam(prefix + "casteroffset", wm.casteroffset);
+		nh.getParam(prefix + "wheeldistance", wm.wheeldistance);
+		nh.getParam(prefix + "can_pivot", wm.canPivot);
+		nh.getParam(prefix + "velocitylimit", wm.velocitylimit);
+		nh.getParam(prefix + "currentlimit", wm.currentlimit);
+		wheelModels[name] = wm;
+	}
+}
+
+void PlatformDriverROS::readWheelConfig(const ros::NodeHandle& nh) {
 	for (int i = 0; i < nWheels; i++) {
 		std::stringstream ssGroupName;
 		ssGroupName << "wheel" << i;
@@ -120,10 +263,6 @@ void readWheelConfig(const ros::NodeHandle& nh) {
 			&& nh.getParam(groupName + "/y", config.y)
 			&& nh.getParam(groupName + "/a", config.a);
 
-		int critical = 1;
-		if (nh.getParam(groupName + "/critical", critical))
-			config.critical = critical;
-
 		int reverseVelocity = 0;
 		if (nh.getParam(groupName + "/reverse_velocity", reverseVelocity))
 			config.reverseVelocity = (reverseVelocity != 0);
@@ -131,31 +270,38 @@ void readWheelConfig(const ros::NodeHandle& nh) {
 		if (!ok)
 			ROS_WARN("Missing config value for wheel %d", i);
 
+		// copy complete model data if provided
+		std::string model;
+		if (nh.getParam(groupName + "/model", model)) {
+			if (wheelModels.count(model) > 0) {
+				config.model = wheelModels[model];
+			} else {
+				ROS_WARN("Unknown wheel model: %s", model.c_str());
+			}
+		}
+
+		// enable separate values for this wheel
+		double x;
+		if (nh.getParam(groupName + "/wheel_distance", x))
+			config.model.wheeldistance = x;
+		if (nh.getParam(groupName + "/diameter", x))
+			config.model.diameter = x;
+
 		wheelConfigs[i] = config;
 	}
 }
 
-void checkAndPublishSmartWheelStatus() {
-	int state = 0;
-	int errors = 0;
-//	for (int i = 0; i < nMasters; i++) { // TODO check
-		int mstatus = driver->getDriverStatus();
-		int mstate = (mstatus & 0x000000ff);
-		int merror = (mstatus & 0xffffff00);
+void PlatformDriverROS::checkAndPublishSmartWheelStatus() {
+	int status = driver->getDriverStatus();
+	int state = (status & 0x000000ff);
+	int error = (status & 0xffffff00);
 		
-		if (mstate > state)
-			state = mstate;
-			
-		errors |= merror;	
-//	}
-	int status = state | errors;
-	
 	std_msgs::Int32 statusMsg;
 	statusMsg.data = status;
 	statusPublisher.publish(statusMsg);
 
 	std_msgs::Int32 errorMsg;
-	if (errors) {
+	if (error) {
 		// TODO correct
 		//stop navigation and start debug mode. Robot can only be moved with joystick
 		debugMode = true;
@@ -183,18 +329,17 @@ double norm(double x) {
 	return x;
 }
 
-void initializeEncoderValue() {
+void PlatformDriverROS::initializeEncoderValue() {
 	prev_left_enc.resize(nWheels, 0);
 	prev_right_enc.resize(nWheels, 0);
 	for (int i=0; i<nWheels; i++) {
-		txpdo1_t* swDataInit = driver->getProcessData(wheelConfigs[i].ethercatNumber);
 		std::vector<double> encoderValueInit = driver->getEncoderValue(i);
 		prev_left_enc[i] = encoderValueInit[0];
 		prev_right_enc[i] = encoderValueInit[1];
 	}
 }
 
-void calculateRobotVelocity(double& vx, double& vy, double& va, double& encDisplacement) {
+void PlatformDriverROS::calculateRobotVelocity(double& vx, double& vy, double& va, double& encDisplacement) {
 	double dt = 0.05;
 	
 	//initialize the variables
@@ -204,7 +349,7 @@ void calculateRobotVelocity(double& vx, double& vy, double& va, double& encDispl
 	encDisplacement = 0;
 	
 	for (int i = 0; i < nWheels; i++) {
-		txpdo1_t* swData = driver->getProcessData(wheelConfigs[i].ethercatNumber);
+		txpdo1_t* swData = driver->getWheelProcessData(i);
 		std::vector<double> encoderValue = driver->getEncoderValue(i);
 		double wl = (encoderValue[0] - prev_left_enc[i]) / dt;
 		double wr = -(encoderValue[1] - prev_right_enc[i]) / dt;
@@ -236,7 +381,7 @@ void calculateRobotVelocity(double& vx, double& vy, double& va, double& encDispl
 	va = va / nWheels / 2;
 }
 
-void calculateRobotPose(double vx, double vy, double va) {
+void PlatformDriverROS::calculateRobotPose(double vx, double vy, double va) {
 	double dt = 0.05;
 	double dx, dy;
 	
@@ -266,8 +411,9 @@ void calculateRobotPose(double vx, double vy, double va) {
 	odoma = norm(odoma + va * dt);
 }
 
-void publishOdometry(double vx, double vy, double va) {
+void PlatformDriverROS::publishOdometry(double vx, double vy, double va) {
 	geometry_msgs::Quaternion odom_quat = tf::createQuaternionMsgFromYaw(odoma);
+	nav_msgs::Odometry odom;
 	odom.header.stamp = ros::Time::now();
 	//odom.header.seq = sequence_id++;
 	odom.header.frame_id = "odom";
@@ -296,7 +442,7 @@ void publishOdometry(double vx, double vy, double va) {
 	odomPublisher.publish(odom);
 }
 		
-void createOdomToBaseLinkTransform(geometry_msgs::TransformStamped& odom_trans) {
+void PlatformDriverROS::createOdomToBaseLinkTransform(geometry_msgs::TransformStamped& odom_trans) {
 	geometry_msgs::Quaternion odom_quat = tf::createQuaternionMsgFromYaw(odoma);
 	odom_trans.header.stamp = ros::Time::now();
 	odom_trans.header.frame_id = "odom";
@@ -307,11 +453,62 @@ void createOdomToBaseLinkTransform(geometry_msgs::TransformStamped& odom_trans) 
 	odom_trans.transform.rotation = odom_quat;
 }
 
-void publishBattery() {
+void PlatformDriverROS::publishProcessDataInput() {
+	kelo_tulip::KeloDrivesInput msg;
+	for (int i = 0; i < nWheels; i++) {
+		txpdo1_t* swData = driver->getWheelProcessData(i);
+		kelo_tulip::KeloDriveInput wheel;
+		wheel.status1 = swData->status1;
+		wheel.status2 = swData->status2;
+		wheel.sensor_ts = swData->sensor_ts;
+		wheel.setpoint_ts = swData->setpoint_ts;
+		wheel.encoder_1 = swData->encoder_1;
+		wheel.velocity_1 = swData->velocity_1;
+		wheel.current_1_d = swData->current_1_d;
+		wheel.current_1_q = swData->current_1_q;
+		wheel.current_1_u = swData->current_1_u;
+		wheel.current_1_v = swData->current_1_v;
+		wheel.current_1_w = swData->current_1_w;
+		wheel.voltage_1 = swData->voltage_1;
+		wheel.voltage_1_u = swData->voltage_1_u;
+		wheel.voltage_1_v = swData->voltage_1_v;
+		wheel.voltage_1_w = swData->voltage_1_w;
+		wheel.temperature_1 = swData->temperature_1;
+		wheel.encoder_2 = swData->encoder_2;
+		wheel.velocity_2 = swData->velocity_2;
+		wheel.current_2_d = swData->current_2_d;
+		wheel.current_2_q = swData->current_2_q;
+		wheel.current_2_u = swData->current_2_u;
+		wheel.current_2_v = swData->current_2_v;
+		wheel.current_2_w = swData->current_2_w;
+		wheel.voltage_2 = swData->voltage_2;
+		wheel.voltage_2_u = swData->voltage_2_u;
+		wheel.voltage_2_v = swData->voltage_2_v;
+		wheel.voltage_2_w = swData->voltage_2_w;
+		wheel.temperature_2 = swData->temperature_2;
+		wheel.encoder_pivot = swData->encoder_pivot;
+		wheel.velocity_pivot = swData->velocity_pivot;
+		wheel.voltage_bus = swData->voltage_bus;
+		wheel.imu_ts = swData->imu_ts;
+		wheel.accel_x = swData->accel_x;
+		wheel.accel_y = swData->accel_y;
+		wheel.accel_z = swData->accel_z;
+		wheel.gyro_x = swData->gyro_x;
+		wheel.gyro_y = swData->gyro_y;
+		wheel.gyro_z = swData->gyro_z;
+		wheel.temperature_imu = swData->temperature_imu;
+		wheel.pressure = swData->pressure;
+		wheel.current_in = swData->current_in;
+		msg.wheels.push_back(wheel);
+	}
+	processDataInputPublisher.publish(msg);
+}
+
+void PlatformDriverROS::publishBattery() {
 	std_msgs::Float32 msg;
 	double volt = 0;
 	for (unsigned int i = 0; i < wheelConfigs.size(); i++) {
-		double x = driver->getProcessData(wheelConfigs[i].ethercatNumber)->voltage_bus;
+		double x = driver->getWheelProcessData(i)->voltage_bus;
 		if (x > volt)
 			volt = x;
 	}	
@@ -319,9 +516,9 @@ void publishBattery() {
 	batteryPublisher.publish(msg);
 }
 
-void publishIMU () {
+void PlatformDriverROS::publishIMU() {
 	for (unsigned int i=0; i<wheelConfigs.size(); i++) {
-		txpdo1_t* swData = driver->getProcessData(wheelConfigs[i].ethercatNumber);
+		txpdo1_t* swData = driver->getWheelProcessData(i);
 		sensor_msgs::Imu imu;
 		imu.angular_velocity.x = swData->gyro_x;
 		imu.angular_velocity.y = swData->gyro_y;
@@ -333,7 +530,11 @@ void publishIMU () {
 	}
 }
 
-void joyCallback(const sensor_msgs::Joy::ConstPtr& joy) {
+void PlatformDriverROS::joyCallback(const sensor_msgs::Joy::ConstPtr& joy) {
+	joyCallbackImpl(joy);
+}
+
+void PlatformDriverROS::joyCallbackImpl(const sensor_msgs::Joy::ConstPtr& joy) {
 	if (joy->buttons[5]) {
 		useJoy = true;
 
@@ -362,189 +563,26 @@ void joyCallback(const sensor_msgs::Joy::ConstPtr& joy) {
 	}
 }
 
-void cmdVelCallback(const geometry_msgs::Twist::ConstPtr& msg) {
+void PlatformDriverROS::cmdVelCallback(const geometry_msgs::Twist::ConstPtr& msg) {
 	//if (!useJoy && !debugMode)
 	if (!useJoy)
 		driver->setTargetVelocity(msg->linear.x, msg->linear.y, msg->angular.z);
 }
 
-void currentMaxCallback(const std_msgs::Float32& msg) {
+void PlatformDriverROS::currentMaxCallback(const std_msgs::Float32& msg) {
 	if (msg.data >= 0 && msg.data <= currentMax)
 		driver->setCurrentDrive(msg.data);
 }
 
-void resetCallback(const std_msgs::Empty& msg) {
+void PlatformDriverROS::resetCallback(const std_msgs::Empty& msg) {
 	// only error flags are resetted so far
 	ROS_INFO("Reset error flags.");
 	driver->resetErrorFlags();
 }
 
-void publishAll(const ros::TimerEvent&) {
-		//check condition of the smartwheels and handle the error
-		checkAndPublishSmartWheelStatus();
-
-		//calculate robot velocity
-		double vx, vy, va, encDisplacement;
-		calculateRobotVelocity(vx, vy, va, encDisplacement);
-
-		//calculate robot displacement and current pose
-		calculateRobotPose(vx, vy, va);
-			
-		//publish the odometry
-		publishOdometry(vx, vy, va);
-
-		//broadcast odom-base_link transform
-		geometry_msgs::TransformStamped odom_trans;
-		createOdomToBaseLinkTransform(odom_trans);
-		odom_broadcaster->sendTransform(odom_trans);
-		
-/*
-		//publish smartwheel values
-		std_msgs::Float64MultiArray processDataValues;
-		for (unsigned int i = 0; i < wheelConfigs.size(); i++) {
-			addToWheelDataMsg(processDataValues, driver->getWheelData(i));
-			addToProcessDataMsg(processDataValues, driver->getProcessData(wheelConfigs[i].ethercatNumber));
-			processDataValues.data.push_back(driver->getCurrentDrive());
-			processDataValues.data.push_back(driver->getThreadPhase());
-		}
-		valuesPublisher.publish(processDataValues);
-*/
-
-		publishBattery();
-		
-		//publish IMU data
-		publishIMU();
+void PlatformDriverROS::enableCallback(const std_msgs::Int32MultiArray& msg) {
+	driver->setWheelsEnable(msg.data);
 }
 
-int main (int argc, char** argv)
-{
-	ros::init (argc, argv, "platform_driver");
-	ros::NodeHandle nh("~");
-	
-	nh.getParam("num_wheels", nWheels);
-	
-	if (nWheels == 0) {
-		ROS_ERROR("Missing number of wheels in config file");
-		return -1;
-	}
 
-	wheelConfigs.resize(nWheels);
-	kelo::WheelData data = {};
-	data.enable = true;
-	data.error = false;
-	data.errorTimestamp = false;
-	wheelData.resize(nWheels, data);
-
-	// read all wheel configs
-	readWheelConfig(nh);
-
-	// read config and create driver
-	int wheelIndex = 0;	
-
-	std::vector<kelo::EtherCATModule*> modules;
-
-	int robileMasterBatteryEthercatNumber = 0;
-	nh.param("robile_master_battery_ethercat_number", robileMasterBatteryEthercatNumber, 0);
-	if (robileMasterBatteryEthercatNumber > 0) {
-		robileMasterBattery = new kelo::RobileMasterBattery(robileMasterBatteryEthercatNumber);
-		modules.push_back(robileMasterBattery);
-	}
-
-	std::string device;
-	int nWheelsMaster;
-	bool ok = nh.getParam("device", device);
-
-//TODO check
-		
-	bool hasNumWheel = nh.getParam("num_wheels", nWheelsMaster);
-    int firstWheel = 0;
-
-	driver = new kelo::PlatformDriver(device, modules, &wheelConfigs, &wheelData, firstWheel, nWheelsMaster);
-
-	wheelIndex += nWheelsMaster;
-
-	// set driver control parameters		
-	double x;
-	if (nh.getParam("wheel_distance", x))
-		driver->setWheelDistance(x);
-	if (nh.getParam("wheel_diameter", x))
-		driver->setWheelDiameter(x);
-	if (nh.getParam("current_stop", x))
-		driver->setCurrentStop(x);
-	if (nh.getParam("current_drive", x))
-		driver->setCurrentDrive(x);
-
-	if (nh.getParam("vlin_max", x))
-		driver->setMaxvlin(x);
-	if (nh.getParam("va_max", x))
-		driver->setMaxva(x);
-	if (nh.getParam("vlin_acc_max", x))
-		driver->setMaxvlinacc(x);
-	if (nh.getParam("angle_acc_max", x))
-		driver->setMaxangleacc(x);
-	if (nh.getParam("va_acc_max", x))
-		driver->setMaxvaacc(x);
-
-	joyVlinMax = driver->getMaxvlin();
-	joyVaMax = driver->getMaxva();
-	if (nh.getParam("joy_vlin_max", x))
-		joyVlinMax = x;
-	if (nh.getParam("joy_va_max", x))
-		joyVaMax = x;
-	if (nh.getParam("joy_scale", x))
-		if (x > 0 && x <= 1.0)
-			joyScale = x;
-
-	bool b;
-	if (nh.getParam("active_by_joypad", b))
-		activeByJoypad = b;
-	if (!activeByJoypad)
-		driver->setCanChangeActive();
-		
-	double delay = 0;
-	if (nh.getParam("start_delay", delay)) {
-		ROS_INFO("smart_wheel_driver start_delay = %.2f s, waiting.", delay);
-		ros::WallDuration(delay).sleep();
-	}
-
-	if (nh.getParam("current_max", x)) {
-		currentMax = x;
-	}
-
-	double delayRetry = 0;
-	nh.getParam("start_retry_delay", delayRetry);
-		
-	// initialize Ethercat
-	while (!driver->initEthercat()) {
-		if (delayRetry == 0) {
-			ROS_ERROR("Failed to initialize EtherCAT");
-			return -1;
-		}
-		ROS_ERROR("Failed to initialize EtherCAT, will retry in %.2f s.", delayRetry);
-		ros::WallDuration(delayRetry).sleep();
-	}
-	
-
-	ros::NodeHandle nhGlobal("");
-	odomPublisher = nhGlobal.advertise<nav_msgs::Odometry>("odom", 10);
-	odomInitializedPublisher = nhGlobal.advertise<std_msgs::Empty>("odom_initialized", 10);
-//	timestampPublisher = nh.advertise<std_msgs::UInt64MultiArray>("timestamp", 10);
-	imuPublisher = nh.advertise<sensor_msgs::Imu>("imu", 10);
-	batteryPublisher = nh.advertise<std_msgs::Float32>("battery", 10);
-	errorPublisher = nh.advertise<std_msgs::Int32>("error", 10);
-	statusPublisher = nh.advertise<std_msgs::Int32>("status", 10);
-	ros::Subscriber joySubscriber = nh.subscribe("/joy", 1000, joyCallback);
-	ros::Subscriber cmdVelSubscriber = nh.subscribe("/cmd_vel", 1000, cmdVelCallback);
-	ros::Subscriber resetSubscriber = nh.subscribe("reset", 1, resetCallback);
-//	ros::Subscriber currentMaxSubscriber = nh.subscribe("current_max", 1, currentMaxCallback);
-	odom_broadcaster = new tf::TransformBroadcaster();
-
-	initializeEncoderValue();
-
-	ros::Timer timer = nh.createTimer(ros::Duration(0.05), publishAll);
-	ros::spin();
-
-	ros::shutdown();
-	return 0;
-}
-
+} //namespace kelo
