@@ -1,6 +1,8 @@
-from typing import List, Set, Dict, Tuple
+from typing import List, Tuple
 import math
 import time
+
+from tulipy.structs import Attitude2D, WheelConfig, WheelParamVelocity, PlatformLimits
 
 def clip(value: float, maximum: float, minimum: float) -> float:
     return min(max(value, minimum), maximum)
@@ -16,70 +18,6 @@ def clip_angle(angle: float) -> float:
 def get_shortest_angle(angle1: float, angle2: float) -> float:
     return math.atan2(math.sin(angle1 - angle2), math.cos(angle1 - angle2))
     
-
-class Point2D:
-    """
-    A simple class represention a point in 2D space using carthesian coordinates.
-    """
-    def __init__(self):
-        self.x = 0.0
-        self.y = 0.0
-    def __str__(self) -> str:
-        return f"Point2D(x={self.x}, y={self.y})"
-
-class Attitude2D:
-    """
-    A simple class represention a pose in 2D space using carthesian coordinates.
-    The orientation is stored in the variable `a` in the form of an angle measured from the x-axis.
-    """
-    def __init__(self):
-        self.x = 0.0
-        self.y = 0.0
-        self.a = 0.0
-    def __str__(self) -> str:
-        return f"Attitude2D(x={self.x}, y={self.y}, a={self.a})"
-
-class PlatformLimits:
-    """
-    Configuration of the velocity and acceleration limits of complete mobile platform.
-    """
-    def __init__(self):
-        self.max_vel_linear = 1.0
-        self.max_vel_angular = 1.0
-        self.max_acc_linear = 0.5
-        self.max_acc_angular = 0.8
-        self.max_dec_linear = 0.5
-        self.max_dec_angular = 0.8
-
-class WheelConfig:
-    """
-    Class for storing the details and geometry of each drive as a part of the complete mobile platform.
-    """
-    def __init__(self):
-        self.ethercat_number: int
-        self.x: float
-        self.y: float
-        self.a: float
-        self.critical: bool
-        self.enable: bool
-        self.reverseVelocity: bool
-
-class WheelParamVelocity:
-    """
-    Class for storing the details and geometry of each drive as a part of the complete mobile platform.
-    """
-    def __init__(self):
-        self.pivot_position = Point2D()         # pivot location relative to vehicle centre
-        self.pivot_offset = 0.0                 # pivot offset relative to vehicle direction of travel
-        self.relative_position_l = Point2D()    # location of left wheel relative to pivot
-        self.relative_position_r = Point2D()    # location of right wheel relative to pivot
-        self.linear_to_angular_velocity = 0.0   # scaling m/s to rad/s
-        self.angular_to_linear_velocity = 0.0   # scaling rad/s to m/s
-        self.max_linear_velocity = 0.0          # maximum velocity of wheel
-        self.max_pivot_velocity = 0.0           # maximum pivot error of smart wheel used for error correction
-        self.pivot_kp = 0.0                     # proportional gain for pivot position controller
-        self.wheel_diameter = 0.0               # wheel diameter
-
 
 class VelocityPlatformController:
     """
