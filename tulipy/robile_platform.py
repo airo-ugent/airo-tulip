@@ -1,19 +1,19 @@
 import pysoem
 from typing import List
+from tulipy.structs import WheelConfig
 from tulipy.platform_driver import PlatformDriver
 from tulipy.ethercat import EC_STATE_SAFE_OP, EC_STATE_OPERATIONAL
 
-class EtherCATMaster():
-    def __init__(self, device: str):
+class RobilePlatform():
+    def __init__(self, device: str, wheel_configs: List[WheelConfig]):
         self._device = device
         self._ethercat_initialized = False
+
         self._master = pysoem.Master()
+        self._driver = PlatformDriver(self._master, wheel_configs)
 
-    def set_driver(self, driver: PlatformDriver) -> None:
-        self._driver = driver
-
-    def get_master(self) -> pysoem.Master:
-        return self._master
+    def get_driver(self) -> PlatformDriver:
+        return self._driver
 
     def init_ethercat(self) -> bool:
         """

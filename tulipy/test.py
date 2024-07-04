@@ -1,39 +1,36 @@
 import time
 
-from tulipy.ethercat_master import EtherCATMaster
-from tulipy.platform_driver import PlatformDriver
+from tulipy.robile_platform import RobilePlatform
 from tulipy.structs import WheelConfig
 
 def test():
     # Init stuff
     device = "eno1"
     wheel_configs = create_wheel_configs()
-    ecm = EtherCATMaster(device)
-    driver = PlatformDriver(ecm.get_master(), wheel_configs)
-    ecm.set_driver(driver)
-    ecm.init_ethercat()
+    mobi = RobilePlatform(device)
+    mobi.init_ethercat()
 
     # Wait one second
     time_start = time.time()
     while time.time() - time_start < 1:
-        ecm.loop()
+        mobi.loop()
         time.sleep(0.050)
 
     # Set target velocity
-    driver.set_platform_velocity_target(1.0, 0.0, 0.0)
+    mobi.get_driver().set_platform_velocity_target(1.0, 0.0, 0.0)
 
     # Wait one second
     time_start = time.time()
     while time.time() - time_start < 100:
-        ecm.loop()
+        mobi.loop()
         time.sleep(0.050)
 
     # Set zero target velocity
-    driver.set_platform_velocity_target(0.0, 0.0, 0.0)
+    mobi.get_driver().set_platform_velocity_target(0.0, 0.0, 0.0)
 
     # Loop indefinitely
     while True:
-        ecm.loop()
+        mobi.loop()
         time.sleep(0.050)
         
 
