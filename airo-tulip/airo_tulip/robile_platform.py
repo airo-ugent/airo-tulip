@@ -1,10 +1,12 @@
-import pysoem
 from typing import List
 
-from airo_tulip.structs import WheelConfig
+import pysoem
+
+from airo_tulip.ethercat import EC_STATE_SAFE_OP, EC_STATE_OPERATIONAL
 from airo_tulip.platform_driver import PlatformDriver
 from airo_tulip.platform_monitor import PlatformMonitor
-from airo_tulip.ethercat import EC_STATE_SAFE_OP, EC_STATE_OPERATIONAL
+from airo_tulip.structs import WheelConfig
+
 
 class RobilePlatform():
     def __init__(self, device: str, wheel_configs: List[WheelConfig]):
@@ -51,7 +53,7 @@ class RobilePlatform():
             print("Not all EtherCAT slaves reached a safe operational state.")
             # TODO: check and report which slave was the culprit.
             return False
-        
+
         # Request OP state for all slaves
         print("Requesting operational state for all EtherCAT slaves.")
         self._master.state = EC_STATE_OPERATIONAL
@@ -81,5 +83,3 @@ class RobilePlatform():
         self._monitor.step()
         self._driver.step()
         self._master.send_processdata()
-
-    

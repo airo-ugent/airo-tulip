@@ -3,8 +3,7 @@ from typing import List
 import zmq
 from loguru import logger
 
-from airo_tulip.ethercat_master import EtherCATMaster
-from airo_tulip.platform_driver import PlatformDriver
+from airo_tulip.robile_platform import RobilePlatform
 from airo_tulip.server.messages import SetPlatformVelocityTargetMessage, ErrorResponse, OkResponse
 from airo_tulip.structs import WheelConfig
 
@@ -48,9 +47,7 @@ class TulipServer:
         }
 
         # Robot platform.
-        self._platform = EtherCATMaster(robot_configuration.ecat_device)
-        driver = PlatformDriver(self._platform.get_master(), robot_configuration.wheel_configs)
-        self._platform.set_driver(driver)
+        self._platform = RobilePlatform(robot_configuration.ecat_device, robot_configuration.wheel_configs)
         self._platform.init_ethercat()
 
         # TODO: loop ethercatmaster. Do we need multiprocessing? We have request listening loop, but also the ethercat loop.
@@ -77,7 +74,7 @@ class TulipServer:
 
     def _handle_set_platform_velocity_target_request(self, request: SetPlatformVelocityTargetMessage):
         try:
-            self._platform.driver.set_platform_velocity_target(request.vel_x, request.vel_y, request.vel_a)
+            self._platform.get_driver().set_platform_velocity_target(request.vel_x, request.vel_y, request.vel_a)
             logger.trace("Request handled successfully.")
             return OkResponse()
         except ValueError as e:
