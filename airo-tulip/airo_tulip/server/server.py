@@ -82,13 +82,13 @@ class TulipServer:
         # Whenever the get_request task finishes, which will in most cases take longer, also restart it.
         # This gives priority to self._ecat_step() over self._get_request().
         # TODO: is there a more elegant way to structure this?
-        task1_running = asyncio.create_task(self._get_request())
-        task2_running = asyncio.create_task(self._ecat_step())
+        get_request_task = asyncio.create_task(self._get_request())
+        ecat_task = asyncio.create_task(self._ecat_step())
         while not self._should_stop:
-            await task2_running
-            task2_running = asyncio.create_task(self._ecat_step())
-            if task1_running.done():
-                task1_running = asyncio.create_task(self._get_request())
+            await ecat_task
+            ecat_task = asyncio.create_task(self._ecat_step())
+            if get_request_task.done():
+                get_request_task = asyncio.create_task(self._get_request())
 
     def _handle_request(self, request):
         # Delegate based on the request class.
