@@ -2,6 +2,7 @@ from enum import Enum
 from typing import List
 import math
 import pysoem
+from loguru import logger
 
 from airo_tulip.controllers.velocity_platform_controller import VelocityPlatformController
 from airo_tulip.ethercat import *
@@ -62,7 +63,7 @@ class PlatformDriver:
 
         for i in range(len(self._process_data)):
             pd = self._process_data[i]
-            print(f"pd {i} sensor_ts {pd.sensor_ts} vel_1 {pd.velocity_1} vel_2 {pd.velocity_2}")
+            logger.debug(f"pd {i} sensor_ts {pd.sensor_ts} vel_1 {pd.velocity_1} vel_2 {pd.velocity_2}")
 
         self._current_ts = self._process_data[0].sensor_ts
 
@@ -90,10 +91,10 @@ class PlatformDriver:
 
         if ready:
             self._state = PlatformDriverState.READY
-            print("PlatformDriver from INIT to READY")
+            logger.info("PlatformDriver from INIT to READY")
 
         if self._step_count > 500 and not ready:
-            print("Stopping PlatformDriver because wheels don't become ready.")
+            logger.warning("Stopping PlatformDriver because wheels don't become ready.")
             return False
 
         return True
@@ -104,7 +105,7 @@ class PlatformDriver:
         # TODO: check status error
 
         self._state = PlatformDriverState.ACTIVE
-        print("PlatformDriver from READY to ACTIVE")
+        logger.info("PlatformDriver from READY to ACTIVE")
 
         return True
 
@@ -187,12 +188,12 @@ class PlatformDriver:
             data.setpoint1 = setpoint1
             data.setpoint2 = setpoint2
 
-            print(
+            logger.debug(
                 f"wheel {i} enabled {self._wheel_enabled[i]} sp1 {setpoint1} sp2 {setpoint2} enc {self._process_data[i].encoder_pivot}")
 
             self._set_process_data(i, data)
 
-        print("")
+        logger.debug("")
 
     def _update_encoders(self):
         if not self._encoder_initialized:
