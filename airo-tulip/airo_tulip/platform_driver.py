@@ -50,6 +50,10 @@ class PlatformDriver:
         self._vpc.initialise(self._wheel_configs)
 
     def set_platform_velocity_target(self, vel_x: float, vel_y: float, vel_a: float) -> None:
+        if math.sqrt(vel_x**2 + vel_y**2) > 1.0:
+            raise ValueError("Cannot set target linear velocity higher than 1.0 m/s")
+        if abs(vel_a) > math.pi/8:
+            raise ValueError("Cannot set target angular velocity higher than pi/8 rad/s")
         self._vpc.set_platform_velocity_target(vel_x, vel_y, vel_a)
 
     def step(self) -> bool:
