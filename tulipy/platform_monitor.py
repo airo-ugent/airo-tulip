@@ -39,51 +39,67 @@ class PlatformMonitor:
         self._current_in = [pd.current_in for pd in process_data]
 
     def get_status1(self, wheel_index: int) -> int:
+        """Returns the status1 register value for a specific drive, see `ethercat.py`."""
         return self._status1[wheel_index]
 
     def get_status2(self, wheel_index: int) -> int:
+        """Returns the status2 register value for a specific drive, see `ethercat.py`."""
         return self._status2[wheel_index]
 
     def get_encoder(self, wheel_index: int) -> List[float]:
+        """Returns a list of the encoder value for wheel1, wheel2 and pivot for a specific drive."""
         return self._encoder[wheel_index]
 
     def get_velocity(self, wheel_index: int) -> List[float]:
+        """Returns a list of the velocity value for wheel1, wheel2 and pivot encoders for a specific drive."""
         return self._velocity[wheel_index]
 
     def get_current(self, wheel_index: int) -> List[float]:
+        """Returns a list of the direct current for wheel1 and wheel2 for a specific drive."""
         return self._current[wheel_index]
 
     def get_voltage(self, wheel_index: int) -> List[float]:
+        """Returns a list of the pwm voltage for wheel1 and wheel2 for a specific drive."""
         return self._voltage[wheel_index]
 
     def get_temperature(self, wheel_index: int) -> List[float]:
+        """Returns a list of the temperature for wheel1, wheel2 and IMU for a specific drive."""
         return self._temperature[wheel_index]
 
     def get_voltage_bus(self, wheel_index: int) -> float:
+        """Returns the bus voltage for a specific drive."""
         return self._voltage_bus[wheel_index]
 
     def get_voltage_bus_max(self) -> float:
+        """Returns the maximal bus voltage of all drives."""
         return max(self._voltage_bus)
 
     def get_acceleration(self, wheel_index: int) -> List[float]:
+        """Returns a list of the x, y and z acceleration values for IMU of a specific drive."""
         return self._accel[wheel_index]
 
     def get_gyro(self, wheel_index: int) -> List[float]:
+        """Returns a list of the x, y and z gyro values for IMU of a specific drive."""
         return self._gyro[wheel_index]
 
     def get_pressure(self, wheel_index: int) -> float:
+        """Returns the pressure for a specific drive."""
         return self._pressure[wheel_index]
 
     def get_current_in(self, wheel_index: int) -> float:
+        """Returns the input current for a specific drive."""
         return self._current_in[wheel_index]
 
     def get_current_in_total(self) -> float:
+        """Returns the total input current for all drives."""
         return sum(self._current_in)
 
     def get_power(self, wheel_index: int) -> float:
+        """Returns the power for a specific drive."""
         return self._voltage_bus[wheel_index] * self._current_in[wheel_index]
 
     def get_power_total(self) -> float:
+        """Returns the total power for all drives."""
         return sum([self._voltage_bus[i] * self._current_in[i] for i in range(self._num_wheels)])
 
     def _get_process_data(self, wheel_index: int) -> TxPDO1:
