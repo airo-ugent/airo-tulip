@@ -7,10 +7,12 @@ class SetPlatformVelocityTargetMessage:
     vel_y: float
     vel_a: float
 
+
 @dataclass
 class ErrorResponse:
     message: str
     cause: str
+
 
 @dataclass
 class OkResponse:
