@@ -2,6 +2,7 @@ import pysoem
 from typing import List
 from tulipy.structs import WheelConfig
 from tulipy.platform_driver import PlatformDriver
+from tulipy.platform_monitor import PlatformMonitor
 from tulipy.ethercat import EC_STATE_SAFE_OP, EC_STATE_OPERATIONAL
 
 class RobilePlatform():
@@ -11,9 +12,13 @@ class RobilePlatform():
 
         self._master = pysoem.Master()
         self._driver = PlatformDriver(self._master, wheel_configs)
+        self._monitor = PlatformMonitor(self._master, wheel_configs)
 
     def get_driver(self) -> PlatformDriver:
         return self._driver
+
+    def get_monitor(self) -> PlatformMonitor:
+        return self._monitor
 
     def init_ethercat(self) -> bool:
         """
@@ -72,6 +77,7 @@ class RobilePlatform():
         Main processing loop of the EtherCAT master, must be called frequently.
         """
         self._master.receive_processdata()
+        self._monitor.step()
         self._driver.step()
         self._master.send_processdata()
 
