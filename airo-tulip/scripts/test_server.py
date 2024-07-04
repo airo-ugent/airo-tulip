@@ -1,7 +1,5 @@
-import time
+import asyncio
 
-from airo_tulip.ethercat_master import EtherCATMaster
-from airo_tulip.platform_driver import PlatformDriver
 from airo_tulip.server.server import TulipServer, RobotConfiguration
 from airo_tulip.structs import WheelConfig
 
@@ -12,7 +10,7 @@ def test():
     wheel_configs = create_wheel_configs()
 
     server = TulipServer("localhost", 49789, RobotConfiguration(device, wheel_configs))
-    server.run()
+    asyncio.run(server.run())
 
 
 def create_wheel_configs():
