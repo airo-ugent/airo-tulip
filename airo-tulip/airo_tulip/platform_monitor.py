@@ -2,6 +2,7 @@ import pysoem
 from typing import List
 
 from airo_tulip.ethercat import *
+from airo_tulip.structs import WheelConfig
 
 class PlatformMonitor:
 

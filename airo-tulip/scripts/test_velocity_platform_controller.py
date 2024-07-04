@@ -17,7 +17,7 @@ def test():
         time.sleep(0.050)
 
     # Set target velocity
-    mobi.get_driver().set_platform_velocity_target(-0.2, -0.1, 0.0)
+    mobi.get_driver().set_platform_velocity_target(0.0, 0.0, 3.14/8)
 
     # Wait one second
     time_start = time.time()
