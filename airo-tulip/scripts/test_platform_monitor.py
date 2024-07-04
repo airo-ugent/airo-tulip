@@ -10,29 +10,17 @@ def test():
     mobi = RobilePlatform(device, wheel_configs)
     mobi.init_ethercat()
 
-    # Wait one second
-    time_start = time.time()
-    while time.time() - time_start < 1:
-        mobi.loop()
-        time.sleep(0.050)
-
-    # Set target velocity
-    mobi.get_driver().set_platform_velocity_target(0.0, 0.0, 3.14/8)
-
-    # Wait one second
-    time_start = time.time()
-    while time.time() - time_start < 4:
-        mobi.loop()
-        time.sleep(0.050)
-
-    # Set zero target velocity
-    mobi.get_driver().set_platform_velocity_target(0.0, 0.0, 0.0)
-
     # Loop indefinitely
     while True:
         mobi.loop()
+        fancy_print_sensors(mobi.get_monitor())
         time.sleep(0.050)
         
+def fancy_print_sensors(monitor):
+    for i in range(4):
+        print(f"accel {i} ", monitor.get_acceleration(i))
+        print(f"temp {i} ", monitor.get_temperature(i))
+    print()
 
 def create_wheel_configs():
     wheel_configs = []

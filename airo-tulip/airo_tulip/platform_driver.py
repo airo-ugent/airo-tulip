@@ -1,13 +1,12 @@
 from enum import Enum
 from typing import List
-
 import math
 import pysoem
+
 from airo_tulip.controllers.velocity_platform_controller import VelocityPlatformController
 from airo_tulip.ethercat import *
 from airo_tulip.structs import WheelConfig
 from airo_tulip.util import *
-
 
 class PlatformDriverState(Enum):
     UNDEFINED = 0x00

@@ -1,19 +1,25 @@
 import pysoem
-from airo_tulip.ethercat import EC_STATE_SAFE_OP, EC_STATE_OPERATIONAL
+from typing import List
+
+from airo_tulip.structs import WheelConfig
 from airo_tulip.platform_driver import PlatformDriver
+from airo_tulip.platform_monitor import PlatformMonitor
+from airo_tulip.ethercat import EC_STATE_SAFE_OP, EC_STATE_OPERATIONAL
 
-
-class EtherCATMaster():
-    def __init__(self, device: str):
+class RobilePlatform():
+    def __init__(self, device: str, wheel_configs: List[WheelConfig]):
         self._device = device
         self._ethercat_initialized = False
+
         self._master = pysoem.Master()
+        self._driver = PlatformDriver(self._master, wheel_configs)
+        self._monitor = PlatformMonitor(self._master, wheel_configs)
 
-    def set_driver(self, driver: PlatformDriver) -> None:
-        self._driver = driver
+    def get_driver(self) -> PlatformDriver:
+        return self._driver
 
-    def get_master(self) -> pysoem.Master:
-        return self._master
+    def get_monitor(self) -> PlatformMonitor:
+        return self._monitor
 
     def init_ethercat(self) -> bool:
         """
@@ -45,7 +51,7 @@ class EtherCATMaster():
             print("Not all EtherCAT slaves reached a safe operational state.")
             # TODO: check and report which slave was the culprit.
             return False
-
+        
         # Request OP state for all slaves
         print("Requesting operational state for all EtherCAT slaves.")
         self._master.state = EC_STATE_OPERATIONAL
@@ -72,5 +78,8 @@ class EtherCATMaster():
         Main processing loop of the EtherCAT master, must be called frequently.
         """
         self._master.receive_processdata()
+        self._monitor.step()
         self._driver.step()
         self._master.send_processdata()
+
+    
