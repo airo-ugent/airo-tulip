@@ -1,11 +1,11 @@
-import pysoem
 from typing import List
 
-from airo_tulip.ethercat import *
+import pysoem
+from airo_tulip.ethercat import RxPDO1, TxPDO1
 from airo_tulip.structs import WheelConfig
 
-class PlatformMonitor:
 
+class PlatformMonitor:
     def __init__(self, master: pysoem.Master, wheel_configs: List[WheelConfig]):
         self._master = master
         self._wheel_configs = wheel_configs
@@ -105,8 +105,8 @@ class PlatformMonitor:
 
     def _get_process_data(self, wheel_index: int) -> TxPDO1:
         ethercat_index = self._wheel_configs[wheel_index].ethercat_number
-        return TxPDO1.from_buffer_copy(self._master.slaves[ethercat_index-1].input)
+        return TxPDO1.from_buffer_copy(self._master.slaves[ethercat_index - 1].input)
 
     def _set_process_data(self, wheel_index: int, data: RxPDO1) -> None:
         ethercat_index = self._wheel_configs[wheel_index].ethercat_number
-        self._master.slaves[ethercat_index-1].output = bytes(data)
+        self._master.slaves[ethercat_index - 1].output = bytes(data)

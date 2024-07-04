@@ -6,6 +6,7 @@ class Point2D:
     """
     A simple class representation of a point in 2D space using cartesian coordinates.
     """
+
     x: float = 0.0
     y: float = 0.0
 
@@ -16,6 +17,7 @@ class Attitude2D:
     A simple class representation of a pose in 2D space using cartesian coordinates.
     The orientation is stored in the variable `a` in the form of an angle measured from the x-axis.
     """
+
     x: float = 0.0
     y: float = 0.0
     a: float = 0.0
@@ -26,6 +28,7 @@ class PlatformLimits:
     """
     Configuration of the velocity and acceleration limits of complete mobile platform.
     """
+
     max_vel_linear: float = 1.0
     max_vel_angular: float = 1.0
     max_acc_linear: float = 0.5
@@ -39,6 +42,7 @@ class WheelConfig:
     """
     Class for storing the details and geometry of each drive as a part of the complete mobile platform.
     """
+
     ethercat_number: int
     x: float
     y: float
@@ -57,6 +61,7 @@ class WheelParamVelocity:
     """
     Class for storing the details and geometry of each drive as a part of the complete mobile platform.
     """
+
     pivot_position: Point2D = field(default_factory=Point2D)  # pivot location relative to vehicle centre
     pivot_offset: float = 0.0  # pivot offset relative to vehicle direction of travel
     relative_position_l: Point2D = field(default_factory=Point2D)  # location of left wheel relative to pivot

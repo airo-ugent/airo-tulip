@@ -1,12 +1,13 @@
+import math
 from enum import Enum
 from typing import List
-import math
-import pysoem
 
+import pysoem
 from airo_tulip.controllers.velocity_platform_controller import VelocityPlatformController
 from airo_tulip.ethercat import *
 from airo_tulip.structs import WheelConfig
 from airo_tulip.util import *
+
 
 class PlatformDriverState(Enum):
     UNDEFINED = 0x00
@@ -17,7 +18,6 @@ class PlatformDriverState(Enum):
 
 
 class PlatformDriver:
-
     def __init__(self, master: pysoem.Master, wheel_configs: List[WheelConfig]):
         self._master = master
         self._wheel_configs = wheel_configs
@@ -51,7 +51,7 @@ class PlatformDriver:
     def set_platform_velocity_target(self, vel_x: float, vel_y: float, vel_a: float) -> None:
         if math.sqrt(vel_x**2 + vel_y**2) > 1.0:
             raise ValueError("Cannot set target linear velocity higher than 1.0 m/s")
-        if abs(vel_a) > math.pi/8:
+        if abs(vel_a) > math.pi / 8:
             raise ValueError("Cannot set target angular velocity higher than pi/8 rad/s")
         self._vpc.set_platform_velocity_target(vel_x, vel_y, vel_a)
 
@@ -188,7 +188,8 @@ class PlatformDriver:
             data.setpoint2 = setpoint2
 
             print(
-                f"wheel {i} enabled {self._wheel_enabled[i]} sp1 {setpoint1} sp2 {setpoint2} enc {self._process_data[i].encoder_pivot}")
+                f"wheel {i} enabled {self._wheel_enabled[i]} sp1 {setpoint1} sp2 {setpoint2} enc {self._process_data[i].encoder_pivot}"
+            )
 
             self._set_process_data(i, data)
 
@@ -200,7 +201,6 @@ class PlatformDriver:
                 data = self._process_data[i]
                 self._prev_encoder[i][0] = data.encoder_1
                 self._prev_encoder[i][1] = data.encoder_2
-            encoder_initialized = True
 
         # count accumulative encoder value
         for i in range(self._num_wheels):

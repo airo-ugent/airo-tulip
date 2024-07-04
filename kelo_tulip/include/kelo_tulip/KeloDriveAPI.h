@@ -67,7 +67,7 @@
 typedef struct PACKED{
   uint16_t		status1;			// Status bits as defined in STAT1_
   uint16_t		status2;			// Status bits as defined in STAT2_
-  uint64_t		sensor_ts;			// EtherCAT timestamp (ns) on sensor acquisition 
+  uint64_t		sensor_ts;			// EtherCAT timestamp (ns) on sensor acquisition
   uint64_t		setpoint_ts;		// EtherCAT timestamp (ns) of last setpoint data
   float			encoder_1;			// encoder 1 value in rad (no wrapping at 2PI)
   float			velocity_1;			// encoder 1 velocity in rad/s
@@ -103,13 +103,13 @@ typedef struct PACKED{
   float			gyro_x;				// IMU gyro X-axis in rad/s
   float			gyro_y;				// IMU gyro Y-axis in rad/s
   float			gyro_z;				// IMU gyro Z-axis in rad/s
-  float			temperature_imu;	// IMU temperature in K	
+  float			temperature_imu;	// IMU temperature in K
   float			pressure;			// barometric pressure in Pa absolute
   float			current_in;			// current input
 }txpdo1_t;
 
 /* SMARTWHEEL SETPOINT MODES
-/* 
+/*
 /* Mode TORQUE
 /*   Setpoint 1		= Current in Amp for motor 1
 /*   Setpoint 2		= Current in Amp for motor 2
@@ -150,7 +150,7 @@ typedef struct PACKED{
 #define COM1_MODE_DTORQUE	  (0x1 << 2)
 #define COM1_MODE_VELOCITY	  (0x2 << 2)
 #define COM1_MODE_DVELOCITY	  (0x3 << 2)
-#define COM1_EMERGENCY1		  0x0010	
+#define COM1_EMERGENCY1		  0x0010
 #define COM1_EMERGENCY2		  0x0020
 #define COM1_ENABLESERVO      0x0400
 #define COM1_SERVOCLOSE       0x0800

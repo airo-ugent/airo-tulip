@@ -56,7 +56,7 @@ struct WheelConfig {
 	double a;
 	bool enable;
 	bool reverseVelocity;
-	
+
 	WheelModel model;
 };
 

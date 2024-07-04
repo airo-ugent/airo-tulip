@@ -131,7 +131,7 @@ void RobileMasterBatteryROS::publishEthercatInput() {
 	msg.data.push_back(input->TimeStamp);
 	msg.layout.dim.push_back(dim);
 
-	dim.label = "status"; 
+	dim.label = "status";
 	dim.stride++;
 	msg.data.push_back(input->Status);
 	msg.layout.dim.push_back(dim);
