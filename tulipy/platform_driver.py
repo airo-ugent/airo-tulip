@@ -1,11 +1,10 @@
-from dataclasses import dataclass
 import pysoem
 from typing import List
 from enum import Enum
 import math
 
 from tulipy.ethercat import *
-from tulipy.structs import WheelConfig, WheelData
+from tulipy.structs import WheelConfig
 from tulipy.velocity_platform_controller import VelocityPlatformController
 from tulipy.util import *
 
