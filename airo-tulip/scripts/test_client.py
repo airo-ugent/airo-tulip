@@ -1,7 +1,7 @@
 import zmq
 from loguru import logger
 
-from airo_tulip.server.messages import SetPlatformVelocityTargetMessage
+from airo_tulip.server.messages import SetPlatformVelocityTargetMessage, StopServerMessage
 
 
 class SimpleClient:
@@ -24,6 +24,7 @@ def test():
     client = SimpleClient("localhost", 49789)
     for i in range(5):
         client.send_test_request()
+    client._zmq_socket.send_pyobj(StopServerMessage())
 
 
 if __name__ == "__main__":

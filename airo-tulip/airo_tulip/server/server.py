@@ -6,7 +6,7 @@ import zmq.asyncio
 from loguru import logger
 
 from airo_tulip.robile_platform import RobilePlatform
-from airo_tulip.server.messages import SetPlatformVelocityTargetMessage, ErrorResponse, OkResponse
+from airo_tulip.server.messages import SetPlatformVelocityTargetMessage, ErrorResponse, OkResponse, StopServerMessage
 from airo_tulip.structs import WheelConfig
 
 
@@ -53,7 +53,8 @@ class TulipServer:
 
         # TCP request handlers for passing instructions to the robot.
         self._request_handlers = {
-            SetPlatformVelocityTargetMessage.__name__: self._handle_set_platform_velocity_target_request
+            SetPlatformVelocityTargetMessage.__name__: self._handle_set_platform_velocity_target_request,
+            StopServerMessage.__name__: self._handle_stop_server_request
         }
 
         # Robot platform.
@@ -87,7 +88,7 @@ class TulipServer:
         while not self._should_stop:
             await ecat_task
             ecat_task = asyncio.create_task(self._ecat_step())
-            if get_request_task.done():
+            if get_request_task.done() or self._should_stop:
                 get_request_task = asyncio.create_task(self._get_request())
 
     def _handle_request(self, request):
@@ -104,3 +105,7 @@ class TulipServer:
         except ValueError as e:
             logger.error(f"Safety limits exceeded: {e}")
             return ErrorResponse("Safety limits exceeded", str(e))
+
+    def _handle_stop_server_request(self, _request: StopServerMessage):
+        logger.info("Received stop request.")
+        self._should_stop = True
