@@ -1,7 +1,7 @@
 import pysoem
 from typing import List
-from tulipy.platform_driver import PlatformDriver
-from tulipy.ethercat import EC_STATE_SAFE_OP, EC_STATE_OPERATIONAL
+from airo_tulip.platform_driver import PlatformDriver
+from airo_tulip.ethercat import EC_STATE_SAFE_OP, EC_STATE_OPERATIONAL
 
 class EtherCATMaster():
     def __init__(self, device: str):

@@ -4,10 +4,10 @@ from typing import List
 from enum import Enum
 import math
 
-from tulipy.ethercat import *
-from tulipy.structs import WheelConfig, WheelData
-from tulipy.velocity_platform_controller import VelocityPlatformController
-from tulipy.util import *
+from airo_tulip.ethercat import *
+from airo_tulip.structs import WheelConfig, WheelData
+from airo_tulip.velocity_platform_controller import VelocityPlatformController
+from airo_tulip.util import *
 
 class PlatformDriverState(Enum):
     UNDEFINED = 0x00

@@ -1,8 +1,8 @@
 import time
 
-from tulipy.ethercat_master import EtherCATMaster
-from tulipy.platform_driver import PlatformDriver
-from tulipy.structs import WheelConfig
+from airo_tulip.ethercat_master import EtherCATMaster
+from airo_tulip.platform_driver import PlatformDriver
+from airo_tulip.structs import WheelConfig
 
 def test():
     # Init stuff

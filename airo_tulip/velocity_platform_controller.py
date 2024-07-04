@@ -2,8 +2,8 @@ from typing import List, Tuple
 import math
 import time
 
-from tulipy.structs import Attitude2D, WheelConfig, WheelParamVelocity, PlatformLimits, Point2D
-from tulipy.util import *
+from airo_tulip.structs import Attitude2D, WheelConfig, WheelParamVelocity, PlatformLimits, Point2D
+from airo_tulip.util import *
 
 class VelocityPlatformController:
     """
