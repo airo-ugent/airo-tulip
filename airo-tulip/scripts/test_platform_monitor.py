@@ -1,3 +1,5 @@
+import time
+
 from airo_tulip.robile_platform import RobilePlatform
 from airo_tulip.structs import WheelConfig
 
