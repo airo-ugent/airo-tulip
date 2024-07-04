@@ -51,10 +51,10 @@ class WheelParamVelocity:
     """
     Class for storing the details and geometry of each drive as a part of the complete mobile platform.
     """
-    pivot_position:             Point2D     = Point2D()     # pivot location relative to vehicle centre
+    pivot_position:             Point2D     = field(default_factory=Point2D)     # pivot location relative to vehicle centre
     pivot_offset:               float       = 0.0           # pivot offset relative to vehicle direction of travel
-    relative_position_l:        Point2D     = Point2D()     # location of left wheel relative to pivot
-    relative_position_r:        Point2D     = Point2D()     # location of right wheel relative to pivot
+    relative_position_l:        Point2D     = field(default_factory=Point2D)     # location of left wheel relative to pivot
+    relative_position_r:        Point2D     = field(default_factory=Point2D)     # location of right wheel relative to pivot
     linear_to_angular_velocity: float       = 0.0           # scaling m/s to rad/s
     angular_to_linear_velocity: float       = 0.0           # scaling rad/s to m/s
     max_linear_velocity:        float       = 0.0           # maximum velocity of wheel
