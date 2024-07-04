@@ -96,13 +96,13 @@ class VelocityPlatformController:
         
         if self._platform_ramped_vel.a >= 0:
             self._platform_ramped_vel.a = clip(self._platform_target_vel.a,
-                self._platform_ramped_vel.a + time_delta * self._platform_limits.max_acc_linear,
-                self._platform_ramped_vel.a - time_delta * self._platform_limits.max_dec_linear
+                self._platform_ramped_vel.a + time_delta * self._platform_limits.max_acc_angular,
+                self._platform_ramped_vel.a - time_delta * self._platform_limits.max_dec_angular
             )
         else:
             self._platform_ramped_vel.a = clip(self._platform_target_vel.a,
-                self._platform_ramped_vel.a + time_delta * self._platform_limits.max_dec_linear,
-                self._platform_ramped_vel.a - time_delta * self._platform_limits.max_acc_linear
+                self._platform_ramped_vel.a + time_delta * self._platform_limits.max_dec_angular,
+                self._platform_ramped_vel.a - time_delta * self._platform_limits.max_acc_angular
             )
 
         # Velocity limits
