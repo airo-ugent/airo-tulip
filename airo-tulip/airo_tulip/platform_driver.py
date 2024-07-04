@@ -1,13 +1,13 @@
-from dataclasses import dataclass
-import pysoem
-from typing import List
 from enum import Enum
-import math
+from typing import List
 
+import math
+import pysoem
+from airo_tulip.controllers.velocity_platform_controller import VelocityPlatformController
 from airo_tulip.ethercat import *
-from airo_tulip.structs import WheelConfig, WheelData
-from airo_tulip.velocity_platform_controller import VelocityPlatformController
+from airo_tulip.structs import WheelConfig
 from airo_tulip.util import *
+
 
 class PlatformDriverState(Enum):
     UNDEFINED = 0x00
@@ -15,6 +15,7 @@ class PlatformDriverState(Enum):
     READY = 0x02
     ACTIVE = 0x04
     ERROR = 0x10
+
 
 class PlatformDriver:
 
@@ -115,23 +116,23 @@ class PlatformDriver:
     def _has_wheel_status_enabled(self, wheel: int) -> bool:
         status1 = self._process_data[wheel].status1
         return (status1 & STAT1_ENABLED1) > 0 and (status1 & STAT1_ENABLED2) > 0
-    
+
     def _has_wheel_status_error(self, wheel: int) -> bool:
         STATUS1a = 3
         STATUS1b = 63
         STATUS1disabled = 60
         STATUS2 = 2051
-    
+
         process_data = self._process_data[wheel]
         status1 = process_data.status1
         status2 = process_data.status2
-    
+
         return (status1 != STATUS1a and status1 != STATUS1b and status1 != STATUS1disabled) or (status2 != STATUS2)
 
     def _do_stop(self) -> None:
         # zero setpoints for all drives
         data = RxPDO1()
-        data.timestamp = self._current_ts + 100*1000
+        data.timestamp = self._current_ts + 100 * 1000
         data.limit1_p = self._current_stop
         data.limit1_n = -self._current_stop
         data.limit2_p = self._current_stop
@@ -149,7 +150,7 @@ class PlatformDriver:
     def _do_control(self) -> None:
         # calculate setpoints for each drive
         data = RxPDO1()
-        data.timestamp = self._current_ts + 100*1000
+        data.timestamp = self._current_ts + 100 * 1000
         data.limit1_p = self._current_drive
         data.limit1_n = -self._current_drive
         data.limit2_p = self._current_drive
@@ -183,12 +184,12 @@ class PlatformDriver:
             data.setpoint1 = setpoint1
             data.setpoint2 = setpoint2
 
-            print(f"wheel {i} enabled {self._wheel_enabled[i]} sp1 {setpoint1} sp2 {setpoint2} enc {self._process_data[i].encoder_pivot}")
+            print(
+                f"wheel {i} enabled {self._wheel_enabled[i]} sp1 {setpoint1} sp2 {setpoint2} enc {self._process_data[i].encoder_pivot}")
 
             self._set_process_data(i, data)
 
         print("")
-
 
     def _update_encoders(self):
         if not self._encoder_initialized:
@@ -197,7 +198,7 @@ class PlatformDriver:
                 self._prev_encoder[i][0] = data.encoder_1
                 self._prev_encoder[i][1] = data.encoder_2
             encoder_initialized = True
-    
+
         # count accumulative encoder value
         for i in range(self._num_wheels):
             data = self._process_data[i]
@@ -211,7 +212,7 @@ class PlatformDriver:
                     self._sum_encoder[i][0] += curr_encoder1 - self._prev_encoder[i][0] - 2 * math.pi
             else:
                 self._sum_encoder[i][0] += curr_encoder1 - self._prev_encoder[i][0]
-    
+
             if abs(curr_encoder2 - self._prev_encoder[i][1]) > math.pi:
                 if curr_encoder2 < self._prev_encoder[i][1]:
                     self._sum_encoder[i][1] += curr_encoder2 - self._prev_encoder[i][1] + 2 * math.pi
@@ -219,16 +220,14 @@ class PlatformDriver:
                     self._sum_encoder[i][1] += curr_encoder2 - self._prev_encoder[i][1] - 2 * math.pi
             else:
                 self._sum_encoder[i][1] += curr_encoder2 - self._prev_encoder[i][1]
-    
+
             self._prev_encoder[i][0] = curr_encoder1
             self._prev_encoder[i][1] = curr_encoder2
 
-
     def _get_process_data(self, wheel_index: int) -> TxPDO1:
         ethercat_index = self._wheel_configs[wheel_index].ethercat_number
-        return TxPDO1.from_buffer_copy(self._master.slaves[ethercat_index-1].input)
+        return TxPDO1.from_buffer_copy(self._master.slaves[ethercat_index - 1].input)
 
     def _set_process_data(self, wheel_index: int, data: RxPDO1) -> None:
         ethercat_index = self._wheel_configs[wheel_index].ethercat_number
-        self._master.slaves[ethercat_index-1].output = bytes(data)
-
+        self._master.slaves[ethercat_index - 1].output = bytes(data)

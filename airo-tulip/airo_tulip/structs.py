@@ -3,7 +3,7 @@ from dataclasses import dataclass
 @dataclass
 class Point2D:
     """
-    A simple class represention a point in 2D space using carthesian coordinates.
+    A simple class representation of a point in 2D space using cartesian coordinates.
     """
     x: float = 0.0
     y: float = 0.0
@@ -11,7 +11,7 @@ class Point2D:
 @dataclass
 class Attitude2D:
     """
-    A simple class represention a pose in 2D space using carthesian coordinates.
+    A simple class representation of a pose in 2D space using cartesian coordinates.
     The orientation is stored in the variable `a` in the form of an angle measured from the x-axis.
     """
     x: float = 0.0
