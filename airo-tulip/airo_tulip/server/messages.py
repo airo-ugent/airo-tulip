@@ -11,3 +11,7 @@ class SetPlatformVelocityTargetMessage:
 class ErrorResponse:
     message: str
     cause: str
+
+@dataclass
+class OkResponse:
+    pass

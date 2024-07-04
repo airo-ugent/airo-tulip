@@ -1,9 +1,12 @@
 from typing import List
 
 import zmq
-from airo_tulip.server.messages import SetPlatformVelocityTargetMessage, ErrorResponse
-from airo_tulip.structs import WheelConfig
 from loguru import logger
+
+from airo_tulip.ethercat_master import EtherCATMaster
+from airo_tulip.platform_driver import PlatformDriver
+from airo_tulip.server.messages import SetPlatformVelocityTargetMessage, ErrorResponse, OkResponse
+from airo_tulip.structs import WheelConfig
 
 
 class RobotConfiguration:
@@ -41,14 +44,14 @@ class TulipServer:
 
         # TCP request handlers for passing instructions to the robot.
         self._request_handlers = {
-            SetPlatformVelocityTargetMessage.__class__: self._handle_set_platform_velocity_target_request
+            SetPlatformVelocityTargetMessage.__name__: self._handle_set_platform_velocity_target_request
         }
 
         # Robot platform.
         self._platform = EtherCATMaster(robot_configuration.ecat_device)
-        driver = PlatformDriver(platform.get_master(), robot_configuration.wheel_configs)
-        ecm.set_driver(driver)
-        ecm.init_ethercat()
+        driver = PlatformDriver(self._platform.get_master(), robot_configuration.wheel_configs)
+        self._platform.set_driver(driver)
+        self._platform.init_ethercat()
 
         # TODO: loop ethercatmaster. Do we need multiprocessing? We have request listening loop, but also the ethercat loop.
         #       The ethercat loop should run independently of the request listening loop, which will block while
@@ -68,10 +71,15 @@ class TulipServer:
 
     def _handle_request(self, request):
         # Delegate based on the request class.
-        return self._request_handlers[type(request).__class__](request)
+        request_class_name = type(request).__name__
+        logger.trace(f"Request type: {request_class_name}.")
+        return self._request_handlers[request_class_name](request)
 
     def _handle_set_platform_velocity_target_request(self, request: SetPlatformVelocityTargetMessage):
         try:
             self._platform.driver.set_platform_velocity_target(request.vel_x, request.vel_y, request.vel_a)
+            logger.trace("Request handled successfully.")
+            return OkResponse()
         except ValueError as e:
+            logger.error(f"Safety limits exceeded: {e}")
             return ErrorResponse("Safety limits exceeded", str(e))
