@@ -67,7 +67,7 @@ public:
 	virtual std::string getType();
 
 	virtual EtherCATModule* getEtherCATModule();
-	
+
 protected:
 	void callbackResetError(const std_msgs::Empty& msg);
 	void callbackShutdown(const std_msgs::Int32& msg);
@@ -77,14 +77,14 @@ protected:
 	void publishEthercatInput();
 
 	RobileMasterBattery* battery;
-	
+
 	ros::Publisher batteryPublisher;
 	ros::Publisher processDataInputPublisher;
 	ros::Subscriber resetErrorSubscriber;
 	ros::Subscriber shutdownSubscriber;
 	ros::Subscriber chargerStartSubscriber;
 	ros::Subscriber chargerStopSubscriber;
-		
+
 	std::string topicPrefix;
 };
 

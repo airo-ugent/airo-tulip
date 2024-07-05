@@ -891,7 +891,7 @@ static void ecx_config_find_mappings(ecx_contextt *context, uint8 group)
    }
 }
 
-static void ecx_config_create_input_mappings(ecx_contextt *context, void *pIOmap, 
+static void ecx_config_create_input_mappings(ecx_contextt *context, void *pIOmap,
    uint8 group, int16 slave, uint32 * LogAddr, uint8 * BitPos)
 {
    int BitCount = 0;
@@ -1018,7 +1018,7 @@ static void ecx_config_create_input_mappings(ecx_contextt *context, void *pIOmap
    context->slavelist[slave].FMMUunused = FMMUc;
 }
 
-static void ecx_config_create_output_mappings(ecx_contextt *context, void *pIOmap, 
+static void ecx_config_create_output_mappings(ecx_contextt *context, void *pIOmap,
    uint8 group, int16 slave, uint32 * LogAddr, uint8 * BitPos)
 {
    int BitCount = 0;
@@ -1236,7 +1236,7 @@ int ecx_config_map_group(ecx_contextt *context, void *pIOmap, uint8 group)
             /* create input mapping */
             if (context->slavelist[slave].Ibits)
             {
- 
+
                ecx_config_create_input_mappings(context, pIOmap, group, slave, &LogAddr, &BitPos);
                diff = LogAddr - oLogAddr;
                oLogAddr = LogAddr;
@@ -1335,7 +1335,7 @@ int ecx_config_overlap_map_group(ecx_contextt *context, void *pIOmap, uint8 grou
 
       /* Find mappings and program syncmanagers */
       ecx_config_find_mappings(context, group);
-      
+
       /* do IO mapping of slave and program FMMUs */
       for (slave = 1; slave <= *(context->slavecount); slave++)
       {
@@ -1347,8 +1347,8 @@ int ecx_config_overlap_map_group(ecx_contextt *context, void *pIOmap, uint8 grou
             /* create output mapping */
             if (context->slavelist[slave].Obits)
             {
-               
-               ecx_config_create_output_mappings(context, pIOmap, group, 
+
+               ecx_config_create_output_mappings(context, pIOmap, group,
                   slave, &soLogAddr, &BitPos);
                if (BitPos)
                {
@@ -1360,7 +1360,7 @@ int ecx_config_overlap_map_group(ecx_contextt *context, void *pIOmap, uint8 grou
             /* create input mapping */
             if (context->slavelist[slave].Ibits)
             {
-               ecx_config_create_input_mappings(context, pIOmap, group, 
+               ecx_config_create_input_mappings(context, pIOmap, group,
                   slave, &siLogAddr, &BitPos);
                if (BitPos)
                {

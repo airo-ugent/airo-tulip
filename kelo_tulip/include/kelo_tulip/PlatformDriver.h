@@ -69,7 +69,7 @@ namespace kelo {
 
 struct WheelData {
 	bool enable;
-	
+
 	bool error;
 	bool errorTimestamp;
 
@@ -97,11 +97,11 @@ public:
 	PlatformDriver(const std::vector<WheelConfig>& wheelConfigs, const std::vector<WheelData>& wheelData);
 	virtual ~PlatformDriver();
 
-	virtual bool initEtherCAT2(ecx_contextt* ecx_context, int ecx_slavecount); 
+	virtual bool initEtherCAT2(ecx_contextt* ecx_context, int ecx_slavecount);
 
 	virtual bool initEtherCAT(ec_slavet* ecx_slaves, int ecx_slavecount);
 	virtual bool step();
-	
+
 	virtual bool stepInit();
 	virtual bool stepReady();
 	virtual bool stepActive();
@@ -139,7 +139,7 @@ public:
 	void setWheelsetpointmin(double x);
 
 	const	WheelData* getWheelData(unsigned int wheel);
-	
+
 	int getDriverStatus();
 
 	void resetErrorFlags();
@@ -148,7 +148,7 @@ public:
 	std::vector<double> getEncoderValue(int idx);
 
 	void SetState(int wheel, uint16_t state);
-		
+
 protected:
 	int checkSmartwheelTimestamp();
 	void updateEncoders();
@@ -168,7 +168,7 @@ protected:
 
 	ec_slavet* ecx_slaves;
 	ecx_contextt* ecx_contextp;
-	
+
 	std::vector<EtherCATModule*> modules;
 
 	std::vector<txpdo1_t> processData;
@@ -184,11 +184,11 @@ protected:
 	volatile bool ethercatWkcError;
 	volatile bool flagReconnectSlave;
 	std::vector<bool> wheelEnabled;
-	
+
 	int firstWheel, nWheels;
 	std::vector<WheelConfig> wheelConfigs;
 	std::vector<WheelData> wheelData;
-	
+
 	double maxCalibrationTime;
 	double vCalibration;
 	double currentCalibration;

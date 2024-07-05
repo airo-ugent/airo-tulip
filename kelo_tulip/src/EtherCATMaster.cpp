@@ -94,7 +94,7 @@ bool EtherCATMaster::initEthercat() {
 			return false;
 		}
 		std::cout << "Initializing EtherCAT on " << device << "\n";
-		
+
 		ethercatInitialized = true;
 	}
 
@@ -111,7 +111,7 @@ bool EtherCATMaster::initEthercat() {
 		std::cout << "Found no EtherCAT slaves." << std::endl;
 		return false;
 	}
-	
+
 	for (int i=1; i<=ecx_slavecount; i++) {
 		std::cout << "slave " << i << " has id = " << ecx_slave[i].eep_id << std::endl;
 	}
@@ -120,7 +120,7 @@ bool EtherCATMaster::initEthercat() {
 	// determine expected WKC
 	expectedWKC = (ecx_context.grouplist[0].outputsWKC * 2) + ecx_context.grouplist[0].inputsWKC;
 
-	// initialize modules and return false if any fails	
+	// initialize modules and return false if any fails
 	std::cout << "Modules to init : " << modules.size() << std::endl;
 	for (unsigned int i = 0; i < modules.size(); i++) {
 		std::cout << " Module " << i << " initializing..." << std::endl;
@@ -172,7 +172,7 @@ bool EtherCATMaster::initEthercat() {
 
 	for (int cnt = 1; cnt <= ecx_slavecount; cnt++) {
 		std::cout << "Slave: " << cnt  << " Name: " << ecx_slave[cnt].name  << " Output size: " << ecx_slave[cnt].Obits
-			<< "bits Input size: " << ecx_slave[cnt].Ibits << "bits State: " << ecx_slave[cnt].state  
+			<< "bits Input size: " << ecx_slave[cnt].Ibits << "bits State: " << ecx_slave[cnt].state
 			<< " delay: " << ecx_slave[cnt].pdelay << std::endl; //<< " has dclock: " << (bool)ecx_slave[cnt].hasdc;
 	}
 
@@ -235,7 +235,7 @@ void EtherCATMaster::ethercatHandler() {
 	int timeTillNextEthercatUpdate = 1000; //usec
 
 	ecx_send_processdata(&ecx_context);
-	
+
 	while (!stopThread) {
 		pastTime = boost::posix_time::microsec_clock::local_time() - startTime;
 		timeToWait = timeTillNextEthercatUpdate - pastTime.total_microseconds();
@@ -260,7 +260,7 @@ void EtherCATMaster::ethercatHandler() {
 				std::cout << "WKC error: expected " << expectedWKC << ", got " << wkc << std::endl;
 			ethercatWkcError = true;
 		} else ethercatWkcError = false;
-		
+
 		if (wkc <= 0) {
 			if (communicationErrors == 0) {
 				std::cout << "Receiving data failed" << std::endl;
@@ -301,10 +301,10 @@ void EtherCATMaster::ethercatHandler() {
 			ecx_poperror(&ecx_context, &ec);
 			std::cout << "There is an error in the soem driver" << std::endl;
 		}
-		
+
 		step++;
 	}
-	
+
 	std::cout << "Stopped EtherCAT thread" << std::endl;
 }
 
@@ -322,7 +322,7 @@ void EtherCATMaster::ethercatCheck(void)
 		if( inOP && (wkc < expectedWKC) && (wkcErrorCount < 100))
 			wkcErrorCount++;
 		else
-			wkcErrorCount = 0;	
+			wkcErrorCount = 0;
         if( inOP && ((wkcErrorCount > 1) || ec_group[currentgroup].docheckstate))
         {
             /* one ore more slaves are not responding */
@@ -330,7 +330,7 @@ void EtherCATMaster::ethercatCheck(void)
             ecx_readstate(&ecx_context);
             for (slave = 1; slave <= ecx_slavecount; slave++)
             {
-               if ((ecx_slave[slave].group == currentgroup) && 
+               if ((ecx_slave[slave].group == currentgroup) &&
 			   		(!ecx_slave[slave].islost) &&
 			   		(ecx_slave[slave].state != EC_STATE_OPERATIONAL))
                {

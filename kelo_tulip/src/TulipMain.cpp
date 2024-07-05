@@ -49,7 +49,7 @@
 // create and configure one module
 kelo::EtherCATModuleROS* createModule(ros::NodeHandle& nh, std::string moduleType, std::string moduleName, std::string configTag) {
 	kelo::EtherCATModuleROS* module = NULL;
-		
+
 	if (moduleType == "robile_master_battery") {
 		module = new kelo::RobileMasterBatteryROS();
 	} else if (moduleType == "platform_driver") {
@@ -70,7 +70,7 @@ kelo::EtherCATModuleROS* createModule(ros::NodeHandle& nh, std::string moduleTyp
 		delete module;
 		return NULL;
 	}
-	
+
 	return module;
 }
 
@@ -88,7 +88,7 @@ int main (int argc, char** argv)
 	ros::NodeHandle nh("~");
 
 	std::vector<kelo::EtherCATModuleROS*> rosModules;
-	
+
 	// create modules by iterating through struct in config
 	XmlRpc::XmlRpcValue modulesXML;
 	std::string configModulesTag = "modules";
@@ -104,10 +104,10 @@ int main (int argc, char** argv)
 			std::string moduleType = it->second["type"];
 			std::string configTag = configModulesTag + "/" + moduleName + "/";
 			kelo::EtherCATModuleROS* module = createModule(nh, moduleType, moduleName, configTag);
-			
+
 			if (!module)
 				return -1;
-				
+
 			rosModules.push_back(module);
 		}
 	}
@@ -115,12 +115,12 @@ int main (int argc, char** argv)
 	// legacy config mode for master battery
 	int robileMasterBatteryEthercatNumber = 0;
 	nh.param("robile_master_battery_ethercat_number", robileMasterBatteryEthercatNumber, 0);
-	if (robileMasterBatteryEthercatNumber > 0) {	
+	if (robileMasterBatteryEthercatNumber > 0) {
 		kelo::EtherCATModuleROS* module = new kelo::RobileMasterBatteryROS();
 		if (!module || !module->init(nh, ""))
 			return -1;
-			
-		rosModules.push_back(module);		
+
+		rosModules.push_back(module);
 	}
 
 	// collect EtherCAT modules
@@ -138,7 +138,7 @@ int main (int argc, char** argv)
 	kelo::EtherCATMaster* master = new kelo::EtherCATMaster(device, etherCATmodules);
 	if (!master) {
 		std::cout << "Failed to create EtherCAT master." << std::endl;
-		return -1;		
+		return -1;
 	}
 
 	// initialize EtherCAT
@@ -150,25 +150,25 @@ int main (int argc, char** argv)
 		ROS_ERROR("Failed to initialize EtherCAT, will retry in %.2f s.", delayRetry);
 		ros::WallDuration(delayRetry).sleep();
 	}
-	
+
 	// ROS main loop
 	ros::Rate rate(20.0f); // hz
 	while (ros::ok()) {
-		ros::spinOnce();		
+		ros::spinOnce();
 
 		for (size_t i = 0; i < rosModules.size(); i++)
 			rosModules[i]->step();
-			
+
 		rate.sleep();
 	}
-	
+
 
 	// delete and close everything
 	for (size_t i = 0; i < rosModules.size(); i++)
 		delete rosModules[i];
 
 	delete master;
-	
+
 	ros::shutdown();
 	return 0;
 }

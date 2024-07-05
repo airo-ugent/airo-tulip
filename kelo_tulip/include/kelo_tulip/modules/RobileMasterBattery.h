@@ -54,28 +54,28 @@ class RobileMasterBattery : public EtherCATModule {
 public:
 	RobileMasterBattery(int slaveNumber);
 	virtual ~RobileMasterBattery();
-	
+
 	bool initEtherCAT(ec_slavet* ecx_slaves, int ecx_slavecount);
 	bool initEtherCAT2(ecx_contextt* ecx_context, int ecx_slavecount);
 	bool step();
-	
+
 	const struct RobileMasterBatteryProcessDataInput* getProcessDataInput();
 
 	void resetError();
 	void shutdown(int seconds);
 	void startCharge();
 	void stopCharge();
-	
+
 	void pump(bool enablePump);
 	void dock(bool dock);
 	void undock(bool undock);
-	
+
 	float getVoltage();
-	
+
 private:
 	ec_slavet* ecx_slaves;
 	int slaveNumber;
-	
+
 	bool flagResetError;
 	bool flagShutdown;
 	bool robileCharge;
@@ -88,7 +88,7 @@ private:
 	boost::posix_time::ptime pumpStartTime;
 	boost::posix_time::ptime dockStartTime;
 	boost::posix_time::ptime undockStartTime;
-		
+
 	float voltage;
 };
 
@@ -103,7 +103,7 @@ struct __attribute__((packed)) RobileMasterBatteryProcessDataInput {
 	float    AuxPortCurrent; // Current consumption at Auxiliary port
 	float    GenericData1; 	 // Generic data, might be used for different purposes
 	uint32_t  GenericData2;	 // Generic data, might be used for different purposes
-	
+
 	uint16_t bmsm_PwrDeviceId;
 	uint16_t bmsm_Status;
 	float    bmsm_Voltage;

@@ -78,7 +78,7 @@ PlatformDriver::PlatformDriver(const std::vector<WheelConfig>& wheelConfigs, con
 	maxvlinacc = 0.0025; // per msec, same value for dec
 	maxangleacc = 0.01; // at vlin=0, per msec, same value for dec
 	maxvaacc = 0.01; // per msec, same value for dec
-	
+
 	// status variables
 	state = DRIVER_STATE_INIT;
 	statusError = false;
@@ -124,9 +124,9 @@ bool PlatformDriver::initEtherCAT(ec_slavet* ecx_slaves, int ecx_slavecount) {
 	std::cout << "PlatformDriver InitEtherCAT\n";
 	for (unsigned int i = 0; i < wheelConfigs.size(); i++) {
 		int slave = wheelConfigs[i].ethercatNumber;
-		std::cout << "Wheel #" << i << " is slave #" << slave << std::endl; 
+		std::cout << "Wheel #" << i << " is slave #" << slave << std::endl;
 		if (slave > ecx_slavecount) { // slaves start index 1
-			std::cout << "Found only " << ecx_slavecount << " EtherCAT slaves, but config requires at least " << slave << std::endl; 
+			std::cout << "Found only " << ecx_slavecount << " EtherCAT slaves, but config requires at least " << slave << std::endl;
 			return false;
 		}
 
@@ -141,14 +141,14 @@ bool PlatformDriver::initEtherCAT(ec_slavet* ecx_slaves, int ecx_slavecount) {
 
 bool PlatformDriver::step() {
 	stepCount++;
-	
+
 /*
 	for (unsigned int i = 0; i < nWheels; i++) {
 		int slave = wheelConfigs[i].ethercatNumber;
 		if (ecx_slaves[slave].state == EC_STATE_SAFE_OP + EC_STATE_ERROR) {
 			std::cout << "Trying to reconnect slave " << slave << std::endl;
-	
-		//if (flagReconnectSlave) {	
+
+		//if (flagReconnectSlave) {
 			ecx_slaves[slave].state = EC_STATE_SAFE_OP + EC_STATE_ACK;
 			ecx_writestate(&ecx_context, slave);
 		  ecx_statecheck(&ecx_context, slave, EC_STATE_SAFE_OP, EC_TIMEOUTSTATE);
@@ -157,7 +157,7 @@ bool PlatformDriver::step() {
 		    std::cout << "Failed to reset slave to SAFE_OP.\n";
 			} else {
 				ecx_slaves[slave].state = EC_STATE_OPERATIONAL;
-		
+
 			  ecx_send_processdata(&ecx_context);
 			  ecx_receive_processdata(&ecx_context, EC_TIMEOUTRET);
 				ecx_writestate(&ecx_context, slave);
@@ -190,7 +190,7 @@ bool PlatformDriver::step() {
 		case DRIVER_STATE_READY:  return stepReady();
 		case DRIVER_STATE_ACTIVE: return stepActive();
 		case DRIVER_STATE_ERROR:  return stepError();
-		default: 
+		default:
 			doStop();
 	}
 
@@ -205,17 +205,17 @@ bool PlatformDriver::stepInit() {
 	for (unsigned int wheel = 0; wheel < nWheels; wheel++)
 		if (!hasWheelStatusEnabled(wheel) || hasWheelStatusError(wheel))
 			ready = false;
-	
+
 	if (ready) {
 		state = DRIVER_STATE_READY;
 		std::cout << "PlatformDriver from INIT to READY" << std::endl;
 	}
-		
+
 	if (stepCount > 500 && !ready) {
 		std::cout << "Stopping platform driver, because wheels don't become ready." << std::endl;
 		return false;
 	}
-	
+
 	return true;
 }
 
@@ -230,7 +230,7 @@ bool PlatformDriver::stepReady() {
 		else if (!showedMessageChangeActive) {
 			std::cout << "platform driver is ready, but waiting for signal to become active." << std::endl;
 			showedMessageChangeActive = true;
-		}		
+		}
 	}
 
 	return true;
@@ -330,7 +330,7 @@ std::vector<double> PlatformDriver::getEncoderValue(int idx) {
 		std::cout << "Failed to return encoder value. Encoder index does not match" << std::endl;
 		return std::vector<double>();
 	}
-	
+
 	return sum_encoder[idx];
 }
 
@@ -359,7 +359,7 @@ void PlatformDriver::updateStatusError() {
 	for (unsigned int i = 0; i < nWheels; i++) {
 		if (hasWheelStatusError(i)) {
 			int s1 = processData[i].status1;
-			int s2 = processData[i].status2;		
+			int s2 = processData[i].status2;
 			if (!statusError) {
 				std::cout << "Status error: wheel=" << i << ", status1=" << s1 << ", status2=" << s2 << std::endl;
 				statusError = true;
@@ -368,7 +368,7 @@ void PlatformDriver::updateStatusError() {
 
 		if (!hasWheelStatusEnabled(i) && state != DRIVER_STATE_INIT) {
 			int s1 = processData[i].status1;
-			int s2 = processData[i].status2;		
+			int s2 = processData[i].status2;
 			if (!statusError) {
 				std::cout << "Wheel got disabled: wheel=" << i << ", status1=" << s1 << ", status2=" << s2 << std::endl;
 				statusError = true;
@@ -413,7 +413,7 @@ void PlatformDriver::setWheelsEnable(std::vector<int> values) {
 		std::cout << "Number of wheels do not match. Ignoring enable command" << std::endl;
 		return;
 	}
-	
+
 	for (int i = 0; i < wheelEnabled.size(); i++) {
 		if (values[i] == 1)
 			wheelEnabled[i] = true;
@@ -450,7 +450,7 @@ int PlatformDriver::checkSmartwheelTimestamp() {
 
 		swOK = swOK & !error;
 	}
-	
+
 	int result = 4;
 	if (swOK) {
 		result = 2;
@@ -480,7 +480,7 @@ void PlatformDriver::updateEncoders() {
 		}
 		encoderInitialized = true;
 	}
-	
+
 	//count accumulative encoder value
 	for (int i = 0; i < nWheels; i++) {
 		txpdo1_t* wData = getWheelProcessData(i);
@@ -493,15 +493,15 @@ void PlatformDriver::updateEncoders() {
 				sum_encoder[i][0] += curr_encoder1 - prev_encoder[i][0] - 2 * M_PI;
 		} else
 			sum_encoder[i][0] += curr_encoder1 - prev_encoder[i][0];
-			
+
 		if (fabs(curr_encoder2 - prev_encoder[i][1]) > M_PI) {
 			if (curr_encoder2 < prev_encoder[i][1])
 				sum_encoder[i][1] += curr_encoder2 - prev_encoder[i][1] + 2 * M_PI;
 			else
 				sum_encoder[i][1] += curr_encoder2 - prev_encoder[i][1] - 2 * M_PI;
 		} else
-			sum_encoder[i][1] += curr_encoder2 - prev_encoder[i][1];	
-		
+			sum_encoder[i][1] += curr_encoder2 - prev_encoder[i][1];
+
 		prev_encoder[i][0] = curr_encoder1;
 		prev_encoder[i][1] = curr_encoder2;
 	}
@@ -524,7 +524,7 @@ void PlatformDriver::doStop() {
 			rxdata.command1 = COM1_ENABLE1 | COM1_ENABLE2 | COM1_MODE_VELOCITY;
 		else
 			rxdata.command1 = COM1_MODE_VELOCITY;
-		
+
 		setWheelProcessData(i, &rxdata);
 	}
 }
@@ -543,13 +543,13 @@ void PlatformDriver::doControl() {
 
 	// update desired velocity of platform, based on target velocity and veloity ramps
 	velocityPlatformController.calculatePlatformRampedVelocities();
-	
+
 	for (size_t i = 0; i < nWheels; i++) {
 		if (wheelEnabled[i])
 			rxdata.command1 = COM1_ENABLE1 | COM1_ENABLE2 | COM1_MODE_VELOCITY;
 		else
 			rxdata.command1 = COM1_MODE_VELOCITY;
-		
+
 		txpdo1_t* wheel_data = getWheelProcessData(i);
 
 		float setpoint1, setpoint2;
@@ -576,7 +576,7 @@ void PlatformDriver::doControl() {
 		/* send calculated target velocity values to EtherCAT */
 		rxdata.setpoint1 = setpoint1;
 		rxdata.setpoint2 = setpoint2;
-		
+
 		setWheelProcessData(i, &rxdata);
 	}
 }

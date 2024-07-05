@@ -60,7 +60,7 @@ struct WheelModel {
 	bool canPivot;
 	double velocitylimit;    // [rad/s] for one hubwheel
 	double currentlimit;
-	
+
 	WheelModel() {
 		name = "KELOdrive105";
 		active = true;
