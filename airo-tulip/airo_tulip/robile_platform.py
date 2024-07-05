@@ -16,10 +16,12 @@ class RobilePlatform():
         self._driver = PlatformDriver(self._master, wheel_configs)
         self._monitor = PlatformMonitor(self._master, wheel_configs)
 
-    def get_driver(self) -> PlatformDriver:
+	@property
+    def driver(self) -> PlatformDriver:
         return self._driver
 
-    def get_monitor(self) -> PlatformMonitor:
+	@property
+    def monitor(self) -> PlatformMonitor:
         return self._monitor
 
     def init_ethercat(self) -> bool:
