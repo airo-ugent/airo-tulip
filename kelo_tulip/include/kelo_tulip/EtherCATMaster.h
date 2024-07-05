@@ -97,14 +97,14 @@ protected:
 	ec_eepromSMt ec_SM;
 	ec_eepromFMMUt ec_FMMU;
 	boolean EcatError;
-	int64 ec_DCtime;			   
+	int64 ec_DCtime;
 	ecx_portt ecx_port;
 	ecx_redportt ecx_redport;
 	ecx_contextt ecx_context;
 	int expectedWKC;
 	volatile int wkc;
 	bool inOP = false;
-	
+
 	std::vector<EtherCATModule*> modules;
 
 	char IOmap[4096];

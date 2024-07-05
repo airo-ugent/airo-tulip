@@ -165,7 +165,7 @@ int ecx_setupnic(ecx_portt *port, const char *ifname, int secondary)
    if (ioctl(*bpf, BIOCSBLEN, &buffer_len) == -1) {
      perror("BIOCGBLEN");
    }
-   
+
    if (buffer_len < 1518) {
      printf("buffer_len %d < 1518\n", buffer_len);
      return 0;
@@ -191,7 +191,7 @@ int ecx_setupnic(ecx_portt *port, const char *ifname, int secondary)
      perror("BIOCPROMISC");
      return 0;
    }
-   
+
    /* Allow to have custom source address */
    if (ioctl(*bpf, BIOCSHDRCMPLT, &true_val) == -1) {
      perror("BIOCSHDRCMPLT");

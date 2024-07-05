@@ -50,7 +50,7 @@ RobileMasterBattery::RobileMasterBattery(int slaveNumber) : EtherCATModule() {
 	this->slaveNumber = slaveNumber;
 
 	ecx_slaves = 0;
-	
+
 	flagResetError = false;
 	flagShutdown = false;
 	robileCharge = false;
@@ -59,7 +59,7 @@ RobileMasterBattery::RobileMasterBattery(int slaveNumber) : EtherCATModule() {
 	robileEnableUndock = false;
 
 	autoResetError = false;
-	
+
 	voltage = 0;
 }
 
@@ -76,10 +76,10 @@ bool RobileMasterBattery::initEtherCAT(ec_slavet* ecx_slaves, int ecx_slavecount
 
 	if (!(slaveNumber > 0))
 		return false;
-		
-	std::cout << "Robile Master Battery is slave #" << slaveNumber << std::endl; 
+
+	std::cout << "Robile Master Battery is slave #" << slaveNumber << std::endl;
 	if (slaveNumber > ecx_slavecount) { // slaves start index 1
-		std::cout << "Found only " << ecx_slavecount << " EtherCAT slaves, but config requires at least " << slaveNumber << std::endl; 
+		std::cout << "Found only " << ecx_slavecount << " EtherCAT slaves, but config requires at least " << slaveNumber << std::endl;
 		return false;
 	}
 	if (ecx_slaves[slaveNumber].eep_id != 34603264 && ecx_slaves[slaveNumber].eep_id != 34603265 && ecx_slaves[slaveNumber].eep_id != 0) {
@@ -95,7 +95,7 @@ bool RobileMasterBattery::step() {
 		return false;
 
  	RobileMasterBatteryProcessDataInput* input = (RobileMasterBatteryProcessDataInput*) ecx_slaves[slaveNumber].inputs;
-	
+
 	voltage = input->bmsm_Voltage;
 
 	// debug output
@@ -111,7 +111,7 @@ bool RobileMasterBattery::step() {
 	data.Command2 = 0;
 	data.Shutdown = 0;
 	data.PwrDeviceId = 0;
-	
+
 	if (flagShutdown)
 		data.Shutdown = 0x80;
 
@@ -152,7 +152,7 @@ bool RobileMasterBattery::step() {
 		data.Command1 = 0x0;
 	}
 
-	*((RobileMasterBatteryProcessDataOutput*) ecx_slaves[slaveNumber].outputs) = data;		
+	*((RobileMasterBatteryProcessDataOutput*) ecx_slaves[slaveNumber].outputs) = data;
 
 	return true;
 }

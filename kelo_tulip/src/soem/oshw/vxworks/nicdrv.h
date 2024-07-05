@@ -3,9 +3,9 @@
  * LICENSE file in the project root for full license information
  */
 
-/** \file 
+/** \file
  * \brief
- * Headerfile for nicdrv.c 
+ * Headerfile for nicdrv.c
  */
 
 #ifndef _nicdrvh_
@@ -24,7 +24,7 @@ typedef struct ETHERCAT_PKT_DEV
 {
    struct ecx_port  *port;
    void             *pCookie;
-   END_OBJ          *endObj; 
+   END_OBJ          *endObj;
    UINT32           redundant;
    UINT32           tx_count;
    UINT32           rx_count;
@@ -44,12 +44,12 @@ typedef struct
    int         (*rxbufstat)[EC_MAXBUF];
    /** received MAC source address (middle word) */
    int         (*rxsa)[EC_MAXBUF];
-} ec_stackT;   
+} ec_stackT;
 
 /** pointer structure to buffers for redundant port */
 typedef struct ecx_redport
 {
-   /** Stack reference */   
+   /** Stack reference */
    ec_stackT stack;
    /** Packet device instance */
    ETHERCAT_PKT_DEV pktDev;
@@ -66,7 +66,7 @@ typedef struct ecx_redport
 /** pointer structure to buffers, vars and mutexes for port instantiation */
 typedef struct ecx_port
 {
-   /** Stack reference */   
+   /** Stack reference */
    ec_stackT stack;
    /** Packet device instance */
    ETHERCAT_PKT_DEV pktDev;
@@ -89,7 +89,7 @@ typedef struct ecx_port
    /** current redundancy state */
    int redstate;
    /** pointer to redundancy port and buffers */
-   ecx_redportt *redport;   
+   ecx_redportt *redport;
    /** Semaphore to protect single resources */
    SEM_ID  sem_get_index;
    /** MSG Q for receive callbacks to post into */

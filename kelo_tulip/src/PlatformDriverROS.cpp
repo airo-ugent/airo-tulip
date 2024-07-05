@@ -61,7 +61,7 @@ PlatformDriverROS::PlatformDriverROS()
 {
 	s_w = 0.01; //caster offset of a smartWheel
 	d_w = 0.0775; //distance between the left and the right wheel
-	s_d_ratio = s_w / d_w;	
+	s_d_ratio = s_w / d_w;
 	r_w = 0.0524; //the radius of the wheel
 
 	nWheels = 0;
@@ -94,7 +94,7 @@ bool PlatformDriverROS::init(ros::NodeHandle& nh, std::string configPrefix) {
 		ROS_ERROR("Missing number of wheels in config file");
 		return -1;
 	}
-	
+
 	if (nWheels < 0) {
 		ROS_ERROR("Invalid number of wheels in config file");
 		return -1;
@@ -113,7 +113,7 @@ bool PlatformDriverROS::init(ros::NodeHandle& nh, std::string configPrefix) {
 
 	driver = createDriver();
 
-	// set driver control parameters		
+	// set driver control parameters
 	double x;
 	if (nh.getParam("current_stop", x))
 		driver->setCurrentStop(x);
@@ -150,7 +150,7 @@ bool PlatformDriverROS::init(ros::NodeHandle& nh, std::string configPrefix) {
 		activeByJoypad = b;
 	if (!activeByJoypad)
 		driver->setCanChangeActive();
-		
+
 	if (nh.getParam("current_max", x)) {
 		currentMax = x;
 	}
@@ -185,7 +185,7 @@ bool PlatformDriverROS::step() {
 
 	//calculate robot displacement and current pose
 	calculateRobotPose(vx, vy, va);
-			
+
 	//publish the odometry
 	publishOdometry(vx, vy, va);
 
@@ -193,7 +193,7 @@ bool PlatformDriverROS::step() {
 	geometry_msgs::TransformStamped odom_trans;
 	createOdomToBaseLinkTransform(odom_trans);
 	odom_broadcaster->sendTransform(odom_trans);
-		
+
 /*
 		//publish smartwheel values
 		std_msgs::Float64MultiArray processDataValues;
@@ -257,7 +257,7 @@ void PlatformDriverROS::readWheelConfig(const ros::NodeHandle& nh) {
 		kelo::WheelConfig config;
 		config.enable = true;
 		config.reverseVelocity = true;
-		bool ok =		
+		bool ok =
 		     nh.getParam(groupName + "/ethercat_number", config.ethercatNumber)
 		  && nh.getParam(groupName + "/x", config.x)
 			&& nh.getParam(groupName + "/y", config.y)
@@ -295,7 +295,7 @@ void PlatformDriverROS::checkAndPublishSmartWheelStatus() {
 	int status = driver->getDriverStatus();
 	int state = (status & 0x000000ff);
 	int error = (status & 0xffffff00);
-		
+
 	std_msgs::Int32 statusMsg;
 	statusMsg.data = status;
 	statusPublisher.publish(statusMsg);
@@ -341,13 +341,13 @@ void PlatformDriverROS::initializeEncoderValue() {
 
 void PlatformDriverROS::calculateRobotVelocity(double& vx, double& vy, double& va, double& encDisplacement) {
 	double dt = 0.05;
-	
+
 	//initialize the variables
 	vx = 0;
 	vy = 0;
 	va = 0;
 	encDisplacement = 0;
-	
+
 	for (int i = 0; i < nWheels; i++) {
 		txpdo1_t* swData = driver->getWheelProcessData(i);
 		std::vector<double> encoderValue = driver->getEncoderValue(i);
@@ -363,7 +363,7 @@ void PlatformDriverROS::calculateRobotVelocity(double& vx, double& vy, double& v
 			vy += r_w * ((wl + wr) * sin(theta)); // - 2 * s_d_ratio * (wl - wr) * cos(theta));
 		} else {
 			vx -= r_w * ((wl + wr) * cos(theta)); // + 2 * s_d_ratio * (wl - wr) * sin(theta));
-			vy -= r_w * ((wl + wr) * sin(theta)); // - 2 * s_d_ratio * (wl - wr) * cos(theta));		
+			vy -= r_w * ((wl + wr) * sin(theta)); // - 2 * s_d_ratio * (wl - wr) * cos(theta));
 		}
 		double wangle = atan2(wheelConfigs[i].y, wheelConfigs[i].x);
 		double d = sqrt(wheelConfigs[i].x * wheelConfigs[i].x + wheelConfigs[i].y * wheelConfigs[i].y);
@@ -371,7 +371,7 @@ void PlatformDriverROS::calculateRobotVelocity(double& vx, double& vy, double& v
 			va += r_w * (2 * (wr - wl) * s_d_ratio * cos(theta - wangle) + (wr + wl) * sin(theta - wangle)) / d;
 		} else{
 			va += r_w * (2 * (wr - wl) * s_d_ratio * cos(theta - wangle) - (wr + wl) * sin(theta - wangle)) / d;
-		}			
+		}
 		//va += r_w * (wr + wl) * sin(theta - wangle) / d;
 		//va += 4*swData->gyro_y;
 	}
@@ -384,7 +384,7 @@ void PlatformDriverROS::calculateRobotVelocity(double& vx, double& vy, double& v
 void PlatformDriverROS::calculateRobotPose(double vx, double vy, double va) {
 	double dt = 0.05;
 	double dx, dy;
-	
+
 	if (fabs(va) > 0.001) {
 		double vlin = sqrt(vx * vx + vy * vy);
 		double direction = atan2(vy, vx);
@@ -404,7 +404,7 @@ void PlatformDriverROS::calculateRobotPose(double vx, double vy, double va) {
 		dx = vx * dt;
 		dy = vy * dt;
 	}
-	
+
 	//transform displacement to odom frame
 	odomx += dx * cos(odoma) - dy * sin(odoma);
 	odomy += dx * sin(odoma) + dy * cos(odoma);
@@ -441,7 +441,7 @@ void PlatformDriverROS::publishOdometry(double vx, double vy, double va) {
 	odom.twist.twist.angular.z = va;
 	odomPublisher.publish(odom);
 }
-		
+
 void PlatformDriverROS::createOdomToBaseLinkTransform(geometry_msgs::TransformStamped& odom_trans) {
 	geometry_msgs::Quaternion odom_quat = tf::createQuaternionMsgFromYaw(odoma);
 	odom_trans.header.stamp = ros::Time::now();
@@ -511,7 +511,7 @@ void PlatformDriverROS::publishBattery() {
 		double x = driver->getWheelProcessData(i)->voltage_bus;
 		if (x > volt)
 			volt = x;
-	}	
+	}
 	msg.data = volt;
 	batteryPublisher.publish(msg);
 }
@@ -557,7 +557,7 @@ void PlatformDriverROS::joyCallbackImpl(const sensor_msgs::Joy::ConstPtr& joy) {
 
 	if (useJoy) {
 		driver->setTargetVelocity(joy->axes[1] * joyVlinMax * joyScale, joy->axes[0] * joyVlinMax * joyScale, joy->axes[2] * joyVaMax * joyScale);
-		
+
 		if (activeByJoypad)
 			driver->setCanChangeActive();
 	}
