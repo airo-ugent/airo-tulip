@@ -18,6 +18,19 @@ Later on, we'll add more types of controllers to also support e.g., torque contr
 
 The `RobilePlatform` class instantiates a `PlatformDriver` and a `PlatformMonitor` in its constructor. These objects are available in the `driver` and `monitor` properties of the `RobilePlatform` class respectively. The `VelocityPlatformController` is instantiated by the `PlatformDriver` but not available through properties in the `PlatformDriver`. One can set a target velocity using a wrapper method in the `RobilePlatform` class.
 
+### Communication with `airo-tulip`
+
+The `airo-tulip` package has a subpackage called `server`. When working with the KELO Robile platform, you want to run the `TulipServer` on boot, typically,
+so that commands can be sent over the network. The `TulipServer` takes a desired IP address and port, which can be used to connect to it via a client.
+A client example can be found in `test_client.py`.
+
+The server is implemented via [0MQ](https://pyzmq.readthedocs.io/en/latest/), so it does not work over raw TCP sockets, but rather uses a higher level of abstraction.
+The server accepts messages, defined in `airo_tulip.server.messages`, which can be sent using `zmq.Socket.send_pyobj`: these messages are pickled,
+resp. unpickled, and contain the relevant information to drive the KELO Robile system via the `RobilePlatform` interface.
+
+When using `airo-tulip`, we recommend building an abstraction layer over your client, so that users only need to call methods such as
+`robile.set_platform_velocity_target()` and do not need to work with message objects directly.
+
 ## Velocity limits
 
 The drives of the KELO Robile are quite strong, so care should be taken when controlling them.
