@@ -16,7 +16,7 @@ extern "C"
 {
 #endif
 
-#include <ethercattype.h> 
+#include <ethercattype.h>
 
 /** DNS length according to ETG 1000.6 */
 #define EOE_DNS_NAME_LENGTH  32
@@ -168,27 +168,27 @@ typedef struct PACKED
 PACKED_END
 
 int ecx_EOEdefinehook(ecx_contextt *context, void *hook);
-int ecx_EOEsetIp(ecx_contextt *context, 
-   uint16 slave, 
-   uint8 port, 
-   eoe_param_t * ipparam, 
+int ecx_EOEsetIp(ecx_contextt *context,
+   uint16 slave,
+   uint8 port,
+   eoe_param_t * ipparam,
    int timeout);
-int ecx_EOEgetIp(ecx_contextt *context, 
-   uint16 slave, 
-   uint8 port, 
-   eoe_param_t * ipparam, 
+int ecx_EOEgetIp(ecx_contextt *context,
+   uint16 slave,
+   uint8 port,
+   eoe_param_t * ipparam,
    int timeout);
-int ecx_EOEsend(ecx_contextt *context, 
-   uint16 slave, 
-   uint8 port, 
-   int psize, 
-   void *p, 
+int ecx_EOEsend(ecx_contextt *context,
+   uint16 slave,
+   uint8 port,
+   int psize,
+   void *p,
    int timeout);
-int ecx_EOErecv(ecx_contextt *context, 
-   uint16 slave, 
-   uint8 port, 
-   int * psize, 
-   void *p, 
+int ecx_EOErecv(ecx_contextt *context,
+   uint16 slave,
+   uint8 port,
+   int * psize,
+   void *p,
    int timeout);
 int ecx_EOEreadfragment(
    ec_mbxbuft * MbxIn,

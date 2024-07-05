@@ -58,7 +58,7 @@ class EtherCATModuleROS {
 public:
 	//! Default constructor.
 	EtherCATModuleROS();
-	
+
 	//! Default destructor.
 	virtual ~EtherCATModuleROS();
 

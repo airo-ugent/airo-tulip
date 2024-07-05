@@ -59,7 +59,7 @@ class PlatformDriverROS : public EtherCATModuleROS {
 public:
 	//! Default constructor.
 	PlatformDriverROS();
-	
+
 	//! Default destructor.
 	virtual ~PlatformDriverROS();
 
@@ -79,11 +79,11 @@ public:
 
 protected:
 	virtual kelo::PlatformDriver* createDriver();
-	
+
 	void readWheelModels(const ros::NodeHandle& nh);
 	void readWheelConfig(const ros::NodeHandle& nh);
 	void checkAndPublishSmartWheelStatus();
-	
+
 	void initializeEncoderValue();
 	void calculateRobotVelocity(double& vx, double& vy, double& va, double& encDisplacement);
 	void calculateRobotPose(double vx, double vy, double va);
@@ -125,10 +125,10 @@ protected:
 	ros::Subscriber cmdVelSubscriber;
 	ros::Subscriber resetSubscriber;
 	ros::Subscriber enableSubscriber;
-		
+
 	double s_w; //caster offset of a smartWheel
 	double d_w; //distance between the left and the right wheel
-	double s_d_ratio;	
+	double s_d_ratio;
 	double r_w; //the radius of the wheel
 
 	int nWheels;
@@ -147,7 +147,7 @@ protected:
 	std::vector<double> prev_right_enc;
 	double odomx;
 	double odomy;
-	double odoma;		
+	double odoma;
 };
 
 } // namespace kelp

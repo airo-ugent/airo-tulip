@@ -1,13 +1,14 @@
+import math
 from enum import Enum
 from typing import List
-import math
-import pysoem
-from loguru import logger
 
+import pysoem
 from airo_tulip.controllers.velocity_platform_controller import VelocityPlatformController
 from airo_tulip.ethercat import *
 from airo_tulip.structs import WheelConfig
 from airo_tulip.util import *
+from loguru import logger
+
 
 class PlatformDriverState(Enum):
     UNDEFINED = 0x00
@@ -18,7 +19,6 @@ class PlatformDriverState(Enum):
 
 
 class PlatformDriver:
-
     def __init__(self, master: pysoem.Master, wheel_configs: List[WheelConfig]):
         self._master = master
         self._wheel_configs = wheel_configs
@@ -50,9 +50,9 @@ class PlatformDriver:
         self._vpc.initialise(self._wheel_configs)
 
     def set_platform_velocity_target(self, vel_x: float, vel_y: float, vel_a: float) -> None:
-        if math.sqrt(vel_x**2 + vel_y**2) > 1.0:
+        if math.sqrt(vel_x ** 2 + vel_y ** 2) > 1.0:
             raise ValueError("Cannot set target linear velocity higher than 1.0 m/s")
-        if abs(vel_a) > math.pi/8:
+        if abs(vel_a) > math.pi / 8:
             raise ValueError("Cannot set target angular velocity higher than pi/8 rad/s")
         self._vpc.set_platform_velocity_target(vel_x, vel_y, vel_a)
 
@@ -193,45 +193,45 @@ class PlatformDriver:
 
             self._set_process_data(i, data)
 
-        logger.debug("")
 
-    def _update_encoders(self):
-        if not self._encoder_initialized:
-            for i in range(self._num_wheels):
-                data = self._process_data[i]
-                self._prev_encoder[i][0] = data.encoder_1
-                self._prev_encoder[i][1] = data.encoder_2
-            encoder_initialized = True
-
-        # count accumulative encoder value
+def _update_encoders(self):
+    if not self._encoder_initialized:
         for i in range(self._num_wheels):
             data = self._process_data[i]
-            curr_encoder1 = data.encoder_1
-            curr_encoder2 = data.encoder_2
+            self._prev_encoder[i][0] = data.encoder_1
+            self._prev_encoder[i][1] = data.encoder_2
 
-            if abs(curr_encoder1 - self._prev_encoder[i][0]) > math.pi:
-                if curr_encoder1 < self._prev_encoder[i][0]:
-                    self._sum_encoder[i][0] += curr_encoder1 - self._prev_encoder[i][0] + 2 * math.pi
-                else:
-                    self._sum_encoder[i][0] += curr_encoder1 - self._prev_encoder[i][0] - 2 * math.pi
+    # count accumulative encoder value
+    for i in range(self._num_wheels):
+        data = self._process_data[i]
+        curr_encoder1 = data.encoder_1
+        curr_encoder2 = data.encoder_2
+
+        if abs(curr_encoder1 - self._prev_encoder[i][0]) > math.pi:
+            if curr_encoder1 < self._prev_encoder[i][0]:
+                self._sum_encoder[i][0] += curr_encoder1 - self._prev_encoder[i][0] + 2 * math.pi
             else:
-                self._sum_encoder[i][0] += curr_encoder1 - self._prev_encoder[i][0]
+                self._sum_encoder[i][0] += curr_encoder1 - self._prev_encoder[i][0] - 2 * math.pi
+        else:
+            self._sum_encoder[i][0] += curr_encoder1 - self._prev_encoder[i][0]
 
-            if abs(curr_encoder2 - self._prev_encoder[i][1]) > math.pi:
-                if curr_encoder2 < self._prev_encoder[i][1]:
-                    self._sum_encoder[i][1] += curr_encoder2 - self._prev_encoder[i][1] + 2 * math.pi
-                else:
-                    self._sum_encoder[i][1] += curr_encoder2 - self._prev_encoder[i][1] - 2 * math.pi
+        if abs(curr_encoder2 - self._prev_encoder[i][1]) > math.pi:
+            if curr_encoder2 < self._prev_encoder[i][1]:
+                self._sum_encoder[i][1] += curr_encoder2 - self._prev_encoder[i][1] + 2 * math.pi
             else:
-                self._sum_encoder[i][1] += curr_encoder2 - self._prev_encoder[i][1]
+                self._sum_encoder[i][1] += curr_encoder2 - self._prev_encoder[i][1] - 2 * math.pi
+        else:
+            self._sum_encoder[i][1] += curr_encoder2 - self._prev_encoder[i][1]
 
-            self._prev_encoder[i][0] = curr_encoder1
-            self._prev_encoder[i][1] = curr_encoder2
+        self._prev_encoder[i][0] = curr_encoder1
+        self._prev_encoder[i][1] = curr_encoder2
 
-    def _get_process_data(self, wheel_index: int) -> TxPDO1:
-        ethercat_index = self._wheel_configs[wheel_index].ethercat_number
-        return TxPDO1.from_buffer_copy(self._master.slaves[ethercat_index - 1].input)
 
-    def _set_process_data(self, wheel_index: int, data: RxPDO1) -> None:
-        ethercat_index = self._wheel_configs[wheel_index].ethercat_number
-        self._master.slaves[ethercat_index - 1].output = bytes(data)
+def _get_process_data(self, wheel_index: int) -> TxPDO1:
+    ethercat_index = self._wheel_configs[wheel_index].ethercat_number
+    return TxPDO1.from_buffer_copy(self._master.slaves[ethercat_index - 1].input)
+
+
+def _set_process_data(self, wheel_index: int, data: RxPDO1) -> None:
+    ethercat_index = self._wheel_configs[wheel_index].ethercat_number
+    self._master.slaves[ethercat_index - 1].output = bytes(data)

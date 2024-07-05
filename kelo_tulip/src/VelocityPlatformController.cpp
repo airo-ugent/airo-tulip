@@ -57,7 +57,7 @@ namespace kelo
         platform_ramped_vel_.x = 0.0f;
         platform_ramped_vel_.y = 0.0f;
         platform_ramped_vel_.a = 0.0f;
-        
+
         // set default limits
         platform_limits_.max_vel_linear = 1.0;
         platform_limits_.max_vel_angular = 1.0;
@@ -65,7 +65,7 @@ namespace kelo
         platform_limits_.max_acc_angular = 0.8;
         platform_limits_.max_dec_linear = 0.5;
         platform_limits_.max_dec_angular = 0.8;
-        
+
         first_ramping_call = true;
     }
 
@@ -121,7 +121,7 @@ namespace kelo
     {
         platform_limits_.max_vel_linear = max_vel_linear;
     }
-    
+
     void VelocityPlatformController::setPlatformMaxAngVelocity(float max_vel_angular)
     {
         platform_limits_.max_vel_angular = max_vel_angular;
@@ -141,23 +141,23 @@ namespace kelo
     {
         platform_limits_.max_dec_linear = max_dec_linear;
     }
-    
+
     void VelocityPlatformController::setPlatformMaxAngDeceleration(float max_dec_angular)
     {
         platform_limits_.max_dec_angular = max_dec_angular;
     }
-            
+
     void VelocityPlatformController::calculatePlatformRampedVelocities()
     {
         boost::posix_time::ptime now = boost::posix_time::microsec_clock::local_time();
-        	
+
         // if this is called the first time, calculating time delta that way makes no sense
         if (first_ramping_call) {
             first_ramping_call = false;
             time_last_ramping = now;
             return;
         }
-        	
+
         float time_delta = (now - time_last_ramping).total_microseconds() / 1000000.0f;
 
         // velocity ramps
@@ -196,12 +196,12 @@ namespace kelo
                 platform_ramped_vel_.a - time_delta * platform_limits_.max_acc_angular
             );
         }
-        
+
         // velocity limits
         platform_ramped_vel_.x = Utils::clip(platform_ramped_vel_.x, platform_limits_.max_vel_linear, -platform_limits_.max_vel_linear);
         platform_ramped_vel_.y = Utils::clip(platform_ramped_vel_.y, platform_limits_.max_vel_linear, -platform_limits_.max_vel_linear);
         platform_ramped_vel_.a = Utils::clip(platform_ramped_vel_.a, platform_limits_.max_vel_angular, -platform_limits_.max_vel_angular);
-      	
+
         time_last_ramping = now;
     }
 
@@ -231,7 +231,7 @@ namespace kelo
         /* pivot angle to unity vector */
         Point2D unit_pivot_vector;
         unit_pivot_vector.x = cos(pivot_angle);
-        unit_pivot_vector.y = sin(pivot_angle); 
+        unit_pivot_vector.y = sin(pivot_angle);
 
         /* position of wheels relative to platform centre */
         Point2D position_l, position_r;

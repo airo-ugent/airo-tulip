@@ -58,9 +58,9 @@ int osal_usleep (uint32 usec)
    taskDelay(usec / 1000);
    return 0;
 #else
-    /* The suspension may be longer than requested due to the rounding up of 
+    /* The suspension may be longer than requested due to the rounding up of
      * the request to the timer's resolution or to other scheduling activities
-     * (e.g., a higher priority task intervenes). 
+     * (e.g., a higher priority task intervenes).
      */
    struct timespec ts;
    ts.tv_sec = usec / USECS_PER_SEC;
@@ -153,18 +153,18 @@ int osal_thread_create(void *thandle, int stacksize, void *func, void *param)
    *tid = taskSpawn (task_name, ECAT_TASK_PRIO_LOW,
                       ecatTaskOptions, ECAT_STACK_SIZE,
                       func_ptr, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0);
-   if(*tid == TASK_ID_ERROR) 
+   if(*tid == TASK_ID_ERROR)
    {
       return 0;
    }
-   
+
    return 1;
 }
 
 int osal_thread_create_rt(void *thandle, int stacksize, void *func, void *param)
 {
    char task_name[20];
-   TASK_ID * tid = (TASK_ID *)thandle; 
+   TASK_ID * tid = (TASK_ID *)thandle;
    FUNCPTR  func_ptr = func;
    _Vx_usr_arg_t arg1 = (_Vx_usr_arg_t)param;
 
@@ -174,7 +174,7 @@ int osal_thread_create_rt(void *thandle, int stacksize, void *func, void *param)
                       ecatTaskOptions, ECAT_STACK_SIZE,
                       func_ptr, arg1, 0, 0, 0, 0, 0, 0, 0, 0, 0);
 
-   if(*tid == TASK_ID_ERROR) 
+   if(*tid == TASK_ID_ERROR)
    {
       return 0;
    }

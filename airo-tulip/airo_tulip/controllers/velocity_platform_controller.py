@@ -1,16 +1,18 @@
-from typing import List, Tuple
 import math
 import time
+from typing import List, Tuple
 
-from airo_tulip.structs import Attitude2D, WheelConfig, WheelParamVelocity, PlatformLimits, Point2D
-from airo_tulip.util import *
+from airo_tulip.structs import Attitude2D, PlatformLimits, Point2D, WheelConfig, WheelParamVelocity
+from airo_tulip.util import clip, clip_angle, get_shortest_angle
+
 
 class VelocityPlatformController:
     """
     Collection of methods to control and interface with the different drives of the mobile platform.
-    
+
     To be completed...
     """
+
     def __init__(self):
         self._platform_target_vel = Attitude2D()
         self._platform_ramped_vel = Attitude2D()
@@ -46,9 +48,9 @@ class VelocityPlatformController:
             self._wheel_params.append(wheel_param)
 
     def set_platform_velocity_target(self, vel_x: float, vel_y: float, vel_a: float) -> None:
-        self._platform_target_vel.x = 0.0 if ( abs(vel_x) < 0.0000001 ) else vel_x
-        self._platform_target_vel.y = 0.0 if ( abs(vel_y) < 0.0000001 ) else vel_y
-        self._platform_target_vel.a = 0.0 if ( abs(vel_a) < 0.0000001 ) else vel_a
+        self._platform_target_vel.x = 0.0 if (abs(vel_x) < 0.0000001) else vel_x
+        self._platform_target_vel.y = 0.0 if (abs(vel_y) < 0.0000001) else vel_y
+        self._platform_target_vel.a = 0.0 if (abs(vel_a) < 0.0000001) else vel_a
 
     def set_platform_max_velocity(self, max_vel_linear: float, max_vel_angular: float) -> None:
         self._platform_limits.max_vel_linear = max_vel_linear
@@ -73,50 +75,58 @@ class VelocityPlatformController:
 
         # Velocity ramps
         if self._platform_ramped_vel.x >= 0:
-            self._platform_ramped_vel.x = clip(self._platform_target_vel.x,
+            self._platform_ramped_vel.x = clip(
+                self._platform_target_vel.x,
                 self._platform_ramped_vel.x + time_delta * self._platform_limits.max_acc_linear,
-                self._platform_ramped_vel.x - time_delta * self._platform_limits.max_dec_linear
+                self._platform_ramped_vel.x - time_delta * self._platform_limits.max_dec_linear,
             )
         else:
-            self._platform_ramped_vel.x = clip(self._platform_target_vel.x,
+            self._platform_ramped_vel.x = clip(
+                self._platform_target_vel.x,
                 self._platform_ramped_vel.x + time_delta * self._platform_limits.max_dec_linear,
-                self._platform_ramped_vel.x - time_delta * self._platform_limits.max_acc_linear
+                self._platform_ramped_vel.x - time_delta * self._platform_limits.max_acc_linear,
             )
-        
+
         if self._platform_ramped_vel.y >= 0:
-            self._platform_ramped_vel.y = clip(self._platform_target_vel.y,
+            self._platform_ramped_vel.y = clip(
+                self._platform_target_vel.y,
                 self._platform_ramped_vel.y + time_delta * self._platform_limits.max_acc_linear,
-                self._platform_ramped_vel.y - time_delta * self._platform_limits.max_dec_linear
+                self._platform_ramped_vel.y - time_delta * self._platform_limits.max_dec_linear,
             )
         else:
-            self._platform_ramped_vel.y = clip(self._platform_target_vel.y,
+            self._platform_ramped_vel.y = clip(
+                self._platform_target_vel.y,
                 self._platform_ramped_vel.y + time_delta * self._platform_limits.max_dec_linear,
-                self._platform_ramped_vel.y - time_delta * self._platform_limits.max_acc_linear
+                self._platform_ramped_vel.y - time_delta * self._platform_limits.max_acc_linear,
             )
-        
+
         if self._platform_ramped_vel.a >= 0:
-            self._platform_ramped_vel.a = clip(self._platform_target_vel.a,
+            self._platform_ramped_vel.a = clip(
+                self._platform_target_vel.a,
                 self._platform_ramped_vel.a + time_delta * self._platform_limits.max_acc_angular,
-                self._platform_ramped_vel.a - time_delta * self._platform_limits.max_dec_angular
+                self._platform_ramped_vel.a - time_delta * self._platform_limits.max_dec_angular,
             )
         else:
-            self._platform_ramped_vel.a = clip(self._platform_target_vel.a,
+            self._platform_ramped_vel.a = clip(
+                self._platform_target_vel.a,
                 self._platform_ramped_vel.a + time_delta * self._platform_limits.max_dec_angular,
-                self._platform_ramped_vel.a - time_delta * self._platform_limits.max_acc_angular
+                self._platform_ramped_vel.a - time_delta * self._platform_limits.max_acc_angular,
             )
 
         # Velocity limits
-        self._platform_ramped_vel.x = clip(self._platform_ramped_vel.x, self._platform_limits.max_vel_linear, -self._platform_limits.max_vel_linear)
-        self._platform_ramped_vel.y = clip(self._platform_ramped_vel.y, self._platform_limits.max_vel_linear, -self._platform_limits.max_vel_linear)
-        self._platform_ramped_vel.a = clip(self._platform_ramped_vel.a, self._platform_limits.max_vel_angular, -self._platform_limits.max_vel_angular)
+        self._platform_ramped_vel.x = clip(
+            self._platform_ramped_vel.x, self._platform_limits.max_vel_linear, -self._platform_limits.max_vel_linear
+        )
+        self._platform_ramped_vel.y = clip(
+            self._platform_ramped_vel.y, self._platform_limits.max_vel_linear, -self._platform_limits.max_vel_linear
+        )
+        self._platform_ramped_vel.a = clip(
+            self._platform_ramped_vel.a, self._platform_limits.max_vel_angular, -self._platform_limits.max_vel_angular
+        )
 
         self._time_last_ramping = now
 
-    def calculate_wheel_target_velocity(
-            self,
-            wheel_index: int,
-            raw_pivot_angle: float
-        ) -> Tuple[float, float]:
+    def calculate_wheel_target_velocity(self, wheel_index: int, raw_pivot_angle: float) -> Tuple[float, float]:
         """
         Returns a tuple of floats representing the target angular velocity of the left and right wheel of drive `wheel_index` respectively.
         """
@@ -127,29 +137,45 @@ class VelocityPlatformController:
         if self._platform_ramped_vel.x == 0 and self._platform_ramped_vel.y == 0 and self._platform_ramped_vel.a == 0:
             return 0.0, 0.0
 
-        wheel_param = self._wheel_params[wheel_index];
+        wheel_param = self._wheel_params[wheel_index]
 
         # Pivot angle w.r.t. front of platform (between -pi and pi)
-        pivot_angle = clip_angle(raw_pivot_angle - wheel_param.pivot_offset);
-        
+        pivot_angle = clip_angle(raw_pivot_angle - wheel_param.pivot_offset)
+
         # Pivot angle to unity vector
         unit_pivot_vector = Point2D()
         unit_pivot_vector.x = math.cos(pivot_angle)
-        unit_pivot_vector.y = math.sin(pivot_angle) 
+        unit_pivot_vector.y = math.sin(pivot_angle)
 
         # Position of wheels relative to platform centre
         position_l = Point2D()
-        position_l.x = (wheel_param.relative_position_l.x * unit_pivot_vector.x - wheel_param.relative_position_l.y * unit_pivot_vector.y) + wheel_param.pivot_position.x
-        position_l.y = (wheel_param.relative_position_l.x * unit_pivot_vector.y + wheel_param.relative_position_l.y * unit_pivot_vector.x) + wheel_param.pivot_position.y
+        position_l.x = (
+            wheel_param.relative_position_l.x * unit_pivot_vector.x
+            - wheel_param.relative_position_l.y * unit_pivot_vector.y
+        ) + wheel_param.pivot_position.x
+        position_l.y = (
+            wheel_param.relative_position_l.x * unit_pivot_vector.y
+            + wheel_param.relative_position_l.y * unit_pivot_vector.x
+        ) + wheel_param.pivot_position.y
 
         position_r = Point2D()
-        position_r.x = (wheel_param.relative_position_r.x * unit_pivot_vector.x - wheel_param.relative_position_r.y * unit_pivot_vector.y) + wheel_param.pivot_position.x
-        position_r.y = (wheel_param.relative_position_r.x * unit_pivot_vector.y + wheel_param.relative_position_r.y * unit_pivot_vector.x) + wheel_param.pivot_position.y
+        position_r.x = (
+            wheel_param.relative_position_r.x * unit_pivot_vector.x
+            - wheel_param.relative_position_r.y * unit_pivot_vector.y
+        ) + wheel_param.pivot_position.x
+        position_r.y = (
+            wheel_param.relative_position_r.x * unit_pivot_vector.y
+            + wheel_param.relative_position_r.y * unit_pivot_vector.x
+        ) + wheel_param.pivot_position.y
 
         # Velocity target vector at pivot position
         target_vel_at_pivot = Point2D()
-        target_vel_at_pivot.x = self._platform_ramped_vel.x - (self._platform_ramped_vel.a * wheel_param.pivot_position.y)
-        target_vel_at_pivot.y = self._platform_ramped_vel.y + (self._platform_ramped_vel.a * wheel_param.pivot_position.x)
+        target_vel_at_pivot.x = self._platform_ramped_vel.x - (
+            self._platform_ramped_vel.a * wheel_param.pivot_position.y
+        )
+        target_vel_at_pivot.y = self._platform_ramped_vel.y + (
+            self._platform_ramped_vel.a * wheel_param.pivot_position.x
+        )
 
         # Target pivot vector to angle
         target_pivot_angle = math.atan2(target_vel_at_pivot.y, target_vel_at_pivot.x)
@@ -185,6 +211,7 @@ class VelocityPlatformController:
         target_ang_vel_r = target_vel_r * wheel_param.linear_to_angular_velocity
 
         return target_ang_vel_r, target_ang_vel_l
+
 
 # Tests
 if __name__ == "__main__":
@@ -252,5 +279,3 @@ if __name__ == "__main__":
             print(f"wheel {i} r ang vel: {ang_vel_r}")
 
         input()
-
-
