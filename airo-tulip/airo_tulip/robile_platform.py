@@ -74,7 +74,7 @@ class RobilePlatform():
 
         return True
 
-    def loop(self):
+    def step(self):
         """
         Main processing loop of the EtherCAT master, must be called frequently.
         """

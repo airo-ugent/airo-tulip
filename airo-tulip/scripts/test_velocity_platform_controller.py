@@ -13,7 +13,7 @@ def test():
     # Wait one second
     time_start = time.time()
     while time.time() - time_start < 1:
-        mobi.loop()
+        mobi.step()
         time.sleep(0.050)
 
     # Set target velocity
@@ -22,7 +22,7 @@ def test():
     # Wait one second
     time_start = time.time()
     while time.time() - time_start < 4:
-        mobi.loop()
+        mobi.step()
         time.sleep(0.050)
 
     # Set zero target velocity
@@ -30,7 +30,7 @@ def test():
 
     # Loop indefinitely
     while True:
-        mobi.loop()
+        mobi.step()
         time.sleep(0.050)
         
 
