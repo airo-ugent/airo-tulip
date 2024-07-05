@@ -1,4 +1,5 @@
 import time
+import math
 
 from airo_tulip.server.client import Client
 
@@ -26,6 +27,9 @@ def test():
 
     client.set_platform_velocity_target(0.0, 0.0, -math.pi / 8, timeout=2.0)
     time.sleep(2)
+
+    client.set_platform_velocity_target(-0.5, 0.0, 0.0)
+    time.sleep(1)  # movement should timeout
 
     client.set_platform_velocity_target(0.0, 0.0, 0.0)
     time.sleep(0.5)

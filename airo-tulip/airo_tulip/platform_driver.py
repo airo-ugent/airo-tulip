@@ -1,6 +1,7 @@
 import math
 from enum import Enum
 from typing import List
+import time
 
 import pysoem
 from airo_tulip.controllers.velocity_platform_controller import VelocityPlatformController
