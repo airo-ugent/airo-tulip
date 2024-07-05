@@ -1,12 +1,17 @@
 import time
-from threading import Thread, Event
+from threading import Event, Thread
 from typing import List
 
 import zmq
 import zmq.asyncio
 from airo_tulip.robile_platform import RobilePlatform
-from airo_tulip.server.messages import SetPlatformVelocityTargetMessage, ErrorResponse, OkResponse, StopServerMessage, \
-    HeartbeatMessage
+from airo_tulip.server.messages import (
+    ErrorResponse,
+    HeartbeatMessage,
+    OkResponse,
+    SetPlatformVelocityTargetMessage,
+    StopServerMessage,
+)
 from airo_tulip.structs import WheelConfig
 from loguru import logger
 
@@ -32,8 +37,14 @@ class TulipServer:
     to communicate with the TulipServer over a TCP socket, connecting with 0MQ. We use the REQ/REP
     message pattern (https://learning-0mq-with-pyzmq.readthedocs.io/en/latest/pyzmq/patterns/client_server.html)."""
 
-    def __init__(self, robot_ip: str, robot_port: int, robot_configuration: RobotConfiguration,
-                 loop_frequency: float = 20, max_time_between_heartbeats: float = 1):
+    def __init__(
+        self,
+        robot_ip: str,
+        robot_port: int,
+        robot_configuration: RobotConfiguration,
+        loop_frequency: float = 20,
+        max_time_between_heartbeats: float = 1,
+    ):
         """Initialize the server.
 
         Args:
@@ -107,7 +118,10 @@ class TulipServer:
 
         while not self._should_stop.is_set():
             # Stop if we haven't received a heartbeat in a while. Safety first.
-            if self._last_heartbeat is not None and time.time() - self._last_heartbeat > self._max_time_between_heartbeats:
+            if (
+                self._last_heartbeat is not None
+                and time.time() - self._last_heartbeat > self._max_time_between_heartbeats
+            ):
                 logger.warning("No heartbeat message received in time. Stopping platform for safety reasons!")
                 self._platform.driver.set_platform_velocity_target(0.0, 0.0, 0.0)
 
@@ -122,7 +136,9 @@ class TulipServer:
 
     def _handle_set_platform_velocity_target_request(self, request: SetPlatformVelocityTargetMessage):
         try:
-            self._platform.driver.set_platform_velocity_target(request.vel_x, request.vel_y, request.vel_a)
+            self._platform.driver.set_platform_velocity_target(
+                request.vel_x, request.vel_y, request.vel_a, request.timeout
+            )
             logger.info("Request handled successfully.")
             return OkResponse()
         except ValueError as e:

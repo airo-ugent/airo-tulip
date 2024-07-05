@@ -2,27 +2,34 @@ from dataclasses import dataclass
 
 
 @dataclass
-class SetPlatformVelocityTargetMessage:
+class RequestMessage:
+    pass
+
+
+@dataclass
+class ResponseMessage:
+    pass
+
+
+@dataclass
+class SetPlatformVelocityTargetMessage(RequestMessage):
     vel_x: float
     vel_y: float
     vel_a: float
+    timeout: float
 
 
 @dataclass
-class StopServerMessage:
+class StopServerMessage(RequestMessage):
     pass
 
 
 @dataclass
-class HeartbeatMessage:
-    pass
-
-@dataclass
-class ErrorResponse:
+class ErrorResponse(ResponseMessage):
     message: str
     cause: str
 
 
 @dataclass
-class OkResponse:
+class OkResponse(ResponseMessage):
     pass
