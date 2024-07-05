@@ -44,7 +44,7 @@ class RobilePlatform():
         self._master.config_map()
         logger.info(f"Found {len(self._master.slaves)} slaves")
         for slave in self._master.slaves:
-            logger.info(slave.id, slave.man, slave.name)
+            logger.info(f"{slave.id} {slave.man} {slave.name}")
 
         # Check if all slaves reached SAFE_OP state
         self._master.read_state()
