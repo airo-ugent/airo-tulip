@@ -26,7 +26,7 @@ def test():
     client = SimpleClient("localhost", 49789)
     for i in range(5):
         client.send_test_request()
-        client._zmq_socket.send_pyobj(HeartbeatMessage(time.time()))
+        client._zmq_socket.send_pyobj(HeartbeatMessage())
         _hb_response = client._zmq_socket.recv_pyobj()
     client._zmq_socket.send_pyobj(StopServerMessage())
     _response = client._zmq_socket.recv_pyobj()

@@ -15,8 +15,7 @@ class StopServerMessage:
 
 @dataclass
 class HeartbeatMessage:
-    client_time: float
-
+    pass
 
 @dataclass
 class ErrorResponse:

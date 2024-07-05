@@ -1,5 +1,5 @@
 import time
-from threading import Thread
+from threading import Thread, Event
 from typing import List
 
 import zmq
@@ -51,7 +51,7 @@ class TulipServer:
         logger.info(f"Bound to {address}.")
 
         # Stop process flag.
-        self._should_stop = False
+        self._should_stop = Event()
 
         # TCP request handlers for passing instructions to the robot.
         self._request_handlers = {
@@ -70,22 +70,19 @@ class TulipServer:
         self._max_time_between_heartbeats = max_time_between_heartbeats
 
     def _request_loop(self):
-        while not self._should_stop:
-            try:
-                request = self._zmq_socket.recv_pyobj(flags=zmq.NOBLOCK)
-                # As soon as we've received a request, the client should start sending out heartbeats.
-                # Technically, this request could also be something else, but we should start expecting heartbeat messages.
-                self._last_heartbeat = time.time()
-                logger.info("Handling client request.")
-                response = self._handle_request(request)
-                # Send response.
-                logger.info("Sending response to client.")
-                self._zmq_socket.send_pyobj(response)
-            except zmq.Again:
-                pass  # Simply no message received, go to next loop iteration.
+        while not self._should_stop.is_set():
+            request = self._zmq_socket.recv_pyobj()
+            # As soon as we've received a request, the client should start sending out heartbeats.
+            # Technically, this request could also be something else, but we should start expecting heartbeat messages.
+            self._last_heartbeat = time.time()
+            logger.info("Handling client request.")
+            response = self._handle_request(request)
+            # Send response.
+            logger.info("Sending response to client.")
+            self._zmq_socket.send_pyobj(response)
 
     def _ethercat_loop(self):
-        while not self._should_stop:
+        while not self._should_stop.is_set():
             start_ns = time.time_ns()
             self._platform.step()
             end_ns = time.time_ns()
@@ -102,20 +99,20 @@ class TulipServer:
         logger.info("Starting EtherCAT loop.")
         logger.info("Listening for requests.")
 
-        thread_ethercat = Thread(target=self._ethercat_loop)
+        thread_ethercat = Thread(target=self._ethercat_loop, daemon=True)
         thread_ethercat.start()
 
-        thread_requests = Thread(target=self._request_loop)
+        thread_requests = Thread(target=self._request_loop, daemon=True)
         thread_requests.start()
 
-        while not self._should_stop:
+        while not self._should_stop.is_set():
             # Stop if we haven't received a heartbeat in a while. Safety first.
             if self._last_heartbeat is not None and time.time() - self._last_heartbeat > self._max_time_between_heartbeats:
-                logger.warning("No heartbeat message received in time. Stopping execution for safety reasons!")
-                self._should_stop = True
+                logger.warning("No heartbeat message received in time. Stopping platform for safety reasons!")
+                self._platform.driver.set_platform_velocity_target(0.0, 0.0, 0.0)
 
-        thread_ethercat.join()
-        thread_requests.join()
+        self._zmq_socket.close()
+        self._zmq_ctx.term()
 
     def _handle_request(self, request):
         # Delegate based on the request class.
@@ -126,7 +123,7 @@ class TulipServer:
     def _handle_set_platform_velocity_target_request(self, request: SetPlatformVelocityTargetMessage):
         try:
             self._platform.driver.set_platform_velocity_target(request.vel_x, request.vel_y, request.vel_a)
-            logger.trace("Request handled successfully.")
+            logger.info("Request handled successfully.")
             return OkResponse()
         except ValueError as e:
             logger.error(f"Safety limits exceeded: {e}")
@@ -134,7 +131,7 @@ class TulipServer:
 
     def _handle_stop_server_request(self, _request: StopServerMessage):
         logger.info("Received stop request.")
-        self._should_stop = True
+        self._should_stop.set()
         return OkResponse()
 
     def _handle_heartbeat_request(self, request: HeartbeatMessage):
