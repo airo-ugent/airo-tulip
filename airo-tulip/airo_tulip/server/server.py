@@ -66,13 +66,16 @@ class TulipServer:
 
         self._loop_frequency = loop_frequency
 
-        self._last_heartbeat = time.time()
+        self._last_heartbeat = None
         self._max_time_between_heartbeats = max_time_between_heartbeats
 
     def _request_loop(self):
         while not self._should_stop:
             try:
                 request = self._zmq_socket.recv_pyobj(flags=zmq.NOBLOCK)
+                # As soon as we've received a request, the client should start sending out heartbeats.
+                # Technically, this request could also be something else, but we should start expecting heartbeat messages.
+                self._last_heartbeat = time.time()
                 logger.info("Handling client request.")
                 response = self._handle_request(request)
                 # Send response.
