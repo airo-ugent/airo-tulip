@@ -1,5 +1,5 @@
-import time
 import math
+import time
 
 from airo_tulip.server.client import Client
 
