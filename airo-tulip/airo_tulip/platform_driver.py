@@ -193,38 +193,38 @@ class PlatformDriver:
 
             self._set_process_data(i, data)
 
+    def _update_encoders(self):
+        if not self._encoder_initialized:
+            for i in range(self._num_wheels):
+                data = self._process_data[i]
+                self._prev_encoder[i][0] = data.encoder_1
+                self._prev_encoder[i][1] = data.encoder_2
 
-def _update_encoders(self):
-    if not self._encoder_initialized:
+        # count accumulative encoder value
         for i in range(self._num_wheels):
             data = self._process_data[i]
-            self._prev_encoder[i][0] = data.encoder_1
-            self._prev_encoder[i][1] = data.encoder_2
+            curr_encoder1 = data.encoder_1
+            curr_encoder2 = data.encoder_2
 
-    # count accumulative encoder value
-    for i in range(self._num_wheels):
-        data = self._process_data[i]
-        curr_encoder1 = data.encoder_1
-        curr_encoder2 = data.encoder_2
-
-        if abs(curr_encoder1 - self._prev_encoder[i][0]) > math.pi:
-            if curr_encoder1 < self._prev_encoder[i][0]:
-                self._sum_encoder[i][0] += curr_encoder1 - self._prev_encoder[i][0] + 2 * math.pi
+            if abs(curr_encoder1 - self._prev_encoder[i][0]) > math.pi:
+                if curr_encoder1 < self._prev_encoder[i][0]:
+                    self._sum_encoder[i][0] += curr_encoder1 - self._prev_encoder[i][0] + 2 * math.pi
+                else:
+                    self._sum_encoder[i][0] += curr_encoder1 - self._prev_encoder[i][0] - 2 * math.pi
             else:
-                self._sum_encoder[i][0] += curr_encoder1 - self._prev_encoder[i][0] - 2 * math.pi
-        else:
-            self._sum_encoder[i][0] += curr_encoder1 - self._prev_encoder[i][0]
+                self._sum_encoder[i][0] += curr_encoder1 - self._prev_encoder[i][0]
 
-        if abs(curr_encoder2 - self._prev_encoder[i][1]) > math.pi:
-            if curr_encoder2 < self._prev_encoder[i][1]:
-                self._sum_encoder[i][1] += curr_encoder2 - self._prev_encoder[i][1] + 2 * math.pi
+            if abs(curr_encoder2 - self._prev_encoder[i][1]) > math.pi:
+                if curr_encoder2 < self._prev_encoder[i][1]:
+                    self._sum_encoder[i][1] += curr_encoder2 - self._prev_encoder[i][1] + 2 * math.pi
+                else:
+                    self._sum_encoder[i][1] += curr_encoder2 - self._prev_encoder[i][1] - 2 * math.pi
             else:
-                self._sum_encoder[i][1] += curr_encoder2 - self._prev_encoder[i][1] - 2 * math.pi
-        else:
-            self._sum_encoder[i][1] += curr_encoder2 - self._prev_encoder[i][1]
+                self._sum_encoder[i][1] += curr_encoder2 - self._prev_encoder[i][1]
 
-        self._prev_encoder[i][0] = curr_encoder1
-        self._prev_encoder[i][1] = curr_encoder2
+            self._prev_encoder[i][0] = curr_encoder1
+            self._prev_encoder[i][1] = curr_encoder2
+            `
 
     def _get_process_data(self, wheel_index: int) -> TxPDO1:
         ethercat_index = self._wheel_configs[wheel_index].ethercat_number
