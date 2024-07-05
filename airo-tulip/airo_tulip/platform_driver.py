@@ -188,7 +188,7 @@ class PlatformDriver:
             data.setpoint1 = setpoint1
             data.setpoint2 = setpoint2
 
-            logger.debug(
+            logger.trace(
                 f"wheel {i} enabled {self._wheel_enabled[i]} sp1 {setpoint1} sp2 {setpoint2} enc {self._process_data[i].encoder_pivot}")
 
             self._set_process_data(i, data)
