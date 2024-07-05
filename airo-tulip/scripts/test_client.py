@@ -23,11 +23,43 @@ class SimpleClient:
 
 
 def test():
+    import math
     client = SimpleClient("localhost", 49789)
-    for i in range(5):
-        client.send_test_request()
-        client._zmq_socket.send_pyobj(HeartbeatMessage())
-        _hb_response = client._zmq_socket.recv_pyobj()
+    msg = SetPlatformVelocityTargetMessage(0.0, 0.0, math.pi/8)
+    client._zmq_socket.send_pyobj(msg)
+    response =client._zmq_socket.recv_pyobj()
+    time.sleep(2)
+
+    msg = SetPlatformVelocityTargetMessage(0.2, 0.0, 0.0)
+    client._zmq_socket.send_pyobj(msg)
+    response =client._zmq_socket.recv_pyobj()
+    time.sleep(1)
+
+    msg = SetPlatformVelocityTargetMessage(0.0, 0.2, 0.0)
+    client._zmq_socket.send_pyobj(msg)
+    response =client._zmq_socket.recv_pyobj()
+    time.sleep(1)
+
+    msg = SetPlatformVelocityTargetMessage(-0.2, 0.0, 0.0)
+    client._zmq_socket.send_pyobj(msg)
+    response =client._zmq_socket.recv_pyobj()
+    time.sleep(1)
+
+    msg = SetPlatformVelocityTargetMessage(0.0, -0.2, 0.0)
+    client._zmq_socket.send_pyobj(msg)
+    response =client._zmq_socket.recv_pyobj()
+    time.sleep(1)
+
+    msg = SetPlatformVelocityTargetMessage(0.0, 0.0, -math.pi/8)
+    client._zmq_socket.send_pyobj(msg)
+    response =client._zmq_socket.recv_pyobj()
+    time.sleep(2)
+
+    msg = SetPlatformVelocityTargetMessage(0.0, 0.0, 0.0)
+    client._zmq_socket.send_pyobj(msg)
+    response =client._zmq_socket.recv_pyobj()
+    time.sleep(0.5)
+
     client._zmq_socket.send_pyobj(StopServerMessage())
     _response = client._zmq_socket.recv_pyobj()
     client._zmq_socket.close()
