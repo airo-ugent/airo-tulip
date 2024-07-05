@@ -17,10 +17,12 @@ class RobilePlatform:
         self._driver = PlatformDriver(self._master, wheel_configs)
         self._monitor = PlatformMonitor(self._master, wheel_configs)
 
-    def get_driver(self) -> PlatformDriver:
+    @property
+    def driver(self) -> PlatformDriver:
         return self._driver
 
-    def get_monitor(self) -> PlatformMonitor:
+    @property
+    def monitor(self) -> PlatformMonitor:
         return self._monitor
 
     def init_ethercat(self) -> bool:
@@ -43,7 +45,7 @@ class RobilePlatform:
         self._master.config_map()
         logger.info(f"Found {len(self._master.slaves)} slaves")
         for slave in self._master.slaves:
-            logger.info(slave.id, slave.man, slave.name)
+            logger.info(f"{slave.id} {slave.man} {slave.name}")
 
         # Check if all slaves reached SAFE_OP state
         self._master.read_state()
