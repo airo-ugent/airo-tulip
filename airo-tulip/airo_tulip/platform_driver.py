@@ -7,6 +7,7 @@ from airo_tulip.controllers.velocity_platform_controller import VelocityPlatform
 from airo_tulip.ethercat import *
 from airo_tulip.structs import WheelConfig
 from airo_tulip.util import *
+from loguru import logger
 
 
 class PlatformDriverState(Enum):
@@ -49,7 +50,7 @@ class PlatformDriver:
         self._vpc.initialise(self._wheel_configs)
 
     def set_platform_velocity_target(self, vel_x: float, vel_y: float, vel_a: float) -> None:
-        if math.sqrt(vel_x**2 + vel_y**2) > 1.0:
+        if math.sqrt(vel_x ** 2 + vel_y ** 2) > 1.0:
             raise ValueError("Cannot set target linear velocity higher than 1.0 m/s")
         if abs(vel_a) > math.pi / 8:
             raise ValueError("Cannot set target angular velocity higher than pi/8 rad/s")
@@ -62,7 +63,7 @@ class PlatformDriver:
 
         for i in range(len(self._process_data)):
             pd = self._process_data[i]
-            print(f"pd {i} sensor_ts {pd.sensor_ts} vel_1 {pd.velocity_1} vel_2 {pd.velocity_2}")
+            logger.debug(f"pd {i} sensor_ts {pd.sensor_ts} vel_1 {pd.velocity_1} vel_2 {pd.velocity_2}")
 
         self._current_ts = self._process_data[0].sensor_ts
 
@@ -90,10 +91,10 @@ class PlatformDriver:
 
         if ready:
             self._state = PlatformDriverState.READY
-            print("PlatformDriver from INIT to READY")
+            logger.info("PlatformDriver from INIT to READY")
 
         if self._step_count > 500 and not ready:
-            print("Stopping PlatformDriver because wheels don't become ready.")
+            logger.warning("Stopping PlatformDriver because wheels don't become ready.")
             return False
 
         return True
@@ -104,7 +105,7 @@ class PlatformDriver:
         # TODO: check status error
 
         self._state = PlatformDriverState.ACTIVE
-        print("PlatformDriver from READY to ACTIVE")
+        logger.info("PlatformDriver from READY to ACTIVE")
 
         return True
 
@@ -187,50 +188,50 @@ class PlatformDriver:
             data.setpoint1 = setpoint1
             data.setpoint2 = setpoint2
 
-            print(
-                f"wheel {i} enabled {self._wheel_enabled[i]} sp1 {setpoint1} sp2 {setpoint2} enc {self._process_data[i].encoder_pivot}"
-            )
+            logger.debug(
+                f"wheel {i} enabled {self._wheel_enabled[i]} sp1 {setpoint1} sp2 {setpoint2} enc {self._process_data[i].encoder_pivot}")
 
             self._set_process_data(i, data)
 
-        print("")
 
-    def _update_encoders(self):
-        if not self._encoder_initialized:
-            for i in range(self._num_wheels):
-                data = self._process_data[i]
-                self._prev_encoder[i][0] = data.encoder_1
-                self._prev_encoder[i][1] = data.encoder_2
-
-        # count accumulative encoder value
+def _update_encoders(self):
+    if not self._encoder_initialized:
         for i in range(self._num_wheels):
             data = self._process_data[i]
-            curr_encoder1 = data.encoder_1
-            curr_encoder2 = data.encoder_2
+            self._prev_encoder[i][0] = data.encoder_1
+            self._prev_encoder[i][1] = data.encoder_2
 
-            if abs(curr_encoder1 - self._prev_encoder[i][0]) > math.pi:
-                if curr_encoder1 < self._prev_encoder[i][0]:
-                    self._sum_encoder[i][0] += curr_encoder1 - self._prev_encoder[i][0] + 2 * math.pi
-                else:
-                    self._sum_encoder[i][0] += curr_encoder1 - self._prev_encoder[i][0] - 2 * math.pi
+    # count accumulative encoder value
+    for i in range(self._num_wheels):
+        data = self._process_data[i]
+        curr_encoder1 = data.encoder_1
+        curr_encoder2 = data.encoder_2
+
+        if abs(curr_encoder1 - self._prev_encoder[i][0]) > math.pi:
+            if curr_encoder1 < self._prev_encoder[i][0]:
+                self._sum_encoder[i][0] += curr_encoder1 - self._prev_encoder[i][0] + 2 * math.pi
             else:
-                self._sum_encoder[i][0] += curr_encoder1 - self._prev_encoder[i][0]
+                self._sum_encoder[i][0] += curr_encoder1 - self._prev_encoder[i][0] - 2 * math.pi
+        else:
+            self._sum_encoder[i][0] += curr_encoder1 - self._prev_encoder[i][0]
 
-            if abs(curr_encoder2 - self._prev_encoder[i][1]) > math.pi:
-                if curr_encoder2 < self._prev_encoder[i][1]:
-                    self._sum_encoder[i][1] += curr_encoder2 - self._prev_encoder[i][1] + 2 * math.pi
-                else:
-                    self._sum_encoder[i][1] += curr_encoder2 - self._prev_encoder[i][1] - 2 * math.pi
+        if abs(curr_encoder2 - self._prev_encoder[i][1]) > math.pi:
+            if curr_encoder2 < self._prev_encoder[i][1]:
+                self._sum_encoder[i][1] += curr_encoder2 - self._prev_encoder[i][1] + 2 * math.pi
             else:
-                self._sum_encoder[i][1] += curr_encoder2 - self._prev_encoder[i][1]
+                self._sum_encoder[i][1] += curr_encoder2 - self._prev_encoder[i][1] - 2 * math.pi
+        else:
+            self._sum_encoder[i][1] += curr_encoder2 - self._prev_encoder[i][1]
 
-            self._prev_encoder[i][0] = curr_encoder1
-            self._prev_encoder[i][1] = curr_encoder2
+        self._prev_encoder[i][0] = curr_encoder1
+        self._prev_encoder[i][1] = curr_encoder2
 
-    def _get_process_data(self, wheel_index: int) -> TxPDO1:
-        ethercat_index = self._wheel_configs[wheel_index].ethercat_number
-        return TxPDO1.from_buffer_copy(self._master.slaves[ethercat_index - 1].input)
 
-    def _set_process_data(self, wheel_index: int, data: RxPDO1) -> None:
-        ethercat_index = self._wheel_configs[wheel_index].ethercat_number
-        self._master.slaves[ethercat_index - 1].output = bytes(data)
+def _get_process_data(self, wheel_index: int) -> TxPDO1:
+    ethercat_index = self._wheel_configs[wheel_index].ethercat_number
+    return TxPDO1.from_buffer_copy(self._master.slaves[ethercat_index - 1].input)
+
+
+def _set_process_data(self, wheel_index: int, data: RxPDO1) -> None:
+    ethercat_index = self._wheel_configs[wheel_index].ethercat_number
+    self._master.slaves[ethercat_index - 1].output = bytes(data)

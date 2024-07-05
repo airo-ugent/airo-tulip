@@ -13,7 +13,7 @@ def test():
 
     # Loop indefinitely
     while True:
-        mobi.loop()
+        mobi.step()
         fancy_print_sensors(mobi.get_monitor())
         time.sleep(0.050)
 
