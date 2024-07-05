@@ -125,7 +125,7 @@ class TulipServer:
 
     def _handle_set_platform_velocity_target_request(self, request: SetPlatformVelocityTargetMessage):
         try:
-            self._platform.get_driver().set_platform_velocity_target(request.vel_x, request.vel_y, request.vel_a)
+            self._platform.driver.set_platform_velocity_target(request.vel_x, request.vel_y, request.vel_a)
             logger.trace("Request handled successfully.")
             return OkResponse()
         except ValueError as e:
