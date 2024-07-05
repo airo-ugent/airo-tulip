@@ -4,11 +4,11 @@ from typing import List
 
 import zmq
 import zmq.asyncio
+from airo_tulip.robile_platform import RobilePlatform
 from airo_tulip.server.messages import SetPlatformVelocityTargetMessage, ErrorResponse, OkResponse, StopServerMessage, \
     HeartbeatMessage
 from airo_tulip.structs import WheelConfig
 from loguru import logger
-from airo_tulip.robile_platform import RobilePlatform
 
 
 class RobotConfiguration:
@@ -95,8 +95,8 @@ class TulipServer:
             actual_duration = end_ns - start_ns
             if actual_duration < desired_duration:
                 sleep_s = (desired_duration - actual_duration) * 1e-9
-                time.sleep(sleep_s)
                 logger.trace(f"Sleeping EtherCAT thread for {sleep_s} seconds.")
+                time.sleep(sleep_s)
 
     def run(self):
         logger.info("Starting EtherCAT loop.")
