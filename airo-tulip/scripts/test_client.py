@@ -30,6 +30,8 @@ def test():
         _hb_response = client._zmq_socket.recv_pyobj()
     client._zmq_socket.send_pyobj(StopServerMessage())
     _response = client._zmq_socket.recv_pyobj()
+    client._zmq_socket.close()
+    client._zmq_ctx.term()
 
 
 if __name__ == "__main__":
