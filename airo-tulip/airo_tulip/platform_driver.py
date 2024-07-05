@@ -63,7 +63,7 @@ class PlatformDriver:
 
         for i in range(len(self._process_data)):
             pd = self._process_data[i]
-            logger.debug(f"pd {i} sensor_ts {pd.sensor_ts} vel_1 {pd.velocity_1} vel_2 {pd.velocity_2}")
+            logger.trace(f"pd {i} sensor_ts {pd.sensor_ts} vel_1 {pd.velocity_1} vel_2 {pd.velocity_2}")
 
         self._current_ts = self._process_data[0].sensor_ts
 
