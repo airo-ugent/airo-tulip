@@ -224,7 +224,6 @@ class PlatformDriver:
 
             self._prev_encoder[i][0] = curr_encoder1
             self._prev_encoder[i][1] = curr_encoder2
-            `
 
     def _get_process_data(self, wheel_index: int) -> TxPDO1:
         ethercat_index = self._wheel_configs[wheel_index].ethercat_number
