@@ -63,7 +63,7 @@ class PlatformDriver:
 
         for i in range(len(self._process_data)):
             pd = self._process_data[i]
-            logger.debug(f"pd {i} sensor_ts {pd.sensor_ts} vel_1 {pd.velocity_1} vel_2 {pd.velocity_2}")
+            logger.trace(f"pd {i} sensor_ts {pd.sensor_ts} vel_1 {pd.velocity_1} vel_2 {pd.velocity_2}")
 
         self._current_ts = self._process_data[0].sensor_ts
 
@@ -188,7 +188,7 @@ class PlatformDriver:
             data.setpoint1 = setpoint1
             data.setpoint2 = setpoint2
 
-            logger.debug(
+            logger.trace(
                 f"wheel {i} enabled {self._wheel_enabled[i]} sp1 {setpoint1} sp2 {setpoint2} enc {self._process_data[i].encoder_pivot}")
 
             self._set_process_data(i, data)
