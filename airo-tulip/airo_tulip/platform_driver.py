@@ -227,11 +227,11 @@ def _update_encoders(self):
         self._prev_encoder[i][1] = curr_encoder2
 
 
-def _get_process_data(self, wheel_index: int) -> TxPDO1:
-    ethercat_index = self._wheel_configs[wheel_index].ethercat_number
-    return TxPDO1.from_buffer_copy(self._master.slaves[ethercat_index - 1].input)
+    def _get_process_data(self, wheel_index: int) -> TxPDO1:
+        ethercat_index = self._wheel_configs[wheel_index].ethercat_number
+        return TxPDO1.from_buffer_copy(self._master.slaves[ethercat_index - 1].input)
 
 
-def _set_process_data(self, wheel_index: int, data: RxPDO1) -> None:
-    ethercat_index = self._wheel_configs[wheel_index].ethercat_number
-    self._master.slaves[ethercat_index - 1].output = bytes(data)
+    def _set_process_data(self, wheel_index: int, data: RxPDO1) -> None:
+        ethercat_index = self._wheel_configs[wheel_index].ethercat_number
+        self._master.slaves[ethercat_index - 1].output = bytes(data)
