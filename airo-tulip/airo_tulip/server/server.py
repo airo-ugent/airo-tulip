@@ -84,8 +84,10 @@ class TulipServer:
     def _ethercat_loop(self):
         while not self._should_stop:
             start_ns = time.time_ns()
-            self._platform.loop()
+            self._platform.step()
             end_ns = time.time_ns()
+
+            # Sleep if required (most likely).
             desired_duration = int((1 / self._loop_frequency) * 1e9)
             actual_duration = end_ns - start_ns
             if actual_duration < desired_duration:
