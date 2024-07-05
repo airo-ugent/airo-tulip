@@ -7,9 +7,15 @@ class SetPlatformVelocityTargetMessage:
     vel_y: float
     vel_a: float
 
+
 @dataclass
 class StopServerMessage:
     pass
+
+
+@dataclass
+class HeartbeatMessage:
+    client_time: float
 
 
 @dataclass

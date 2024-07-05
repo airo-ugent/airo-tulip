@@ -1,7 +1,9 @@
+import time
+
 import zmq
 from loguru import logger
 
-from airo_tulip.server.messages import SetPlatformVelocityTargetMessage, StopServerMessage
+from airo_tulip.server.messages import SetPlatformVelocityTargetMessage, StopServerMessage, HeartbeatMessage
 
 
 class SimpleClient:
@@ -24,7 +26,10 @@ def test():
     client = SimpleClient("localhost", 49789)
     for i in range(5):
         client.send_test_request()
+        client._zmq_socket.send_pyobj(HeartbeatMessage(time.time()))
+        _hb_response = client._zmq_socket.recv_pyobj()
     client._zmq_socket.send_pyobj(StopServerMessage())
+    _response = client._zmq_socket.recv_pyobj()
 
 
 if __name__ == "__main__":

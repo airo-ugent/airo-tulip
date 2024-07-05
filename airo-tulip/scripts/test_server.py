@@ -10,7 +10,7 @@ def test():
     wheel_configs = create_wheel_configs()
 
     server = TulipServer("localhost", 49789, RobotConfiguration(device, wheel_configs))
-    asyncio.run(server.run())
+    server.run()
 
 
 def create_wheel_configs():

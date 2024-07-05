@@ -1,13 +1,14 @@
-import asyncio
+import time
+from threading import Thread
 from typing import List
 
 import zmq
 import zmq.asyncio
-from loguru import logger
-
-from airo_tulip.robile_platform import RobilePlatform
-from airo_tulip.server.messages import SetPlatformVelocityTargetMessage, ErrorResponse, OkResponse, StopServerMessage
+from airo_tulip.server.messages import SetPlatformVelocityTargetMessage, ErrorResponse, OkResponse, StopServerMessage, \
+    HeartbeatMessage
 from airo_tulip.structs import WheelConfig
+from loguru import logger
+from airo_tulip.robile_platform import RobilePlatform
 
 
 class RobotConfiguration:
@@ -32,18 +33,19 @@ class TulipServer:
     message pattern (https://learning-0mq-with-pyzmq.readthedocs.io/en/latest/pyzmq/patterns/client_server.html)."""
 
     def __init__(self, robot_ip: str, robot_port: int, robot_configuration: RobotConfiguration,
-                 loop_frequency: float = 20):
+                 loop_frequency: float = 20, max_time_between_heartbeats: float = 1):
         """Initialize the server.
 
         Args:
             robot_ip: The IP address of the robot.
             robot_port: The port on which to run this server.
             robot_configuration: The robot configuration.
-            loop_frequency: The frequency (Hz) with which EtherCAT messages are received and sent."""
+            loop_frequency: The frequency (Hz) with which EtherCAT messages are received and sent.
+            max_time_between_heartbeats: The maximum time in seconds between heartbeats. If no heartbeat message was received from the client for this much time, stop everything."""
         # ZMQ socket.
         address = f"tcp://{robot_ip}:{robot_port}"
         logger.info(f"Binding to {address}...")
-        self._zmq_ctx = zmq.asyncio.Context()
+        self._zmq_ctx = zmq.Context()
         self._zmq_socket = self._zmq_ctx.socket(zmq.REP)
         self._zmq_socket.bind(address)
         logger.info(f"Bound to {address}.")
@@ -54,7 +56,8 @@ class TulipServer:
         # TCP request handlers for passing instructions to the robot.
         self._request_handlers = {
             SetPlatformVelocityTargetMessage.__name__: self._handle_set_platform_velocity_target_request,
-            StopServerMessage.__name__: self._handle_stop_server_request
+            StopServerMessage.__name__: self._handle_stop_server_request,
+            HeartbeatMessage.__name__: self._handle_heartbeat_request,
         }
 
         # Robot platform.
@@ -63,33 +66,51 @@ class TulipServer:
 
         self._loop_frequency = loop_frequency
 
-    async def _get_request(self):
-        request = await self._zmq_socket.recv_pyobj()
-        logger.info("Handling client request.")
-        response = self._handle_request(request)
-        # Send response.
-        logger.info("Sending response to client.")
-        # Here, we block. We assume that this will be handled swiftly.
-        await self._zmq_socket.send_pyobj(response)
+        self._last_heartbeat = time.time()
+        self._max_time_between_heartbeats = max_time_between_heartbeats
 
-    async def _ecat_step(self):
-        self._platform.loop()
-        await asyncio.sleep(1 / self._loop_frequency)
+    def _request_loop(self):
+        while not self._should_stop:
+            try:
+                request = self._zmq_socket.recv_pyobj(flags=zmq.NOBLOCK)
+                logger.info("Handling client request.")
+                response = self._handle_request(request)
+                # Send response.
+                logger.info("Sending response to client.")
+                self._zmq_socket.send_pyobj(response)
+            except zmq.Again:
+                pass  # Simply no message received, go to next loop iteration.
 
-    async def run(self):
+    def _ethercat_loop(self):
+        while not self._should_stop:
+            start_ns = time.time_ns()
+            self._platform.loop()
+            end_ns = time.time_ns()
+            desired_duration = int((1 / self._loop_frequency) * 1e9)
+            actual_duration = end_ns - start_ns
+            if actual_duration < desired_duration:
+                sleep_s = (desired_duration - actual_duration) * 1e-9
+                time.sleep(sleep_s)
+                logger.trace(f"Sleeping EtherCAT thread for {sleep_s} seconds.")
+
+    def run(self):
+        logger.info("Starting EtherCAT loop.")
         logger.info("Listening for requests.")
 
-        # Run both tasks concurrently. As soon as the EtherCAT step is finished, restart it.
-        # Whenever the get_request task finishes, which will in most cases take longer, also restart it.
-        # This gives priority to self._ecat_step() over self._get_request().
-        # TODO: is there a more elegant way to structure this?
-        get_request_task = asyncio.create_task(self._get_request())
-        ecat_task = asyncio.create_task(self._ecat_step())
+        thread_ethercat = Thread(target=self._ethercat_loop)
+        thread_ethercat.start()
+
+        thread_requests = Thread(target=self._request_loop)
+        thread_requests.start()
+
         while not self._should_stop:
-            await ecat_task
-            ecat_task = asyncio.create_task(self._ecat_step())
-            if get_request_task.done() or self._should_stop:
-                get_request_task = asyncio.create_task(self._get_request())
+            # Stop if we haven't received a heartbeat in a while. Safety first.
+            if self._last_heartbeat is not None and time.time() - self._last_heartbeat > self._max_time_between_heartbeats:
+                logger.warning("No heartbeat message received in time. Stopping execution for safety reasons!")
+                self._should_stop = True
+
+        thread_ethercat.join()
+        thread_requests.join()
 
     def _handle_request(self, request):
         # Delegate based on the request class.
@@ -109,3 +130,9 @@ class TulipServer:
     def _handle_stop_server_request(self, _request: StopServerMessage):
         logger.info("Received stop request.")
         self._should_stop = True
+        return OkResponse()
+
+    def _handle_heartbeat_request(self, request: HeartbeatMessage):
+        logger.info(f"Received heartbeat from client. Seconds since epoch (client): {request.client_time}.")
+        self._last_heartbeat = time.time()
+        return OkResponse()
