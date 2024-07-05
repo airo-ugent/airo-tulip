@@ -16,11 +16,11 @@ class RobilePlatform():
         self._driver = PlatformDriver(self._master, wheel_configs)
         self._monitor = PlatformMonitor(self._master, wheel_configs)
 
-	@property
+    @property
     def driver(self) -> PlatformDriver:
         return self._driver
 
-	@property
+    @property
     def monitor(self) -> PlatformMonitor:
         return self._monitor
 
