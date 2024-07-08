@@ -29,7 +29,7 @@ def test():
     time.sleep(2)
 
     client.set_platform_velocity_target(-0.5, 0.0, 0.0)
-    time.sleep(1)  # movement should timeout
+    time.sleep(3)  # movement should timeout
 
     client.set_platform_velocity_target(0.0, 0.0, 0.0)
     time.sleep(0.5)
