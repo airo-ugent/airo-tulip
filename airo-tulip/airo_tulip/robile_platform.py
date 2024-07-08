@@ -3,19 +3,30 @@ from typing import List
 import pysoem
 from airo_tulip.ethercat import EC_STATE_OPERATIONAL, EC_STATE_SAFE_OP
 from airo_tulip.platform_driver import PlatformDriver, PlatformDriverType
+from airo_tulip.logging.monitor_rerun import RerunMonitorLogger
 from airo_tulip.platform_monitor import PlatformMonitor
 from airo_tulip.structs import WheelConfig
 from loguru import logger
 
 
 class RobilePlatform:
-    def __init__(self, device: str, wheel_configs: List[WheelConfig], controller_type: PlatformDriverType):
+    def __init__(self, device: str, wheel_configs: List[WheelConfig], controller_type: PlatformDriverType, enable_rerun: bool = True):
+        """Initialize the RobilePlatform.
+
+        Args:
+            device: The EtherCAT device name.
+            wheel_configs: A list of wheel configurations specific to your platform.
+            enable_rerun: Enable logging of monitor values to Rerun. Enabled by default, but can be disabled to save memory."""
         self._device = device
         self._ethercat_initialized = False
 
         self._master = pysoem.Master()
         self._driver = PlatformDriver(self._master, wheel_configs, controller_type)
         self._monitor = PlatformMonitor(self._master, wheel_configs)
+
+        self._enable_rerun = enable_rerun
+        if self._enable_rerun:
+            self._rerun_monitor_logger = RerunMonitorLogger()
 
     @property
     def driver(self) -> PlatformDriver:
@@ -83,5 +94,7 @@ class RobilePlatform:
         """
         self._master.receive_processdata()
         self._monitor.step()
+        if self._enable_rerun:
+            self._rerun_monitor_logger.step(self._monitor)
         self._driver.step()
         self._master.send_processdata()

@@ -6,6 +6,23 @@ The codebase is also structured a bit differently than the original C++ implemen
 
 In this README, we'll go over the structure of the `airo-tulip` package and discuss some design choice that were made during the implementation.
 
+## Installation
+
+To install this package, clone the repository with `git` and use `pip` to install the `airo-tulip/` package.
+Note that the `main` branch is the active development branch: you may want to checkout a certain commit associated with
+a version tag. The package requires at least Python 3.10.
+
+For example, using [pyenv](https://github.com/pyenv) to set the local Python version to 3.10:
+
+```shell
+git clone https://github.com/airo-ugent/airo_kelo
+cd airo_kelo
+pyenv install 3.10 && pyenv local 3.10
+python3 -m venv env
+source env/bin/activate
+pip install -e airo-tulip/
+```
+
 ## Structure
 
 The `airo-tulip` package consists of the following main Python classes and files:
