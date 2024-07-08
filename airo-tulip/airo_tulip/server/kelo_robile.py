@@ -22,14 +22,14 @@ class KELORobile:
     ) -> ResponseMessage:
         """Set the x, y and angular velocity of the complete mobile platform.
 
-        Arguments:
-        vel_x -- linear velocity of platform in x (forward) direction in m/s
-        vel_y -- linear velocity of platform in y (left) direction in m/s
-        vel_a -- linear velocity of platform in angular direction in rad/s
-        timeout -- duration in seconds after which the movement is automatically stopped (default 1.0)
+        Args:
+            vel_x: Linear velocity of platform in x (forward) direction in m/s.
+            vel_y: Linear velocity of platform in y (left) direction in m/s.
+            vel_a: Linear velocity of platform in angular direction in rad/s.
+            timeout: Duration in seconds after which the movement is automatically stopped (default 1.0).
 
         Returns:
-        A ResponseMessage object indicating the response status of the request
+            A ResponseMessage object indicating the response status of the request.
         """
         msg = SetPlatformVelocityTargetMessage(vel_x, vel_y, vel_a, timeout)
         return self._transceive_message(msg)
@@ -38,7 +38,7 @@ class KELORobile:
         """Stops the remote server.
 
         Returns:
-        A ResponseMessage object indicating the response status of the request
+            A ResponseMessage object indicating the response status of the request.
         """
         msg = StopServerMessage()
         return self._transceive_message(msg)
