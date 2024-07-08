@@ -41,6 +41,7 @@ class PlatformDriver:
         self._step_count = 0
         self._timeout = 0
         self._timeout_message_printed = True
+        self._last_step_time = None
 
         # Constants taken directly from KELO: https://github.com/kelo-robotics/kelo_tulip/blob/1a8db0626b3d399b62b65b31c004e7b1831756d7/src/PlatformDriver.cpp
         self._wheel_distance = 0.0775
@@ -215,9 +216,11 @@ class PlatformDriver:
                 else:
                     delta_time = time.time() - self._last_step_time
                     setpoint1, setpoint2 = self._cc.calculate_wheel_target_torque(
-                        i, [self._process_data[i].encoder1, self._process_data[i].encoder2], delta_time
+                        i, [self._process_data[i].encoder_1, self._process_data[i].encoder_2], delta_time
                     )
-                    setpoint1 *= -1  # because of inverted frame
+                    setpoint2 *= -1  # because of inverted frame
+                    setpoint1 *= 0.1
+                    setpoint2 *= 0.1
                     self._last_step_time = time.time()
 
             # Avoid sending close to zero values
