@@ -24,6 +24,10 @@ class PlatformMonitor:
         self._pressure: List[float]
         self._current_in: List[float]
 
+    @property
+    def num_wheels(self) -> int:
+        return self._num_wheels
+
     def step(self) -> None:
         process_data = [self._get_process_data(i) for i in range(self._num_wheels)]
         self._status1 = [pd.status1 for pd in process_data]
