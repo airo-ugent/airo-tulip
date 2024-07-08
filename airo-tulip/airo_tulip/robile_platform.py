@@ -10,14 +10,23 @@ from loguru import logger
 
 
 class RobilePlatform:
-    def __init__(self, device: str, wheel_configs: List[WheelConfig]):
+    def __init__(self, device: str, wheel_configs: List[WheelConfig], enable_rerun: bool = True):
+        """Initialize the RobilePlatform.
+
+        Args:
+            device: The EtherCAT device name.
+            wheel_configs: A list of wheel configurations specific to your platform.
+            enable_rerun: Enable logging of monitor values to Rerun. Enabled by default, but can be disabled to save memory."""
         self._device = device
         self._ethercat_initialized = False
 
         self._master = pysoem.Master()
         self._driver = PlatformDriver(self._master, wheel_configs)
         self._monitor = PlatformMonitor(self._master, wheel_configs)
-        self._rerun_monitor_logger = RerunMonitorLogger(self._monitor, len(wheel_configs))
+
+        self._enable_rerun = enable_rerun
+        if self._enable_rerun:
+            self._rerun_monitor_logger = RerunMonitorLogger()
 
     @property
     def driver(self) -> PlatformDriver:
@@ -85,5 +94,7 @@ class RobilePlatform:
         """
         self._master.receive_processdata()
         self._monitor.step()
+        if self._enable_rerun:
+            self._rerun_monitor_logger.step(self._monitor)
         self._driver.step()
         self._master.send_processdata()

@@ -3,49 +3,47 @@ from airo_tulip.platform_monitor import PlatformMonitor
 
 
 class RerunMonitorLogger:
-    def __init__(self, monitor: PlatformMonitor, number_of_wheels: int, rerun_application_id: str = "kelo",
-                 rerun_max_memory_gb: int = 1):
+    def __init__(self, *, rerun_application_id: str = "kelo", rerun_max_memory_gb: int = 1):
         """Initialize the Rerun monitor logger.
 
         Args:
-            monitor: The platform monitor.
-            number_of_wheels: The number of KELO drive bricks connected to the platform.
             rerun_application_id: Application ID for rerun.
             rerun_max_memory_gb: Maximum amount of memory rerun is allowed to consume."""
-        self._monitor = monitor
-        self._number_of_wheels = number_of_wheels
-
         rr.init(rerun_application_id, spawn=False)
         rr.spawn(memory_limit=f'{rerun_max_memory_gb}GB')
 
-    def step(self):
+    def step(self, monitor: PlatformMonitor):
         """Log all values to rerun."""
-        for drive_index in range(self._number_of_wheels):
-            status1 = self._monitor.get_status1(drive_index)
-            status2 = self._monitor.get_status2(drive_index)
-            encoder_wheel1, encoder_wheel2, encoder_pivot = self._monitor.get_encoder(drive_index)
-            velocity = self._monitor.get_velocity(drive_index)
-            current_d_wheel1, current_d_wheel2 = self._monitor.get_current(drive_index)
-            voltage_wheel1, voltage_wheel2 = self._monitor.get_voltage(drive_index)
-            temperature_wheel1, temperature_wheel2 = self._monitor.get_temperature(drive_index)
-            voltage_bus = self._monitor.get_voltage_bus(drive_index)
-            acceleration_x, acceleration_y, acceleration_z = self._monitor.get_acceleration(drive_index)
-            gyro_x, gyro_y, gyro_z = self._monitor.get_gyro(drive_index)
-            pressure = self._monitor.get_pressure(drive_index)
-            current_in = self._monitor.get_current_in(drive_index)
-            power = self._monitor.get_power(drive_index)
+        for drive_index in range(monitor.num_wheels):
+            status1 = monitor.get_status1(drive_index)
+            status2 = monitor.get_status2(drive_index)
+            encoder_wheel1, encoder_wheel2, encoder_pivot = monitor.get_encoder(drive_index)
+            velocity_x, velocity_y, velocity_a = monitor.get_velocity(drive_index)
+            current_d_wheel1, current_d_wheel2 = monitor.get_current(drive_index)
+            voltage_wheel1, voltage_wheel2 = monitor.get_voltage(drive_index)
+            temperature_wheel1, temperature_wheel2, temperature_imu = monitor.get_temperature(drive_index)
+            voltage_bus = monitor.get_voltage_bus(drive_index)
+            acceleration_x, acceleration_y, acceleration_z = monitor.get_acceleration(drive_index)
+            gyro_x, gyro_y, gyro_z = monitor.get_gyro(drive_index)
+            pressure = monitor.get_pressure(drive_index)
+            current_in = monitor.get_current_in(drive_index)
+            power = monitor.get_power(drive_index)
 
             rr.log(f"drive_{drive_index}/status1", rr.Scalar(status1))
             rr.log(f"drive_{drive_index}/status2", rr.Scalar(status2))
             rr.log(f"drive_{drive_index}/encoder/wheel1", rr.Scalar(encoder_wheel1))
             rr.log(f"drive_{drive_index}/encoder/wheel2", rr.Scalar(encoder_wheel2))
             rr.log(f"drive_{drive_index}/encoder/pivot", rr.Scalar(encoder_pivot))
-            rr.log(f"drive_{drive_index}/velocity", rr.Scalar(velocity))
+            rr.log(f"drive_{drive_index}/velocity_x", rr.Scalar(velocity_x))
+            rr.log(f"drive_{drive_index}/velocity_y", rr.Scalar(velocity_y))
+            rr.log(f"drive_{drive_index}/velocity_a", rr.Scalar(velocity_a))
             rr.log(f"drive_{drive_index}/current_d/wheel1", rr.Scalar(current_d_wheel1))
             rr.log(f"drive_{drive_index}/current_d/wheel2", rr.Scalar(current_d_wheel2))
             rr.log(f"drive_{drive_index}/voltage/wheel1", rr.Scalar(voltage_wheel1))
             rr.log(f"drive_{drive_index}/voltage/wheel2", rr.Scalar(voltage_wheel2))
             rr.log(f"drive_{drive_index}/temperature/wheel1", rr.Scalar(temperature_wheel1))
+            rr.log(f"drive_{drive_index}/temperature/wheel2", rr.Scalar(temperature_wheel2))
+            rr.log(f"drive_{drive_index}/temperature/imu", rr.Scalar(temperature_imu))
             rr.log(f"drive_{drive_index}/voltage_bus", rr.Scalar(voltage_bus))
             rr.log(f"drive_{drive_index}/acceleration/x", rr.Scalar(acceleration_x))
             rr.log(f"drive_{drive_index}/acceleration/y", rr.Scalar(acceleration_y))
