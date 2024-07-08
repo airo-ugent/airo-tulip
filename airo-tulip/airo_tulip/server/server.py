@@ -102,8 +102,8 @@ class TulipServer:
         thread_requests = Thread(target=self._request_loop, daemon=True)
         thread_requests.start()
 
-        while not self._should_stop.is_set():
-            pass
+        # Run until stop flag set by joining EtherCAT thread
+        thread_ethercat.join()
 
         self._zmq_socket.close()
         self._zmq_ctx.term()
