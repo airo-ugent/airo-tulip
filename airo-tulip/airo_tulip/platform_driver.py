@@ -4,11 +4,17 @@ from enum import Enum
 from typing import List
 
 import pysoem
+from airo_tulip.controllers.compliant_controller import CompliantController
 from airo_tulip.controllers.velocity_platform_controller import VelocityPlatformController
 from airo_tulip.ethercat import *
 from airo_tulip.structs import WheelConfig
 from airo_tulip.util import *
 from loguru import logger
+
+
+class PlatformDriverType(Enum):
+    VELOCITY = 1
+    COMPLIANT = 2
 
 
 class PlatformDriverState(Enum):
@@ -20,7 +26,7 @@ class PlatformDriverState(Enum):
 
 
 class PlatformDriver:
-    def __init__(self, master: pysoem.Master, wheel_configs: List[WheelConfig]):
+    def __init__(self, master: pysoem.Master, wheel_configs: List[WheelConfig], controller_type: PlatformDriverType):
         self._master = master
         self._wheel_configs = wheel_configs
         self._num_wheels = len(wheel_configs)
@@ -49,10 +55,16 @@ class PlatformDriver:
         self._wheel_set_point_min = 0.01
         self._wheel_set_point_max = 35.0
 
-        self._vpc = VelocityPlatformController()
-        self._vpc.initialise(self._wheel_configs)
+        self._controller_type = controller_type
+        if self._controller_type == PlatformDriverType.VELOCITY:
+            self._vpc = VelocityPlatformController()
+            self._vpc.initialise(self._wheel_configs)
+        elif self._controller_type == PlatformDriverType.COMPLIANT:
+            self._cc = CompliantController(self._wheel_configs)
 
     def set_platform_velocity_target(self, vel_x: float, vel_y: float, vel_a: float, timeout: float) -> None:
+        if self._controller_type != PlatformDriverType.VELOCITY:
+            raise ValueError("Cannot set target velocity if driver not of type VELOCITY")
         if math.sqrt(vel_x**2 + vel_y**2) > 1.0:
             raise ValueError("Cannot set target linear velocity higher than 1.0 m/s")
         if abs(vel_a) > math.pi / 8:
@@ -77,10 +89,11 @@ class PlatformDriver:
         self._update_encoders()
 
         if self._timeout < time.time():
-            self._vpc.set_platform_velocity_target(0.0, 0.0, 0.0)
-            if not self._timeout_message_printed:
-                logger.info("platform stopped early due to velocity target timeout")
-                self._timeout_message_printed = True
+            if self._controller_type == PlatformDriverType.VELOCITY:
+                self._vpc.set_platform_velocity_target(0.0, 0.0, 0.0)
+                if not self._timeout_message_printed:
+                    logger.info("platform stopped early due to velocity target timeout")
+                    self._timeout_message_printed = True
 
         if self._state == PlatformDriverState.INIT:
             return self._step_init()
@@ -158,7 +171,8 @@ class PlatformDriver:
         data.setpoint2 = 0
 
         for i in range(self._num_wheels):
-            data.command1 = COM1_MODE_VELOCITY
+            data.command1 = COM1_MODE_VELOCITY  # we always want zero velocity (and not zero torque) when stopping
+
             if self._wheel_enabled[i]:
                 data.command1 |= COM1_ENABLE1 | COM1_ENABLE2
 
@@ -175,17 +189,36 @@ class PlatformDriver:
         data.setpoint1 = 0
         data.setpoint2 = 0
 
-        # Update desired platform velocity
-        self._vpc.calculate_platform_ramped_velocities()
+        # Update desired platform velocity if velocity control
+        if self._controller_type == PlatformDriverType.VELOCITY:
+            self._vpc.calculate_platform_ramped_velocities()
 
         for i in range(self._num_wheels):
-            data.command1 = COM1_MODE_VELOCITY
+            if self._controller_type == PlatformDriverType.VELOCITY:
+                data.command1 = COM1_MODE_VELOCITY
+            elif self._controller_type == PlatformDriverType.COMPLIANT:
+                data.command1 = COM1_MODE_TORQUE
+
             if self._wheel_enabled[i]:
                 data.command1 |= COM1_ENABLE1 | COM1_ENABLE2
 
-            # Calculate wheel target velocities
-            setpoint1, setpoint2 = self._vpc.calculate_wheel_target_velocity(i, self._process_data[i].encoder_pivot)
-            setpoint1 *= -1  # because of inverted frame
+            # Calculate wheel setpoints
+            if self._controller_type == PlatformDriverType.VELOCITY:
+                setpoint1, setpoint2 = self._vpc.calculate_wheel_target_velocity(
+                    i, self._process_data[i].encoder_pivot
+                )
+                setpoint1 *= -1  # because of inverted frame
+            elif self._controller_type == PlatformDriverType.COMPLIANT:
+                if self._last_step_time is None:
+                    self._last_step_time = time.time()
+                    setpoint1, setpoint2 = 0.0, 0.0
+                else:
+                    delta_time = time.time() - self._last_step_time
+                    setpoint1, setpoint2 = self._cc.calculate_wheel_target_torque(
+                        i, [self._process_data[i].encoder1, self._process_data[i].encoder2], delta_time
+                    )
+                    setpoint1 *= -1  # because of inverted frame
+                    self._last_step_time = time.time()
 
             # Avoid sending close to zero values
             if abs(setpoint1) < self._wheel_set_point_min:
@@ -201,9 +234,7 @@ class PlatformDriver:
             data.setpoint1 = setpoint1
             data.setpoint2 = setpoint2
 
-            logger.trace(
-                f"wheel {i} enabled {self._wheel_enabled[i]} sp1 {setpoint1} sp2 {setpoint2} enc {self._process_data[i].encoder_pivot}"
-            )
+            logger.trace(f"wheel {i} enabled {self._wheel_enabled[i]} sp1 {setpoint1} sp2 {setpoint2}")
 
             self._set_process_data(i, data)
 

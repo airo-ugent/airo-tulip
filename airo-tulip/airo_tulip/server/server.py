@@ -64,7 +64,9 @@ class TulipServer:
         }
 
         # Robot platform.
-        self._platform = RobilePlatform(robot_configuration.ecat_device, robot_configuration.wheel_configs)
+        self._platform = RobilePlatform(
+            robot_configuration.ecat_device, robot_configuration.wheel_configs, PlatformDriverType.VELOCITY
+        )
         self._platform.init_ethercat()
 
         self._loop_frequency = loop_frequency

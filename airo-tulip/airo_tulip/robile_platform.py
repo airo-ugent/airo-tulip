@@ -2,19 +2,19 @@ from typing import List
 
 import pysoem
 from airo_tulip.ethercat import EC_STATE_OPERATIONAL, EC_STATE_SAFE_OP
-from airo_tulip.platform_driver import PlatformDriver
+from airo_tulip.platform_driver import PlatformDriver, PlatformDriverType
 from airo_tulip.platform_monitor import PlatformMonitor
 from airo_tulip.structs import WheelConfig
 from loguru import logger
 
 
 class RobilePlatform:
-    def __init__(self, device: str, wheel_configs: List[WheelConfig]):
+    def __init__(self, device: str, wheel_configs: List[WheelConfig], controller_type: PlatformDriverType):
         self._device = device
         self._ethercat_initialized = False
 
         self._master = pysoem.Master()
-        self._driver = PlatformDriver(self._master, wheel_configs)
+        self._driver = PlatformDriver(self._master, wheel_configs, controller_type)
         self._monitor = PlatformMonitor(self._master, wheel_configs)
 
     @property
