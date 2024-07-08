@@ -218,16 +218,15 @@ class PlatformDriver:
                     setpoint1, setpoint2 = self._cc.calculate_wheel_target_torque(
                         i, [self._process_data[i].encoder_1, self._process_data[i].encoder_2], delta_time
                     )
-                    setpoint2 *= -1  # because of inverted frame
-                    setpoint1 *= 0.1
-                    setpoint2 *= 0.1
+                    setpoint1 *= -1  # because inverted frame
                     self._last_step_time = time.time()
 
-            # Avoid sending close to zero values
-            if abs(setpoint1) < self._wheel_set_point_min:
-                setpoint1 = 0
-            if abs(setpoint2) < self._wheel_set_point_min:
-                setpoint2 = 0
+            # Avoid sending close to zero velocities
+            if self._controller_type == PlatformDriverType.VELOCITY:
+                if abs(setpoint1) < self._wheel_set_point_min:
+                    setpoint1 = 0
+                if abs(setpoint2) < self._wheel_set_point_min:
+                    setpoint2 = 0
 
             # Avoid sending very large values
             setpoint1 = clip(setpoint1, self._wheel_set_point_max, -self._wheel_set_point_max)
@@ -237,7 +236,7 @@ class PlatformDriver:
             data.setpoint1 = setpoint1
             data.setpoint2 = setpoint2
 
-            logger.trace(f"wheel {i} enabled {self._wheel_enabled[i]} sp1 {setpoint1} sp2 {setpoint2}")
+            logger.debug(f"wheel {i} enabled {self._wheel_enabled[i]} sp1 {setpoint1} sp2 {setpoint2}")
 
             self._set_process_data(i, data)
 

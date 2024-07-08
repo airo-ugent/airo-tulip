@@ -60,12 +60,23 @@ class CompliantController:
         if self._last_encoders[wheel_index] is None:
             self._last_encoders[wheel_index] = raw_encoders.copy()
             return
-
+        
         delta_ang_r = raw_encoders[0] - self._last_encoders[wheel_index][0]
         delta_ang_l = raw_encoders[1] - self._last_encoders[wheel_index][1]
 
+        if delta_ang_r > math.pi:
+            delta_ang_r -= 2*math.pi
+        elif delta_ang_r < -math.pi:
+            delta_ang_r += 2*math.pi
+
+        if delta_ang_l > math.pi:
+            delta_ang_l -= 2*math.pi
+        elif delta_ang_l < -math.pi:
+            delta_ang_l += 2*math.pi
+
         delta_pos_r = delta_ang_r * self._wheel_diameter / 2
         delta_pos_l = delta_ang_l * self._wheel_diameter / 2
+        delta_pos_r *= -1  # because inverted frame
         delta_pos = (delta_pos_r + delta_pos_l) / 2
 
         self._current_position[wheel_index] += delta_pos
@@ -76,8 +87,8 @@ class CompliantController:
         )
 
     def _calculate_mass_spring_damper_force(self, wheel_index: int) -> Tuple[float, float]:
-        spring_constant = 1.0
-        damping_constant = 0.5
+        spring_constant = 100.0
+        damping_constant = 8.0
 
         position_delta = self._current_position[wheel_index] - self._target_position[wheel_index]
         velocity_delta = self._current_velocity[wheel_index] - self._target_velocity[wheel_index]
