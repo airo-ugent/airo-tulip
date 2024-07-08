@@ -8,7 +8,7 @@ from airo_tulip.server.messages import (
 from loguru import logger
 
 
-class Client:
+class KELORobile:
     def __init__(self, robot_ip: str, robot_port: int):
         address = f"tcp://{robot_ip}:{robot_port}"
         logger.info(f"Connecting to {address}...")
