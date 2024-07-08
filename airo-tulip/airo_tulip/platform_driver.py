@@ -1,4 +1,5 @@
 import math
+import time
 from enum import Enum
 from typing import List
 
@@ -32,6 +33,8 @@ class PlatformDriver:
         self._process_data = []
         self._wheel_enabled = [True] * self._num_wheels
         self._step_count = 0
+        self._timeout = 0
+        self._timeout_message_printed = True
 
         # Constants taken directly from KELO: https://github.com/kelo-robotics/kelo_tulip/blob/1a8db0626b3d399b62b65b31c004e7b1831756d7/src/PlatformDriver.cpp
         self._wheel_distance = 0.0775
@@ -49,12 +52,16 @@ class PlatformDriver:
         self._vpc = VelocityPlatformController()
         self._vpc.initialise(self._wheel_configs)
 
-    def set_platform_velocity_target(self, vel_x: float, vel_y: float, vel_a: float) -> None:
-        if math.sqrt(vel_x ** 2 + vel_y ** 2) > 1.0:
+    def set_platform_velocity_target(self, vel_x: float, vel_y: float, vel_a: float, timeout: float) -> None:
+        if math.sqrt(vel_x**2 + vel_y**2) > 1.0:
             raise ValueError("Cannot set target linear velocity higher than 1.0 m/s")
         if abs(vel_a) > math.pi / 8:
             raise ValueError("Cannot set target angular velocity higher than pi/8 rad/s")
+        if timeout < 0.0:
+            raise ValueError("Cannot set negative timeout")
         self._vpc.set_platform_velocity_target(vel_x, vel_y, vel_a)
+        self._timeout = time.time() + timeout
+        self._timeout_message_printed = False
 
     def step(self) -> bool:
         self._step_count += 1
@@ -68,6 +75,12 @@ class PlatformDriver:
         self._current_ts = self._process_data[0].sensor_ts
 
         self._update_encoders()
+
+        if self._timeout < time.time():
+            self._vpc.set_platform_velocity_target(0.0, 0.0, 0.0)
+            if not self._timeout_message_printed:
+                logger.info("platform stopped early due to velocity target timeout")
+                self._timeout_message_printed = True
 
         if self._state == PlatformDriverState.INIT:
             return self._step_init()
@@ -189,7 +202,8 @@ class PlatformDriver:
             data.setpoint2 = setpoint2
 
             logger.trace(
-                f"wheel {i} enabled {self._wheel_enabled[i]} sp1 {setpoint1} sp2 {setpoint2} enc {self._process_data[i].encoder_pivot}")
+                f"wheel {i} enabled {self._wheel_enabled[i]} sp1 {setpoint1} sp2 {setpoint2} enc {self._process_data[i].encoder_pivot}"
+            )
 
             self._set_process_data(i, data)
 
