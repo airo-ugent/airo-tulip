@@ -12,9 +12,10 @@ AXIS_LEFT_HORIZONTAL = 0
 AXIS_LEFT_VERTICAL = 1
 AXIS_RIGHT_HORIZONTAL = 3
 AXIS_RIGHT_VERTICAL = 4
+BUTTON_RIGHT_BUMPER = 5
 
-LINEAR_SPEED_SCALING = 0.5  # joystick range: [-1, 1]. This maps it to [-LINEAR_SPEED_SCALING, LINEAR_SPEED_SCALING] m/s.
-ANGULAR_SPEED_SCALING = math.pi / 8  # analogous for angular velocity in rad/s.
+LINEAR_SPEED_SCALING = 1.0  # joystick range: [-1, 1]. This maps it to [-LINEAR_SPEED_SCALING, LINEAR_SPEED_SCALING] m/s.
+ANGULAR_SPEED_SCALING = 1.0  # analogous for angular velocity in rad/s.
 
 if not pygame.joystick.get_init():
     exit(1)
@@ -27,20 +28,28 @@ joysticks = [pygame.joystick.Joystick(x) for x in range(pygame.joystick.get_coun
 joystick = joysticks[0]
 print("num axes:", joystick.get_numaxes())
 
-mobi = KELORobile("10.10.129.20", 49789)
+mobi = KELORobile("localhost", 49789)
+
+# Get bias of controller.
+axis_left_horizontal = joystick.get_axis(AXIS_LEFT_HORIZONTAL)
+axis_left_vertical = joystick.get_axis(AXIS_LEFT_VERTICAL)
+axis_right_horizontal = joystick.get_axis(AXIS_RIGHT_HORIZONTAL)
+bias = (axis_left_horizontal, axis_left_vertical, axis_right_horizontal)
+
+print(f"Joystick bias: {bias}")
 
 delta_time = 0
 start = time.time()
 while True:
-    for _ in pygame.event.get():
+    for _event in pygame.event.get():
         pass
 
     # Y axis movement.
-    axis_left_horizontal = joystick.get_axis(AXIS_LEFT_HORIZONTAL)
+    axis_left_horizontal = joystick.get_axis(AXIS_LEFT_HORIZONTAL) - bias[0]
     # X axis movement.
-    axis_left_vertical = joystick.get_axis(AXIS_LEFT_VERTICAL)
+    axis_left_vertical = joystick.get_axis(AXIS_LEFT_VERTICAL) - bias[1]
     # Angular movement.
-    axis_right_horizontal = joystick.get_axis(AXIS_RIGHT_HORIZONTAL)
+    axis_right_horizontal = joystick.get_axis(AXIS_RIGHT_HORIZONTAL) - bias[2]
 
     vel_x = LINEAR_SPEED_SCALING * -axis_left_vertical * delta_time
     vel_y = LINEAR_SPEED_SCALING * axis_left_horizontal * delta_time
@@ -50,7 +59,18 @@ while True:
     vel_xy /= np.linalg.norm(vel_xy) + 1e-6
     vel_x, vel_y = vel_xy
 
-    mobi.set_platform_velocity_target(vel_x, vel_y, vel_a)
+    # Avoid sending small values.
+    if abs(vel_x) < 0.1:
+        vel_x = 0.0
+    if abs(vel_y) < 0.1:
+        vel_y = 0.0
+    if abs(vel_a) < math.pi / 16:
+        vel_a = 0.0
+
+    if joystick.get_button(BUTTON_RIGHT_BUMPER):
+        mobi.set_platform_velocity_target(vel_x, vel_y, vel_a)
+    else:
+        mobi.set_platform_velocity_target(0.0, 0.0, 0.0)
 
     now = time.time()
     delta_time = now - start
