@@ -18,7 +18,7 @@ class KELORobile:
         logger.info(f"Connected to {address}.")
 
     def set_platform_velocity_target(
-        self, vel_x: float, vel_y: float, vel_a: float, timeout: float = 1.0
+            self, vel_x: float, vel_y: float, vel_a: float, timeout: float = 1.0
     ) -> ResponseMessage:
         """Set the x, y and angular velocity of the complete mobile platform.
 
@@ -47,6 +47,9 @@ class KELORobile:
         self._zmq_socket.send_pyobj(req)
         return self._zmq_socket.recv_pyobj()
 
-    def __del__(self):
+    def close(self):
         self._zmq_socket.close()
         self._zmq_ctx.term()
+
+    def __del__(self):
+        self.close()
