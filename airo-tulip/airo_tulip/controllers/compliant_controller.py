@@ -103,7 +103,7 @@ class CompliantController:
             self._wheel_params[wheel_index].pivot_position.y, self._wheel_params[wheel_index].pivot_position.x
         )
         print(angle_platform)
-        angle = angle_platform + self._wheel_params[wheel_index].pivot_offset + raw_encoders[2]
+        angle = angle_platform + self._wheel_params[wheel_index].pivot_offset + raw_encoders[2] + math.pi
         print(angle)
 
         # Update drive position in world
@@ -117,13 +117,15 @@ class CompliantController:
         )
 
     def _calculate_mass_spring_damper_force(self, wheel_index: int) -> Tuple[float, float]:
-        spring_constant = 1.0
+        spring_constant = 100.0
         damping_constant = 0.0
 
         position_delta = (self._current_position[wheel_index] - self._target_position[wheel_index]).norm()
         velocity_delta = (self._current_velocity[wheel_index] - self._target_velocity[wheel_index]).norm()
 
         force = -spring_constant * position_delta - damping_constant * velocity_delta
+        if abs(force) < 1.0:
+            return 0.0, 0.0
 
         angle = math.atan2(
             self._current_position[wheel_index].y - self._target_position[wheel_index].y,
@@ -137,6 +139,8 @@ class CompliantController:
     def _convert_carthesian_force_to_wheel_forces(
         self, wheel_index: int, raw_pivot_encoder: float, force_x: float, force_y: float
     ) -> Tuple[float, float]:
+        if abs(force_x) < 1.0 and abs(force_y) < 1.0:
+            return 0.0, 0.0
 
         # Calculate angles of wheel and target force
         pos_center = self._get_current_platform_center()
@@ -152,7 +156,7 @@ class CompliantController:
         angle_error = get_shortest_angle(force_angle, wheel_angle)
 
         # Differential correction force to minimise pivot_error
-        delta_force = angle_error * self._wheel_params[wheel_index].pivot_kp
+        delta_force = angle_error * self._wheel_params[wheel_index].pivot_kp * 100
 
         # Target force of left wheel (dot product with unit pivot vector)
         force_l = force_x * math.cos(wheel_angle) + force_y * math.sin(wheel_angle)
@@ -162,7 +166,7 @@ class CompliantController:
         force_r = force_x * math.cos(wheel_angle) + force_y * math.sin(wheel_angle)
         force_r += delta_force
 
-        return force_r, force_l
+        return -force_r, -force_l
 
     def _calculate_motor_controller_force(
         self, wheel_index: int, msd_force_r: float, msd_force_l: float

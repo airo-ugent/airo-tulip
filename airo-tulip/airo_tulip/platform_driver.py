@@ -216,7 +216,7 @@ class PlatformDriver:
                 else:
                     delta_time = time.time() - self._last_step_time
                     setpoint1, setpoint2 = self._cc.calculate_wheel_target_torque(
-                        i, [self._process_data[i].encoder_1, self._process_data[i].encoder_2], delta_time
+                        i, [self._process_data[i].encoder_1, self._process_data[i].encoder_2, self._process_data[i].encoder_pivot], delta_time
                     )
                     setpoint1 *= -1  # because inverted frame
                     self._last_step_time = time.time()
