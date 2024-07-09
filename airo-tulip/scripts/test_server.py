@@ -9,7 +9,7 @@ def test():
     device = "eno1"
     wheel_configs = create_wheel_configs()
 
-    server = TulipServer("localhost", 49789, RobotConfiguration(device, wheel_configs))
+    server = TulipServer("0.0.0.0", 49789, RobotConfiguration(device, wheel_configs))
     server.run()
 
 
