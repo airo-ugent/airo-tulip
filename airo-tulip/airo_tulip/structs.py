@@ -1,3 +1,4 @@
+import math
 from dataclasses import dataclass, field
 
 
@@ -9,6 +10,18 @@ class Point2D:
 
     x: float = 0.0
     y: float = 0.0
+
+    def norm(self):
+        return math.sqrt(self.x**2 + self.y**2)
+
+    def __add__(self, other):
+        return Point2D(self.x + other.x, self.y + other.y)
+
+    def __sub__(self, other):
+        return Point2D(self.x - other.x, self.y - other.y)
+
+    def __rmul__(self, other):
+        return self * other
 
 
 @dataclass
