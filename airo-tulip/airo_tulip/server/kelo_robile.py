@@ -46,3 +46,7 @@ class KELORobile:
     def _transceive_message(self, req: RequestMessage) -> ResponseMessage:
         self._zmq_socket.send_pyobj(req)
         return self._zmq_socket.recv_pyobj()
+
+    def __del__(self):
+        self._zmq_socket.close()
+        self._zmq_ctx.term()
