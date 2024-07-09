@@ -23,6 +23,60 @@ source env/bin/activate
 pip install -e airo-tulip/
 ```
 
+## Connecting to a UR cobot mounted on the KELO
+
+If you want to connect to a UR cobot mounted on the KELO, you need to set up:
+
+- The UR machine
+- An SSH tunnel to the UR machine
+
+### Setting up the UR
+
+The following instructions were copied from [here](https://github.com/airo-ugent/airo-mono/blob/main/airo-robots/airo_robots/manipulators/hardware/universal_robots_setup.md).
+
+Establish a Ethernet connection between the control box and the external computer:
+* Connect an UTP cable from the control box to the external computer.
+* Create a new network profile on the external computer in `Settings > Network > Wired > +`. Give it any name e.g. `UR` and in the IPv4 tab select `Shared to other computers`.
+* On the control box, go to `Settings > System > Network` and select Static Address and set:
+    * IP address: `10.42.0.162`
+    * Subnet mask: `255.255.255.0`
+    * Gateway: `10.42.0.1`
+    * Preferred DNS server: `10.42.0.1`
+
+On MacOS, this corresponds to creating a network with IPv4 configured manually at 10.42.0.1 (subnet mask 255.255.0.0) and configure IPv4 automatically.
+
+If you're lucky, the control box will already say "Network is connected".
+If pinging the control box from the external computer works, you're done and can read the next section to Enable remote control mode:
+```bash
+ping 10.42.0.162
+```
+If not, you can try to manually bringing up the network profile you created:
+```bash
+nmcli connection up UR
+```
+If pinging still doesn't, try restarting the robot control box.
+If still not successful, try swapping ethernet cables, ports or computers.
+
+Now, make sure the robot is in remote control.
+
+### Setting up an SSH tunnel
+
+The UR robot listens on ports 29999, 30001, 30002, 30003 and 30004. To access them on, e.g., your laptop through the KELO NUC,
+you need to set up an SSH tunnel. Assuming that the KELO's IP address is 10.10.129.20:
+
+```commandline
+ssh -N -L localhost:29999:10.42.0.162:29999 -L localhost:30001:10.42.0.162:30001 -L localhost:30002:10.42.0.162:30002 -L localhost:30003:10.42.0.162:30003 -L localhost:30004:10.42.0.162:30004 kelo@10.10.129.20
+```
+
+Now, you can access the UR robot via `localhost` on your laptop:
+
+```python
+from airo_robots.manipulators.hardware.ur_rtde import URrtde
+
+ur = ur_rtde.URrtde("localhost", ur_rtde.URrtde.UR3E_CONFIG)
+print(ur.get_tcp_pose())
+```
+
 ## Structure
 
 The `airo-tulip` package consists of the following main Python classes and files:
