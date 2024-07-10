@@ -194,6 +194,8 @@ class PlatformDriver:
         if self._controller_type == PlatformDriverType.VELOCITY:
             self._vpc.calculate_platform_ramped_velocities()
 
+        raw_encoders = [[pd.encoder_1, pd.encoder_2, pd.encoder_pivot] for pd in self._process_data]
+
         for i in range(self._num_wheels):
             if self._controller_type == PlatformDriverType.VELOCITY:
                 data.command1 = COM1_MODE_VELOCITY
@@ -215,9 +217,7 @@ class PlatformDriver:
                     setpoint1, setpoint2 = 0.0, 0.0
                 else:
                     delta_time = time.time() - self._last_step_time
-                    setpoint1, setpoint2 = self._cc.calculate_wheel_target_torque(
-                        i, [self._process_data[i].encoder_1, self._process_data[i].encoder_2, self._process_data[i].encoder_pivot], delta_time
-                    )
+                    setpoint1, setpoint2 = self._cc.calculate_wheel_target_torque(i, raw_encoders, delta_time)
                     setpoint1 *= -1  # because inverted frame
                     self._last_step_time = time.time()
 

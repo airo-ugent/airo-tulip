@@ -1,8 +1,8 @@
 import copy
 import math
 from typing import List, Tuple
-import rerun as rr
 
+import rerun as rr
 from airo_tulip.structs import PlatformLimits, Point2D, WheelConfig, WheelParamVelocity
 from airo_tulip.util import get_shortest_angle
 
@@ -15,6 +15,7 @@ class CompliantController:
         self._current_position = [Point2D() for _ in range(len(wheel_configs))]
         self._target_velocity = [Point2D() for _ in range(len(wheel_configs))]
         self._current_velocity = [Point2D() for _ in range(len(wheel_configs))]
+        self._current_force = [Point2D() for _ in range(len(wheel_configs))]
         self._last_encoders = [None] * len(wheel_configs)
 
         self._initialise(wheel_configs)
@@ -57,15 +58,20 @@ class CompliantController:
         return Point2D(s.x / 4, s.y / 4)
 
     def calculate_wheel_target_torque(
-        self, wheel_index: int, raw_encoders: List[float], delta_time: float
+        self, wheel_index: int, raw_encoders: List[List[float]], delta_time: float
     ) -> Tuple[float, float]:
         """
         Returns a tuple of floats representing the target angular torque of the right and left wheel of drive `wheel_index` respectively.
         """
-        self._update_current_state(wheel_index, raw_encoders, delta_time)
-        msd_force_x, msd_force_y = self._calculate_mass_spring_damper_force(wheel_index)
+        if wheel_index == 0:
+            for j in range(self._num_wheels):
+                self._update_current_state(j, raw_encoders[j], delta_time)
+                self._update_current_force(j)
+
+        total_force = Point2D(sum([f.x for f in self._current_force]) / 4, sum([f.x for f in self._current_force]) / 4)
+
         msd_force_r, msd_force_l = self._convert_carthesian_force_to_wheel_forces(
-            wheel_index, raw_encoders[2], msd_force_x, msd_force_y
+            wheel_index, raw_encoders[wheel_index][2], total_force.x, total_force.y
         )
         force_r, force_l = self._calculate_motor_controller_force(wheel_index, msd_force_r, msd_force_l)
         torque_r, torque_l = self._convert_force_to_torque(force_r, force_l)
@@ -113,6 +119,11 @@ class CompliantController:
             f"wheel {wheel_index} pos {self._current_position[wheel_index]} vel {self._current_velocity[wheel_index]}"
         )
 
+    def _update_current_force(self, wheel_index: int) -> None:
+        msd_force_x, msd_force_y = self._calculate_mass_spring_damper_force(wheel_index)
+        self._current_force[wheel_index].x = msd_force_x
+        self._current_force[wheel_index].y = msd_force_y
+
     def _calculate_mass_spring_damper_force(self, wheel_index: int) -> Tuple[float, float]:
         spring_constant = 100.0
         damping_constant = 0.0
@@ -150,7 +161,7 @@ class CompliantController:
         wheel_angle = angle_platform + self._wheel_params[wheel_index].pivot_offset + raw_pivot_encoder
         force_angle = math.atan2(force_y, force_x)
         target_pivot_angle = force_angle - self._wheel_params[wheel_index].pivot_offset - angle_platform
-        #target_pivot_angle += math.pi  # wheels pull on cart, not push
+        # target_pivot_angle += math.pi  # wheels pull on cart, not push
 
         # Calculate error angle as shortest route
         angle_error = get_shortest_angle(target_pivot_angle, raw_pivot_encoder)
@@ -158,17 +169,18 @@ class CompliantController:
 
         # Differential correction force to minimise pivot_error
         delta_force = angle_error * self._wheel_params[wheel_index].pivot_kp * 100
-        delta_force = 0.0
 
         # Target force of left wheel (dot product with unit pivot vector)
         force_l = force_x * math.cos(wheel_angle) + force_y * math.sin(wheel_angle)
+        force_l *= -1
         force_l -= delta_force
 
         # Target force of right wheel (dot product with unit pivot vector)
         force_r = force_x * math.cos(wheel_angle) + force_y * math.sin(wheel_angle)
+        force_r *= -1
         force_r += delta_force
 
-        return -force_r, -force_l
+        return force_r, force_l
 
     def _calculate_motor_controller_force(
         self, wheel_index: int, msd_force_r: float, msd_force_l: float
