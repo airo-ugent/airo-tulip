@@ -26,6 +26,7 @@ class CompliantController:
         self._wheel_distance = 0.055
 
         self._wheel_params = []
+        self._num_wheels = len(wheel_configs)
         for i, wheel_config in enumerate(wheel_configs):
             wheel_param = WheelParamVelocity()
 
@@ -68,13 +69,17 @@ class CompliantController:
                 self._update_current_state(j, raw_encoders[j], delta_time)
                 self._update_current_force(j)
 
-        total_force = Point2D(sum([f.x for f in self._current_force]) / 4, sum([f.x for f in self._current_force]) / 4)
+        total_force = Point2D(sum([f.x for f in self._current_force]) / 4, sum([f.y for f in self._current_force]) / 4)
+        if wheel_index == 0:
+            rr.log(f"total_force", rr.Arrows2D(vectors=[[total_force.x, total_force.y]]))
 
         msd_force_r, msd_force_l = self._convert_carthesian_force_to_wheel_forces(
             wheel_index, raw_encoders[wheel_index][2], total_force.x, total_force.y
         )
         force_r, force_l = self._calculate_motor_controller_force(wheel_index, msd_force_r, msd_force_l)
         torque_r, torque_l = self._convert_force_to_torque(force_r, force_l)
+        rr.log(f"torque/wheel{wheel_index}/r", rr.Scalar(torque_r))
+        rr.log(f"torque/wheel{wheel_index}/l", rr.Scalar(torque_l))
         return torque_r, torque_l
 
     def _update_current_state(self, wheel_index: int, raw_encoders: List[float], delta_time: float) -> None:
@@ -119,6 +124,9 @@ class CompliantController:
             f"wheel {wheel_index} pos {self._current_position[wheel_index]} vel {self._current_velocity[wheel_index]}"
         )
 
+        # Update target position to simulate movement
+        self._target_position[wheel_index].x += -0.30 * delta_time
+
     def _update_current_force(self, wheel_index: int) -> None:
         msd_force_x, msd_force_y = self._calculate_mass_spring_damper_force(wheel_index)
         self._current_force[wheel_index].x = msd_force_x
@@ -159,6 +167,7 @@ class CompliantController:
             self._wheel_params[wheel_index].pivot_position.y, self._wheel_params[wheel_index].pivot_position.x
         )
         wheel_angle = angle_platform + self._wheel_params[wheel_index].pivot_offset + raw_pivot_encoder
+        rr.log(f"wheel_angle/wheel{wheel_index}", rr.Scalar(wheel_angle))
         force_angle = math.atan2(force_y, force_x)
         target_pivot_angle = force_angle - self._wheel_params[wheel_index].pivot_offset - angle_platform
         # target_pivot_angle += math.pi  # wheels pull on cart, not push
@@ -168,17 +177,17 @@ class CompliantController:
         print("ANGLE", angle_error, target_pivot_angle, raw_pivot_encoder)
 
         # Differential correction force to minimise pivot_error
-        delta_force = angle_error * self._wheel_params[wheel_index].pivot_kp * 100
+        delta_force = angle_error * self._wheel_params[wheel_index].pivot_kp * 10
 
         # Target force of left wheel (dot product with unit pivot vector)
         force_l = force_x * math.cos(wheel_angle) + force_y * math.sin(wheel_angle)
         force_l *= -1
-        force_l -= delta_force
+        force_l += delta_force
 
         # Target force of right wheel (dot product with unit pivot vector)
         force_r = force_x * math.cos(wheel_angle) + force_y * math.sin(wheel_angle)
         force_r *= -1
-        force_r += delta_force
+        force_r -= delta_force
 
         return force_r, force_l
 
