@@ -149,11 +149,13 @@ class CompliantController:
         ) - math.atan2(
             self._wheel_params[wheel_index].pivot_position.y, self._wheel_params[wheel_index].pivot_position.x
         )
-        wheel_angle = angle_platform + self._wheel_params[wheel_index].pivot_offset + raw_pivot_encoder
+        wheel_angle = angle_platform + self._wheel_params[wheel_index].pivot_offset + raw_pivot_angle
         force_angle = math.atan2(force_y, force_x)
+        target_pivot_angle = force_angle - self._wheel_params[wheel_index].pivot_offset - angle_platform
+        target_pivot_angle += math.pi  # wheels pull on cart, not push
 
         # Calculate error angle as shortest route
-        angle_error = get_shortest_angle(force_angle, wheel_angle)
+        angle_error = get_shortest_angle(target_pivot_angle, raw_pivot_angle)
 
         # Differential correction force to minimise pivot_error
         delta_force = angle_error * self._wheel_params[wheel_index].pivot_kp * 100
