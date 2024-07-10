@@ -1,6 +1,7 @@
 import copy
 import math
 from typing import List, Tuple
+import rerun as rr
 
 from airo_tulip.structs import PlatformLimits, Point2D, WheelConfig, WheelParamVelocity
 from airo_tulip.util import get_shortest_angle
@@ -94,17 +95,13 @@ class CompliantController:
         delta_pos = (delta_pos_r + delta_pos_l) / 2
 
         # Calculate angle of wheels in world frame of reference
-        print("CALCULATE ANGLE")
         pos_center = self._get_current_platform_center()
-        print(pos_center)
         angle_platform = math.atan2(
             self._current_position[wheel_index].y - pos_center.y, self._current_position[wheel_index].x - pos_center.x
         ) - math.atan2(
             self._wheel_params[wheel_index].pivot_position.y, self._wheel_params[wheel_index].pivot_position.x
         )
-        print(angle_platform)
         angle = angle_platform + self._wheel_params[wheel_index].pivot_offset + raw_encoders[2] + math.pi
-        print(angle)
 
         # Update drive position in world
         self._current_position[wheel_index].x += delta_pos * math.cos(angle)
@@ -124,6 +121,7 @@ class CompliantController:
         velocity_delta = (self._current_velocity[wheel_index] - self._target_velocity[wheel_index]).norm()
 
         force = -spring_constant * position_delta - damping_constant * velocity_delta
+        rr.log(f"compliant/force/wheel{wheel_index}", rr.Scalar(force))
         if abs(force) < 1.0:
             return 0.0, 0.0
 
@@ -149,16 +147,18 @@ class CompliantController:
         ) - math.atan2(
             self._wheel_params[wheel_index].pivot_position.y, self._wheel_params[wheel_index].pivot_position.x
         )
-        wheel_angle = angle_platform + self._wheel_params[wheel_index].pivot_offset + raw_pivot_angle
+        wheel_angle = angle_platform + self._wheel_params[wheel_index].pivot_offset + raw_pivot_encoder
         force_angle = math.atan2(force_y, force_x)
         target_pivot_angle = force_angle - self._wheel_params[wheel_index].pivot_offset - angle_platform
-        target_pivot_angle += math.pi  # wheels pull on cart, not push
+        #target_pivot_angle += math.pi  # wheels pull on cart, not push
 
         # Calculate error angle as shortest route
-        angle_error = get_shortest_angle(target_pivot_angle, raw_pivot_angle)
+        angle_error = get_shortest_angle(target_pivot_angle, raw_pivot_encoder)
+        print("ANGLE", angle_error, target_pivot_angle, raw_pivot_encoder)
 
         # Differential correction force to minimise pivot_error
         delta_force = angle_error * self._wheel_params[wheel_index].pivot_kp * 100
+        delta_force = 0.0
 
         # Target force of left wheel (dot product with unit pivot vector)
         force_l = force_x * math.cos(wheel_angle) + force_y * math.sin(wheel_angle)

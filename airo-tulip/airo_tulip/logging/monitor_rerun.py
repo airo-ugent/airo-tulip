@@ -10,7 +10,7 @@ class RerunMonitorLogger:
             rerun_application_id: Application ID for rerun.
             rerun_max_memory_gb: Maximum amount of memory rerun is allowed to consume."""
         rr.init(rerun_application_id, spawn=False)
-        rr.spawn(memory_limit=f'{rerun_max_memory_gb}GB')
+        rr.serve(open_browser=False, server_memory_limit=f'{rerun_max_memory_gb}GB')
 
     def step(self, monitor: PlatformMonitor):
         """Log all values to rerun."""
