@@ -6,6 +6,11 @@ The codebase is also structured a bit differently than the original C++ implemen
 
 In this README, we'll go over the structure of the `airo-tulip` package and discuss some design choice that were made during the implementation.
 
+This folder also contains additional documentation files:
+
+- `rerun.md` on how to use Rerun running on the remote KELO CPU brick
+- `virtual_display.md` on how to enable a virtual display for use in a VNC connection without needing to connect a display to the KELO CPU brick
+
 ## Installation
 
 To install this package, clone the repository with `git` and use `pip` to install the `airo-tulip/` package.
