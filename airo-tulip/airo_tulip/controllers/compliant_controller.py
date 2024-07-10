@@ -170,24 +170,24 @@ class CompliantController:
         rr.log(f"wheel_angle/wheel{wheel_index}", rr.Scalar(wheel_angle))
         force_angle = math.atan2(force_y, force_x)
         target_pivot_angle = force_angle - self._wheel_params[wheel_index].pivot_offset - angle_platform
-        # target_pivot_angle += math.pi  # wheels pull on cart, not push
 
         # Calculate error angle as shortest route
         angle_error = get_shortest_angle(target_pivot_angle, raw_pivot_encoder)
         print("ANGLE", angle_error, target_pivot_angle, raw_pivot_encoder)
 
         # Differential correction force to minimise pivot_error
-        delta_force = angle_error * self._wheel_params[wheel_index].pivot_kp * 10
+        delta_force = math.sin(angle_error) ** 2 * sign(angle_error)
+        delta_force *= 1 if abs(angle_error) < math.pi / 2 else -1
+        delta_force *= math.sqrt(force_x**2 + force_y**2)
 
-        # Target force of left wheel (dot product with unit pivot vector)
-        force_l = force_x * math.cos(wheel_angle) + force_y * math.sin(wheel_angle)
-        force_l *= -1
-        force_l += delta_force
+        # Common force to move in target direction
+        common_force = math.cos(angle_error) ** 2
+        common_force *= 1 if abs(angle_error) < math.pi / 2 else -1
+        common_force *= math.sqrt(force_x**2 + force_y**2)
 
-        # Target force of right wheel (dot product with unit pivot vector)
-        force_r = force_x * math.cos(wheel_angle) + force_y * math.sin(wheel_angle)
-        force_r *= -1
-        force_r -= delta_force
+        # Target force of left and right wheel
+        force_r = common_force + diff_force
+        force_l = common_force - diff_force
 
         return force_r, force_l
 
