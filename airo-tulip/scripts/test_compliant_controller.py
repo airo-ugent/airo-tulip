@@ -201,7 +201,7 @@ def create_wheel_configs():
     wc1 = WheelConfig(ethercat_number=5, x=0.233, y=-0.1165, a=1.57)
     wheel_configs.append(wc1)
 
-    wc2 = WheelConfig(ethercat_number=7, x=-0.233, y=-0.1165, a=-1.57)
+    wc2 = WheelConfig(ethercat_number=7, x=-0.233, y=-0.1165, a=1.57)
     wheel_configs.append(wc2)
 
     wc3 = WheelConfig(ethercat_number=9, x=-0.233, y=0.1165, a=1.57)

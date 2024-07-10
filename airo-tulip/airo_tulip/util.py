@@ -16,3 +16,6 @@ def clip_angle(angle: float) -> float:
 
 def get_shortest_angle(angle1: float, angle2: float) -> float:
     return math.atan2(math.sin(angle1 - angle2), math.cos(angle1 - angle2))
+
+def sign(a: float) -> float:
+    return 1.0 if a >= 0 else -1.0

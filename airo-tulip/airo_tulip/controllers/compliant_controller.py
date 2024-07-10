@@ -4,7 +4,7 @@ from typing import List, Tuple
 
 import rerun as rr
 from airo_tulip.structs import PlatformLimits, Point2D, WheelConfig, WheelParamVelocity
-from airo_tulip.util import get_shortest_angle
+from airo_tulip.util import get_shortest_angle, sign
 
 
 class CompliantController:
@@ -125,7 +125,7 @@ class CompliantController:
         )
 
         # Update target position to simulate movement
-        self._target_position[wheel_index].x += -0.30 * delta_time
+        self._target_position[wheel_index].x += -0.10 * delta_time
 
     def _update_current_force(self, wheel_index: int) -> None:
         msd_force_x, msd_force_y = self._calculate_mass_spring_damper_force(wheel_index)
@@ -176,14 +176,15 @@ class CompliantController:
         print("ANGLE", angle_error, target_pivot_angle, raw_pivot_encoder)
 
         # Differential correction force to minimise pivot_error
-        delta_force = math.sin(angle_error) ** 2 * sign(angle_error)
-        delta_force *= 1 if abs(angle_error) < math.pi / 2 else -1
-        delta_force *= math.sqrt(force_x**2 + force_y**2)
+        diff_force = math.sin(angle_error) ** 2 * sign(angle_error)
+        diff_force *= 1 if abs(angle_error) < math.pi / 2 else -1
+        diff_force *= math.sqrt(force_x**2 + force_y**2)
+        diff_force *= 1
 
         # Common force to move in target direction
         common_force = math.cos(angle_error) ** 2
         common_force *= 1 if abs(angle_error) < math.pi / 2 else -1
-        common_force *= math.sqrt(force_x**2 + force_y**2)
+        common_force *= -math.sqrt(force_x**2 + force_y**2)
 
         # Target force of left and right wheel
         force_r = common_force + diff_force
