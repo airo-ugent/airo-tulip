@@ -58,6 +58,25 @@ class CompliantController:
             s += p
         return Point2D(s.x / 4, s.y / 4)
 
+    def _get_current_platform_angle(self):
+        v1 = self._current_position[3] - self._current_position[0]
+        a1 = math.atan2(v1.y, v1.x)
+        a1 += math.pi if v1.x < 0 else 0
+
+        v2 = self._current_position[2] - self._current_position[1]
+        a2 = math.atan2(v2.y, v2.x)
+        a2 += math.pi if v2.x < 0 else 0
+
+        v3 = self._current_position[1] - self._current_position[0]
+        a3 = math.atan2(v3.y, v3.x) + math.pi/2
+        a3 += math.pi if v3.x < 0 else 0
+
+        v4 = self._current_position[2] - self._current_position[3]
+        a4 = math.atan2(v4.y, v4.x) + math.pi/2
+        a4 += math.pi if v4.x < 0 else 0
+
+        return (a1 + a2 + a3 + a4) / 4
+
     def calculate_wheel_target_torque(
         self, wheel_index: int, raw_encoders: List[List[float]], delta_time: float
     ) -> Tuple[float, float]:
@@ -76,6 +95,10 @@ class CompliantController:
         msd_force_r, msd_force_l = self._convert_carthesian_force_to_wheel_forces(
             wheel_index, raw_encoders[wheel_index][2], total_force.x, total_force.y
         )
+
+        rr.log(f"force/wheel{wheel_index}/r", rr.Scalar(msd_force_r))
+        rr.log(f"force/wheel{wheel_index}/l", rr.Scalar(msd_force_l))
+
         force_r, force_l = self._calculate_motor_controller_force(wheel_index, msd_force_r, msd_force_l)
         torque_r, torque_l = self._convert_force_to_torque(force_r, force_l)
         rr.log(f"torque/wheel{wheel_index}/r", rr.Scalar(torque_r))
@@ -86,6 +109,10 @@ class CompliantController:
         if self._last_encoders[wheel_index] is None:
             self._last_encoders[wheel_index] = raw_encoders.copy()
             return
+
+        rr.log(f"raw_encoders/wheel{wheel_index}/1", rr.Scalar(raw_encoders[0]))
+        rr.log(f"raw_encoders/wheel{wheel_index}/2", rr.Scalar(raw_encoders[1]))
+        rr.log(f"raw_encoders/wheel{wheel_index}/pivot", rr.Scalar(raw_encoders[2]))
 
         delta_ang_r = raw_encoders[0] - self._last_encoders[wheel_index][0]
         delta_ang_l = raw_encoders[1] - self._last_encoders[wheel_index][1]
@@ -102,17 +129,17 @@ class CompliantController:
 
         delta_pos_r = delta_ang_r * self._wheel_diameter / 2
         delta_pos_l = delta_ang_l * self._wheel_diameter / 2
-        delta_pos_r *= -1  # because inverted frame
+        delta_pos_l *= -1  # because inverted frame
         delta_pos = (delta_pos_r + delta_pos_l) / 2
 
         # Calculate angle of wheels in world frame of reference
         pos_center = self._get_current_platform_center()
-        angle_platform = math.atan2(
-            self._current_position[wheel_index].y - pos_center.y, self._current_position[wheel_index].x - pos_center.x
-        ) - math.atan2(
-            self._wheel_params[wheel_index].pivot_position.y, self._wheel_params[wheel_index].pivot_position.x
-        )
-        angle = angle_platform + self._wheel_params[wheel_index].pivot_offset + raw_encoders[2] + math.pi
+        rr.log(f"pos_center/wheel{wheel_index}/x", rr.Scalar(pos_center.x))
+        rr.log(f"pos_center/wheel{wheel_index}/y", rr.Scalar(pos_center.y))
+        angle_platform = self._get_current_platform_angle()
+        rr.log(f"angle_platform/wheel{wheel_index}", rr.Scalar(angle_platform))
+        angle = angle_platform + self._wheel_params[wheel_index].pivot_offset + raw_encoders[2]
+        rr.log(f"angle/wheel{wheel_index}", rr.Scalar(angle))
 
         # Update drive position in world
         self._current_position[wheel_index].x += delta_pos * math.cos(angle)
@@ -124,8 +151,11 @@ class CompliantController:
             f"wheel {wheel_index} pos {self._current_position[wheel_index]} vel {self._current_velocity[wheel_index]}"
         )
 
+        rr.log(f"pos/wheel{wheel_index}/x", rr.Scalar(self._current_position[wheel_index].x))
+        rr.log(f"pos/wheel{wheel_index}/y", rr.Scalar(self._current_position[wheel_index].y))
+
         # Update target position to simulate movement
-        self._target_position[wheel_index].x += -0.10 * delta_time
+        #self._target_position[wheel_index].x += -0.10 * delta_time
 
     def _update_current_force(self, wheel_index: int) -> None:
         msd_force_x, msd_force_y = self._calculate_mass_spring_damper_force(wheel_index)
@@ -161,18 +191,15 @@ class CompliantController:
 
         # Calculate angles of wheel and target force
         pos_center = self._get_current_platform_center()
-        angle_platform = math.atan2(
-            self._current_position[wheel_index].y - pos_center.y, self._current_position[wheel_index].x - pos_center.x
-        ) - math.atan2(
-            self._wheel_params[wheel_index].pivot_position.y, self._wheel_params[wheel_index].pivot_position.x
-        )
-        wheel_angle = angle_platform + self._wheel_params[wheel_index].pivot_offset + raw_pivot_encoder
-        rr.log(f"wheel_angle/wheel{wheel_index}", rr.Scalar(wheel_angle))
+        angle_platform = self._get_current_platform_angle()
         force_angle = math.atan2(force_y, force_x)
+        rr.log(f"force_angle/wheel{wheel_index}", rr.Scalar(force_angle))
         target_pivot_angle = force_angle - self._wheel_params[wheel_index].pivot_offset - angle_platform
+        rr.log(f"target_pivot_angle/wheel{wheel_index}", rr.Scalar(target_pivot_angle))
 
         # Calculate error angle as shortest route
         angle_error = get_shortest_angle(target_pivot_angle, raw_pivot_encoder)
+        rr.log(f"angle_error/wheel{wheel_index}", rr.Scalar(angle_error))
         print("ANGLE", angle_error, target_pivot_angle, raw_pivot_encoder)
 
         # Differential correction force to minimise pivot_error
@@ -180,11 +207,13 @@ class CompliantController:
         diff_force *= 1 if abs(angle_error) < math.pi / 2 else -1
         diff_force *= math.sqrt(force_x**2 + force_y**2)
         diff_force *= 1
+        rr.log(f"diff_force/wheel{wheel_index}", rr.Scalar(diff_force))
 
         # Common force to move in target direction
         common_force = math.cos(angle_error) ** 2
         common_force *= 1 if abs(angle_error) < math.pi / 2 else -1
         common_force *= -math.sqrt(force_x**2 + force_y**2)
+        rr.log(f"common_force/wheel{wheel_index}", rr.Scalar(common_force))
 
         # Target force of left and right wheel
         force_r = common_force + diff_force
