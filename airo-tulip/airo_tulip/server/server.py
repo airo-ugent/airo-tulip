@@ -7,6 +7,7 @@ import zmq.asyncio
 from airo_tulip.robile_platform import RobilePlatform
 from airo_tulip.server.messages import ErrorResponse, OkResponse, SetPlatformVelocityTargetMessage, StopServerMessage
 from airo_tulip.structs import WheelConfig
+from airo_tulip.platform_driver import PlatformDriverType
 from loguru import logger
 
 
