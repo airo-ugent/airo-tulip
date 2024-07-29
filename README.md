@@ -6,3 +6,11 @@ This repository contains:
 - A Python reimplementation with altered and additional functionality by IDLab-AIRO (UGent-imec) for integration in Python projects without a ROS dependency (`./airo-tulip`)
 
 See the respective subdirectories for more information.
+
+## Installation
+
+To install airo-tulip, use pip:
+
+```
+pip install airo-tulip
+```

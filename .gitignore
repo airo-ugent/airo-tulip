@@ -3,6 +3,9 @@
 airo-tulip/.python-verion
 env3.10/
 
+# IntelliJ
+.idea/
+
 # Vim
 *.swp
 

@@ -18,7 +18,7 @@ class KELORobile:
         logger.info(f"Connected to {address}.")
 
     def set_platform_velocity_target(
-        self, vel_x: float, vel_y: float, vel_a: float, timeout: float = 1.0
+            self, vel_x: float, vel_y: float, vel_a: float, *, timeout: float = 1.0, instantaneous: bool = True
     ) -> ResponseMessage:
         """Set the x, y and angular velocity of the complete mobile platform.
 
@@ -27,11 +27,12 @@ class KELORobile:
             vel_y: Linear velocity of platform in y (left) direction in m/s.
             vel_a: Linear velocity of platform in angular direction in rad/s.
             timeout: Duration in seconds after which the movement is automatically stopped (default 1.0).
+            instantaneous: If true (default), the platform will move immediately, even if the individual drives are not aligned. If false, will first align all the drives.
 
         Returns:
             A ResponseMessage object indicating the response status of the request.
         """
-        msg = SetPlatformVelocityTargetMessage(vel_x, vel_y, vel_a, timeout)
+        msg = SetPlatformVelocityTargetMessage(vel_x, vel_y, vel_a, timeout, instantaneous)
         return self._transceive_message(msg)
 
     def stop_server(self) -> ResponseMessage:
@@ -46,3 +47,10 @@ class KELORobile:
     def _transceive_message(self, req: RequestMessage) -> ResponseMessage:
         self._zmq_socket.send_pyobj(req)
         return self._zmq_socket.recv_pyobj()
+
+    def close(self):
+        self._zmq_socket.close()
+        self._zmq_ctx.term()
+
+    def __del__(self):
+        self.close()

@@ -4,6 +4,7 @@ from typing import List
 
 import zmq
 import zmq.asyncio
+from airo_tulip.platform_driver import PlatformDriverType
 from airo_tulip.robile_platform import RobilePlatform
 from airo_tulip.server.messages import ErrorResponse, OkResponse, SetPlatformVelocityTargetMessage, StopServerMessage
 from airo_tulip.structs import WheelConfig
@@ -120,7 +121,7 @@ class TulipServer:
     def _handle_set_platform_velocity_target_request(self, request: SetPlatformVelocityTargetMessage):
         try:
             self._platform.driver.set_platform_velocity_target(
-                request.vel_x, request.vel_y, request.vel_a, request.timeout
+                request.vel_x, request.vel_y, request.vel_a, request.timeout, request.instantaneous
             )
             logger.info("Request handled successfully.")
             return OkResponse()

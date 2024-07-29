@@ -27,7 +27,7 @@ def test():
 
         # Store positions
         for i in range(4):
-            wheel_positions[i].append([mobi.driver._cc._current_position[i].x, mobi.driver._cc._current_position[i].y])
+            wheel_positions[i].append([mobi.driver._cpc._current_position[i].x, mobi.driver._cpc._current_position[i].y])
 
         # Plot positions
         for i in range(4):

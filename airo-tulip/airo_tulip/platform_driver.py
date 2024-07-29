@@ -4,7 +4,7 @@ from enum import Enum
 from typing import List
 
 import pysoem
-from airo_tulip.controllers.compliant_controller import CompliantController
+from airo_tulip.controllers.compliant_platform_controller import CompliantPlatformController
 from airo_tulip.controllers.velocity_platform_controller import VelocityPlatformController
 from airo_tulip.ethercat import *
 from airo_tulip.structs import WheelConfig
@@ -58,21 +58,32 @@ class PlatformDriver:
 
         self._controller_type = controller_type
         if self._controller_type == PlatformDriverType.VELOCITY:
-            self._vpc = VelocityPlatformController()
-            self._vpc.initialise(self._wheel_configs)
+            self._vpc = VelocityPlatformController(self._wheel_configs)
         elif self._controller_type == PlatformDriverType.COMPLIANT:
-            self._cc = CompliantController(self._wheel_configs)
+            self._cpc = CompliantPlatformController(self._wheel_configs)
 
-    def set_platform_velocity_target(self, vel_x: float, vel_y: float, vel_a: float, timeout: float) -> None:
+    def set_platform_velocity_target(self, vel_x: float, vel_y: float, vel_a: float, timeout: float, instantaneous: bool) -> None:
+        """Set the platform's velocity target.
+
+        This sets a target velocity for the platform, which it will attempt to achieve. This only works if the driver
+        is set to velocity mode. An internal check is done on the magnitude of the velocity to ensure safety.
+        ONLY OVERRIDE THESE CHECKS IF YOU KNOW WHAT YOU ARE DOING.
+
+        Args:
+            vel_x: Velocity along X axis.
+            vel_y: Velocity along Y axis.
+            vel_a: Angular velocity.
+            timeout: The platform will stop after this many seconds.
+            instantaneous: If true, the platform will move immediately, even if the individual drives are not aligned. If false, will first align all the drives."""
         if self._controller_type != PlatformDriverType.VELOCITY:
             raise ValueError("Cannot set target velocity if driver not of type VELOCITY")
-        if math.sqrt(vel_x**2 + vel_y**2) > 1.0:
+        if math.sqrt(vel_x ** 2 + vel_y ** 2) > 1.0:
             raise ValueError("Cannot set target linear velocity higher than 1.0 m/s")
         if abs(vel_a) > math.pi / 8:
             raise ValueError("Cannot set target angular velocity higher than pi/8 rad/s")
         if timeout < 0.0:
             raise ValueError("Cannot set negative timeout")
-        self._vpc.set_platform_velocity_target(vel_x, vel_y, vel_a)
+        self._vpc.set_platform_velocity_target(vel_x, vel_y, vel_a, instantaneous)
         self._timeout = time.time() + timeout
         self._timeout_message_printed = False
 
@@ -91,7 +102,7 @@ class PlatformDriver:
 
         if self._timeout < time.time():
             if self._controller_type == PlatformDriverType.VELOCITY:
-                self._vpc.set_platform_velocity_target(0.0, 0.0, 0.0)
+                self._vpc.set_platform_velocity_target(0.0, 0.0, 0.0, True)
                 if not self._timeout_message_printed:
                     logger.info("platform stopped early due to velocity target timeout")
                     self._timeout_message_printed = True
@@ -194,6 +205,9 @@ class PlatformDriver:
         if self._controller_type == PlatformDriverType.VELOCITY:
             self._vpc.calculate_platform_ramped_velocities()
 
+            encoder_pivots = [self._process_data[i].encoder_pivot for i in range(self._num_wheels)]
+            drives_aligned = self._vpc.are_drives_aligned(encoder_pivots)
+
         raw_encoders = [[pd.encoder_1, pd.encoder_2, pd.encoder_pivot] for pd in self._process_data]
 
         for i in range(self._num_wheels):
@@ -208,7 +222,7 @@ class PlatformDriver:
             # Calculate wheel setpoints
             if self._controller_type == PlatformDriverType.VELOCITY:
                 setpoint1, setpoint2 = self._vpc.calculate_wheel_target_velocity(
-                    i, self._process_data[i].encoder_pivot
+                    i, self._process_data[i].encoder_pivot, drives_aligned
                 )
                 setpoint1 *= -1  # because of inverted frame
             elif self._controller_type == PlatformDriverType.COMPLIANT:
@@ -217,7 +231,7 @@ class PlatformDriver:
                     setpoint1, setpoint2 = 0.0, 0.0
                 else:
                     delta_time = time.time() - self._last_step_time
-                    setpoint1, setpoint2 = self._cc.calculate_wheel_target_torque(i, raw_encoders, delta_time)
+                    setpoint1, setpoint2 = self._cpc.calculate_wheel_target_torque(i, raw_encoders, delta_time)
                     setpoint1 *= -1  # because inverted frame
                     self._last_step_time = time.time()
 
