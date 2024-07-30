@@ -193,7 +193,7 @@ class VelocityPlatformController(Controller):
         pivot_angle = VelocityPlatformController.get_pivot_angle(wheel_param, raw_pivot_angle)
 
         # Velocity target vector at pivot position
-        target_vel_at_pivot = VelocityPlatformController.velocity_at_position(self._platform_target_vel,
+        target_vel_at_pivot = VelocityPlatformController.velocity_at_position(self._platform_ramped_vel,
                                                                               wheel_param.pivot_position)
 
         # Target pivot vector to angle
@@ -218,7 +218,7 @@ class VelocityPlatformController(Controller):
             rr.log(f"drive_{drive_index}/pivot_error", rr.Scalar(pivot_error))
             if pivot_error > max_pivot_error:
                 # Reset velocity ramping so that we don't get sudden accelerations once drives are aligned.
-                self._platform_ramped_vel = np.zeros((3,))
+                self._time_last_ramping = None
                 return False
         return True
 
@@ -236,13 +236,6 @@ class VelocityPlatformController(Controller):
             The target velocities for the right and left wheel, respectively.
         """
 
-        # Command 0 angular vel when platform has been commanded 0 vel
-        # If this is not done, then the wheels pivot to face front of platform
-        # even when the platform is commanded zero velocity.
-        if self._platform_target_vel[0] == 0 and self._platform_target_vel[1] == 0 and self._platform_target_vel[
-            2] == 0:
-            return 0.0, 0.0
-
         wheel_param = self._wheel_params[drive_index]
 
         # Pivot angle to unity vector
@@ -259,8 +252,8 @@ class VelocityPlatformController(Controller):
         pivot_error = clip(pivot_error, wheel_param.max_pivot_error, -wheel_param.max_pivot_error)
 
         # Target velocity vector at wheel position
-        target_vel_vec_l = VelocityPlatformController.velocity_at_position(self._platform_target_vel, position_l)
-        target_vel_vec_r = VelocityPlatformController.velocity_at_position(self._platform_target_vel, position_r)
+        target_vel_vec_l = VelocityPlatformController.velocity_at_position(self._platform_ramped_vel, position_l)
+        target_vel_vec_r = VelocityPlatformController.velocity_at_position(self._platform_ramped_vel, position_r)
 
         # Differential correction speed to minimise pivot_error
         delta_vel = pivot_error * wheel_param.pivot_kp
