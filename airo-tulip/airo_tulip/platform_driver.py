@@ -10,7 +10,7 @@ from airo_tulip.ethercat import *
 from airo_tulip.structs import WheelConfig
 from airo_tulip.util import *
 from loguru import logger
-
+from airo_tulip.constants import *
 
 class PlatformDriverType(Enum):
     VELOCITY = 1
@@ -32,9 +32,6 @@ class PlatformDriver:
         self._num_wheels = len(wheel_configs)
 
         self._state = PlatformDriverState.INIT
-        self._prev_encoder = [[0.0, 0.0]] * self._num_wheels
-        self._sum_encoder = [[0.0, 0.0]] * self._num_wheels
-        self._encoder_initialized = False
         self._current_ts = 0
         self._process_data = []
         self._wheel_enabled = [True] * self._num_wheels
@@ -42,19 +39,6 @@ class PlatformDriver:
         self._timeout = 0
         self._timeout_message_printed = True
         self._last_step_time = None
-
-        # Constants taken directly from KELO: https://github.com/kelo-robotics/kelo_tulip/blob/1a8db0626b3d399b62b65b31c004e7b1831756d7/src/PlatformDriver.cpp
-        self._wheel_distance = 0.0775
-        self._wheel_diameter = 0.104
-        self._current_stop = 1
-        self._current_drive = 20
-        self._max_v_lin = 1.5
-        self._max_v_a = 1.0
-        self._max_v_lin_acc = 0.0025  # per millisecond, same value for deceleration
-        self._max_angle_acc = 0.01  # at vlin=0, per msec, same value for deceleration
-        self._max_v_a_acc = 0.01  # per millisecond, same value for deceleration
-        self._wheel_set_point_min = 0.01
-        self._wheel_set_point_max = 35.0
 
         self._controller_type = controller_type
         if self._controller_type == PlatformDriverType.VELOCITY:
@@ -98,11 +82,9 @@ class PlatformDriver:
 
         self._current_ts = self._process_data[0].sensor_ts
 
-        self._update_encoders()
-
         if self._timeout < time.time():
             if self._controller_type == PlatformDriverType.VELOCITY:
-                self._vpc.set_platform_velocity_target(0.0, 0.0, 0.0, True)
+                self._vpc.set_platform_velocity_target(0.0, 0.0, 0.0, instantaneous=True)
                 if not self._timeout_message_printed:
                     logger.info("platform stopped early due to velocity target timeout")
                     self._timeout_message_printed = True
@@ -175,10 +157,10 @@ class PlatformDriver:
         # zero setpoints for all drives
         data = RxPDO1()
         data.timestamp = self._current_ts + 100 * 1000
-        data.limit1_p = self._current_stop
-        data.limit1_n = -self._current_stop
-        data.limit2_p = self._current_stop
-        data.limit2_n = -self._current_stop
+        data.limit1_p = CURRENT_STOP
+        data.limit1_n = -CURRENT_STOP
+        data.limit2_p = CURRENT_STOP
+        data.limit2_n = -CURRENT_STOP
         data.setpoint1 = 0
         data.setpoint2 = 0
 
@@ -194,10 +176,10 @@ class PlatformDriver:
         # calculate setpoints for each drive
         data = RxPDO1()
         data.timestamp = self._current_ts + 100 * 1000
-        data.limit1_p = self._current_drive
-        data.limit1_n = -self._current_drive
-        data.limit2_p = self._current_drive
-        data.limit2_n = -self._current_drive
+        data.limit1_p = CURRENT_DRIVE
+        data.limit1_n = -CURRENT_DRIVE
+        data.limit2_p = CURRENT_DRIVE
+        data.limit2_n = -CURRENT_DRIVE
         data.setpoint1 = 0
         data.setpoint2 = 0
 
@@ -237,14 +219,14 @@ class PlatformDriver:
 
             # Avoid sending close to zero velocities
             if self._controller_type == PlatformDriverType.VELOCITY:
-                if abs(setpoint1) < self._wheel_set_point_min:
+                if abs(setpoint1) < WHEEL_SET_POINT_MIN:
                     setpoint1 = 0
-                if abs(setpoint2) < self._wheel_set_point_min:
+                if abs(setpoint2) < WHEEL_SET_POINT_MIN:
                     setpoint2 = 0
 
             # Avoid sending very large values
-            setpoint1 = clip(setpoint1, self._wheel_set_point_max, -self._wheel_set_point_max)
-            setpoint2 = clip(setpoint2, self._wheel_set_point_max, -self._wheel_set_point_max)
+            setpoint1 = clip(setpoint1, WHEEL_SET_POINT_MAX, -WHEEL_SET_POINT_MAX)
+            setpoint2 = clip(setpoint2, WHEEL_SET_POINT_MAX, -WHEEL_SET_POINT_MAX)
 
             # Send calculated setpoints
             data.setpoint1 = setpoint1
@@ -253,38 +235,6 @@ class PlatformDriver:
             logger.trace(f"wheel {i} enabled {self._wheel_enabled[i]} sp1 {setpoint1} sp2 {setpoint2}")
 
             self._set_process_data(i, data)
-
-    def _update_encoders(self):
-        if not self._encoder_initialized:
-            for i in range(self._num_wheels):
-                data = self._process_data[i]
-                self._prev_encoder[i][0] = data.encoder_1
-                self._prev_encoder[i][1] = data.encoder_2
-
-        # count accumulative encoder value
-        for i in range(self._num_wheels):
-            data = self._process_data[i]
-            curr_encoder1 = data.encoder_1
-            curr_encoder2 = data.encoder_2
-
-            if abs(curr_encoder1 - self._prev_encoder[i][0]) > math.pi:
-                if curr_encoder1 < self._prev_encoder[i][0]:
-                    self._sum_encoder[i][0] += curr_encoder1 - self._prev_encoder[i][0] + 2 * math.pi
-                else:
-                    self._sum_encoder[i][0] += curr_encoder1 - self._prev_encoder[i][0] - 2 * math.pi
-            else:
-                self._sum_encoder[i][0] += curr_encoder1 - self._prev_encoder[i][0]
-
-            if abs(curr_encoder2 - self._prev_encoder[i][1]) > math.pi:
-                if curr_encoder2 < self._prev_encoder[i][1]:
-                    self._sum_encoder[i][1] += curr_encoder2 - self._prev_encoder[i][1] + 2 * math.pi
-                else:
-                    self._sum_encoder[i][1] += curr_encoder2 - self._prev_encoder[i][1] - 2 * math.pi
-            else:
-                self._sum_encoder[i][1] += curr_encoder2 - self._prev_encoder[i][1]
-
-            self._prev_encoder[i][0] = curr_encoder1
-            self._prev_encoder[i][1] = curr_encoder2
 
     def _get_process_data(self, wheel_index: int) -> TxPDO1:
         ethercat_index = self._wheel_configs[wheel_index].ethercat_number

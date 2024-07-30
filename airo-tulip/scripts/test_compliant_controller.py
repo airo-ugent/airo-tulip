@@ -4,7 +4,7 @@ import random
 
 import matplotlib.pyplot as plt
 from airo_tulip.controllers.compliant_controller import CompliantController
-from airo_tulip.structs import Attitude2D, Point2D, WheelConfig
+from airo_tulip.structs import Attitude2DType, Point2D, WheelConfig
 
 # Init timeseries outputs
 ts_time = []
@@ -25,7 +25,7 @@ def test():
     # Test control loop
     encoders = [[random.random(), random.random(), random.random()] for _ in range(len(wheel_configs))]
     velocity = [Point2D() for _ in range(len(wheel_configs))]
-    position = [Attitude2D(wc.x, wc.y, random.random()) for wc in wheel_configs]
+    position = [Attitude2DType(wc.x, wc.y, random.random()) for wc in wheel_configs]
     time = 0.0
     delta_time = 0.050
 

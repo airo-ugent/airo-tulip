@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 
+from airo_tulip.structs import Attitude2DType
+
 
 @dataclass
 class RequestMessage:
@@ -23,6 +25,16 @@ class SetPlatformVelocityTargetMessage(RequestMessage):
 @dataclass
 class StopServerMessage(RequestMessage):
     pass
+
+
+@dataclass
+class GetOdometryMessage(RequestMessage):
+    pass
+
+
+@dataclass
+class OdometryResponse(ResponseMessage):
+    odometry: Attitude2DType
 
 
 @dataclass
