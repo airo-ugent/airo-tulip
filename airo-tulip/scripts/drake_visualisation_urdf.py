@@ -2,14 +2,13 @@ from typing import List
 
 import airo_models
 import numpy as np
+from airo_tulip.structs import Point2D
 from pydrake.geometry import Meshcat
 from pydrake.geometry import MeshcatVisualizer
 from pydrake.math import RigidTransform, RollPitchYaw
 from pydrake.multibody.plant import MultibodyPlant
-from pydrake.multibody.tree import RigidBodyFrame
+from pydrake.multibody.tree import RigidBodyFrame, PlanarJoint
 from pydrake.planning import RobotDiagramBuilder
-
-from airo_tulip.structs import Point2D
 
 robot_diagram_builder = RobotDiagramBuilder()
 scene_graph = robot_diagram_builder.scene_graph()
@@ -59,19 +58,19 @@ def create_mobile_robot(plant: MultibodyPlant, robot_root_frame: RigidBodyFrame,
     # robot_transform: relative to world
     # drive_transforms: relative to robot_transform
     for drive_index, drive_transform in enumerate(drive_transforms):
-        brick_index = parser.AddModels("../../urdf/wheel_brick.urdf")[0]
+        brick_index = parser.AddModels("../urdf/wheel_brick.urdf")[0]
         brick_frame = plant.GetFrameByName("base_link", brick_index)
         plant.WeldFrames(robot_root_frame, brick_frame, drive_transform)
 
     battery_transform = RigidTransform(p=[brick_size * battery_position.x, brick_size * battery_position.y, 0],
                                        rpy=RollPitchYaw([0, 0, 0]))
-    battery_index = parser.AddModels("../../urdf/battery_brick.urdf")[0]
+    battery_index = parser.AddModels("../urdf/battery_brick.urdf")[0]
     battery_frame = plant.GetFrameByName("base_link", battery_index)
     plant.WeldFrames(robot_root_frame, battery_frame, battery_transform)
 
     cpu_transform = RigidTransform(p=[brick_size * cpu_position.x, brick_size * cpu_position.y, 0],
                                    rpy=RollPitchYaw([0, 0, 0]))
-    cpu_index = parser.AddModels("../../urdf/cpu_brick.urdf")[0]
+    cpu_index = parser.AddModels("../urdf/cpu_brick.urdf")[0]
     cpu_frame = plant.GetFrameByName("base_link", cpu_index)
     plant.WeldFrames(robot_root_frame, cpu_frame, cpu_transform)
 
@@ -105,15 +104,28 @@ def create_mobile_robot(plant: MultibodyPlant, robot_root_frame: RigidBodyFrame,
     plant.WeldFrames(robot_root_frame, ur5e_frame, ur5e_transform)
 
 
-create_mobile_robot(plant, world_frame,
+mobi_model_index = parser.AddModels("../urdf/mobi.urdf")[0]
+mobi_frame = plant.GetFrameByName("base_link", mobi_model_index)
+
+create_mobile_robot(plant, mobi_frame,
                     [Point2D(-0.5, -0.5), Point2D(-0.5, 0.5), Point2D(-2.5, -0.5), Point2D(-2.5, 0.5)],
                     Point2D(-1.5, 0.5), Point2D(-1.5, -0.5), 0.43, 0.69, 0.525, 0.03, Point2D(-0.105, 0), -np.pi / 2)
+
+platform_planar_joint = PlanarJoint("mobi_joint", world_frame, mobi_frame)
+platform_planar_joint.set_velocity_limits([0, 0, 0], [1.5, 1.5, np.pi / 8])
+plant.AddJoint(platform_planar_joint)
 
 # Finishing and visualizing
 diagram = robot_diagram_builder.Build()
 context = diagram.CreateDefaultContext()
 plant_context = plant.GetMyContextFromRoot(context)
 diagram.ForcedPublish(context)
+
+# The first three positions represent the platform's pose (x, y, theta). The last six represent the UR's configuration.
+plant.SetPositions(plant_context, [0.5, 0.5, np.pi, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+diagram.ForcedPublish(context)
+
+print(plant.GetPositions(plant_context))
 
 while True:
     pass
