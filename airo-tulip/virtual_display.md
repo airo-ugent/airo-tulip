@@ -6,13 +6,13 @@ First, create a virtual X frame buffer:
 
 ```bash
 export DISPLAY=:1
-xvfb "$DISPLAY" -screen 0 1024x768x16 &
+Xvfb "$DISPLAY" -screen 0 1024x768x16 &
 ```
 
 Then start a VNC server on this display
 
 ```bash
-x11vnc -display "$DISPLAY" &
+X11vnc -display "$DISPLAY" &
 ```
 
 Finally, start a gnome shell to enable the gnome desktop environment:
