@@ -12,7 +12,7 @@ Xvfb "$DISPLAY" -screen 0 1024x768x16 &
 Then start a VNC server on this display
 
 ```bash
-X11vnc -display "$DISPLAY" &
+x11vnc -display "$DISPLAY" &
 ```
 
 Finally, start a gnome shell to enable the gnome desktop environment:
