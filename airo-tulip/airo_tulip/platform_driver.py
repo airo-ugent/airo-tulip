@@ -4,13 +4,14 @@ from enum import Enum
 from typing import List
 
 import pysoem
+from airo_tulip.constants import *
 from airo_tulip.controllers.compliant_platform_controller import CompliantPlatformController
 from airo_tulip.controllers.velocity_platform_controller import VelocityPlatformController
 from airo_tulip.ethercat import *
 from airo_tulip.structs import WheelConfig
 from airo_tulip.util import *
 from loguru import logger
-from airo_tulip.constants import *
+
 
 class PlatformDriverType(Enum):
     VELOCITY = 1
@@ -46,7 +47,9 @@ class PlatformDriver:
         elif self._controller_type == PlatformDriverType.COMPLIANT:
             self._cpc = CompliantPlatformController(self._wheel_configs)
 
-    def set_platform_velocity_target(self, vel_x: float, vel_y: float, vel_a: float, timeout: float, instantaneous: bool) -> None:
+    def set_platform_velocity_target(
+        self, vel_x: float, vel_y: float, vel_a: float, timeout: float, instantaneous: bool
+    ) -> None:
         """Set the platform's velocity target.
 
         This sets a target velocity for the platform, which it will attempt to achieve. This only works if the driver
@@ -59,15 +62,19 @@ class PlatformDriver:
             vel_a: Angular velocity.
             timeout: The platform will stop after this many seconds.
             instantaneous: If true, the platform will move immediately, even if the individual drives are not aligned. If false, will first align all the drives."""
-        if self._controller_type != PlatformDriverType.VELOCITY:
-            raise ValueError("Cannot set target velocity if driver not of type VELOCITY")
-        if math.sqrt(vel_x ** 2 + vel_y ** 2) > 1.0:
+        if math.sqrt(vel_x**2 + vel_y**2) > 1.0:
             raise ValueError("Cannot set target linear velocity higher than 1.0 m/s")
         if abs(vel_a) > math.pi / 8:
             raise ValueError("Cannot set target angular velocity higher than pi/8 rad/s")
         if timeout < 0.0:
             raise ValueError("Cannot set negative timeout")
-        self._vpc.set_platform_velocity_target(vel_x, vel_y, vel_a, instantaneous)
+
+        if self._controller_type == PlatformDriverType.VELOCITY:
+            self._vpc.set_platform_velocity_target(vel_x, vel_y, vel_a, instantaneous)
+        elif self._controller_type == PlatformDriverType.COMPLIANT:
+            for i in range(4):
+                self._cc.set_wheel_target_velocity(i, vel_x, vel_y)
+
         self._timeout = time.time() + timeout
         self._timeout_message_printed = False
 

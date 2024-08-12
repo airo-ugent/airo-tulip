@@ -5,7 +5,7 @@ import numpy as np
 import rerun as rr
 from airo_tulip.controllers.controller import Controller
 from airo_tulip.structs import PlatformLimits, WheelConfig
-from airo_tulip.util import get_shortest_angle, sign, clip_angle
+from airo_tulip.util import clip_angle, get_shortest_angle, sign
 from airo_typing import Vector2DType
 
 
@@ -20,12 +20,18 @@ class CompliantPlatformController(Controller):
         num_wheels = len(wheel_configs)
         self._current_position = np.zeros((num_wheels, 2))
         self._current_velocity = np.zeros((num_wheels, 2))
+        self._target_velocity = np.zeros((num_wheels, 2))
         self._current_force = np.zeros((num_wheels, 2))
         self._last_encoders = [None] * num_wheels
 
         for i in range(num_wheels):
             self._current_position[i, 0] = wheel_configs[i].x
             self._current_position[i, 1] = wheel_configs[i].y
+
+    def set_wheel_target_velocity(self, drive_index: int, vel_x: float, vel_y: float) -> None:
+        """Set the target velocity of the specified drive."""
+        self._target_velocity[drive_index, 0] = 0.0 if (abs(vel_x) < 0.0000001) else vel_x
+        self._target_velocity[drive_index, 1] = 0.0 if (abs(vel_y) < 0.0000001) else vel_y
 
     def _get_current_platform_center(self) -> Vector2DType:
         """Estimate the current platform center from the drive positions (odometry based).
@@ -53,7 +59,7 @@ class CompliantPlatformController(Controller):
         return a1
 
     def calculate_wheel_target_torque(
-            self, drive_index: int, raw_encoders: List[List[float]], delta_time: float
+        self, drive_index: int, raw_encoders: List[List[float]], delta_time: float
     ) -> Tuple[float, float]:
         """
         Compute the target torque for a drive based on the encoder values and the expired time since the last computation.
@@ -139,7 +145,7 @@ class CompliantPlatformController(Controller):
 
     def _update_current_force(self, drive_index: int) -> None:
         """Update the current force that should be applied to a drive.
-        
+
         Args:
             drive_index: The drive index."""
         self._current_force[drive_index] = self._calculate_mass_spring_damper_force(drive_index)
@@ -152,11 +158,11 @@ class CompliantPlatformController(Controller):
 
         Returns:
             The force vector."""
-        spring_constant = 100.0
-        damping_constant = 0.0
+        spring_constant = 0.0  # 100.0
+        damping_constant = 100.0  # 0.0
 
         position_delta = np.linalg.norm(self._current_position[drive_index])
-        velocity_delta = np.linalg.norm(self._current_velocity[drive_index])
+        velocity_delta = np.linalg.norm(self._target_velocity[drive_index] - self._current_velocity[drive_index])
 
         force = -spring_constant * position_delta - damping_constant * velocity_delta
         rr.log(f"compliant/force/wheel{drive_index}", rr.Scalar(force))
@@ -170,7 +176,10 @@ class CompliantPlatformController(Controller):
         return np.array([force_x, force_y])
 
     def _convert_platform_force_to_drive_forces(
-            self, wheel_index: int, raw_pivot_encoder: float, force: Vector2DType,
+        self,
+        wheel_index: int,
+        raw_pivot_encoder: float,
+        force: Vector2DType,
     ) -> Tuple[float, float]:
         """Convert the overall platform force to the forces that should be applied to both wheels in the given drive.
 
@@ -214,7 +223,7 @@ class CompliantPlatformController(Controller):
         return force_r, force_l
 
     def _calculate_motor_controller_force(
-            self, wheel_index: int, msd_force_r: float, msd_force_l: float
+        self, wheel_index: int, msd_force_r: float, msd_force_l: float
     ) -> Tuple[float, float]:
         """Compensate for the motor."""
         return msd_force_r, msd_force_l  # no compensation for motor non-idealities
