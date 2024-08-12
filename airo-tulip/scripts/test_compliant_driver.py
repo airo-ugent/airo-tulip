@@ -11,7 +11,7 @@ def test():
     wheel_configs = create_wheel_configs()
     mobi = RobilePlatform(device, wheel_configs, PlatformDriverType.COMPLIANT)
     mobi.init_ethercat()
-    mobi.driver.set_platform_velocity_target(0.1, 0.0, 0.0, timeout=10.0)
+    mobi.driver.set_platform_velocity_target(0.1, 0.0, 0.0, timeout=10000.0, instantaneous=True)
 
     # Loop indefinitely
     while True:
