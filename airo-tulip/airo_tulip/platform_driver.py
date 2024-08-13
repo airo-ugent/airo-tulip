@@ -254,9 +254,23 @@ class PlatformDriver:
 class VelocityTorqueController:
     def __init__(self):
         self.P = 0.5
+        self.D = 1.0
         self._max_output = 20.0
 
+        self._prev_time = None
+        self._prev_error_vel = None
+
     def control(self, error_vel):
-        torque = self.P * error_vel
+        if self._prev_time != None:
+            delta_time = time.time() - self._prev_time
+            diff_error = (error_vel - self._prev_error_vel) / delta_time
+        else:
+            diff_error = 0.0
+
+        torque = self.P * error_vel + self.D * diff_error
+
+        self._prev_time = time.time()
+        self._prev_error_vel = error_vel
+
         torque = clip(torque, self._max_output, -self._max_output)
         return torque
