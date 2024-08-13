@@ -186,8 +186,8 @@ class PlatformDriver:
 
         encoder_pivots = [self._process_data[i].encoder_pivot for i in range(self._num_wheels)]
         drives_aligned = self._vpc.are_drives_aligned(encoder_pivots)
+        drives_aligned = True
 
-        [[pd.encoder_1, pd.encoder_2, pd.encoder_pivot] for pd in self._process_data]
         raw_velocities = [[pd.velocity_1, pd.velocity_2] for pd in self._process_data]
 
         for i in range(self._num_wheels):
@@ -210,6 +210,7 @@ class PlatformDriver:
                 setpoint1 = wheel_target_velocity_1
                 setpoint2 = wheel_target_velocity_2
             elif self._driver_type == PlatformDriverType.COMPLIANT:
+                logger.debug(f"wheel_index {i}")
                 setpoint1 = self._control_velocity_torque(wheel_target_velocity_1, raw_velocities[i][0])
                 setpoint2 = self._control_velocity_torque(wheel_target_velocity_2, raw_velocities[i][1])
 
@@ -233,13 +234,14 @@ class PlatformDriver:
             self._set_process_data(i, data)
 
     def _control_velocity_torque(self, target_vel, current_vel):
-        P = 50.0
-        max_torque = 10.0
+        P = 0.5
+        max_torque = 20.0
 
         delta_vel = target_vel - current_vel
         torque = P * delta_vel
 
         torque = clip(torque, max_torque, -max_torque)
+        logger.debug(f"target_vel {target_vel:.2f} current_vel {current_vel:.2f} torque {torque:.2f}")
         return torque
 
     def _get_process_data(self, wheel_index: int) -> TxPDO1:

@@ -9,9 +9,18 @@ def test():
     # Init stuff
     device = "eno1"
     wheel_configs = create_wheel_configs()
-    mobi = RobilePlatform(device, wheel_configs, PlatformDriverType.COMPLIANT)
+    mobi = RobilePlatform(device, wheel_configs, PlatformDriverType.VELOCITY)
     mobi.init_ethercat()
-    mobi.driver.set_platform_velocity_target(0.1, 0.0, 0.0, timeout=10000.0, instantaneous=True)
+    mobi.driver.set_platform_velocity_target(0.1, 0.0, 0.0, timeout=2.0, instantaneous=True)
+
+    # Loop for 2 seconds
+    start = time.time()
+    while time.time() - start < 2.0:
+        mobi.step()
+        time.sleep(0.050)
+
+    mobi.driver._driver_type = PlatformDriverType.COMPLIANT
+    mobi.driver.set_platform_velocity_target(0.3, 0.0, 0.0, timeout=10000.0, instantaneous=True)
 
     # Loop indefinitely
     while True:
