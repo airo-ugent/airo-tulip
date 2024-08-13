@@ -43,6 +43,8 @@ class PlatformDriver:
         self._driver_type = controller_type
         self._vpc = VelocityPlatformController(self._wheel_configs)
 
+        self._wheel_controllers = [VelocityTorqueController() for _ in range(self._num_wheels * 2)]
+
     def set_platform_velocity_target(
         self, vel_x: float, vel_y: float, vel_a: float, timeout: float, instantaneous: bool
     ) -> None:
@@ -211,8 +213,8 @@ class PlatformDriver:
                 setpoint2 = wheel_target_velocity_2
             elif self._driver_type == PlatformDriverType.COMPLIANT:
                 logger.debug(f"wheel_index {i}")
-                setpoint1 = self._control_velocity_torque(wheel_target_velocity_1, raw_velocities[i][0])
-                setpoint2 = self._control_velocity_torque(wheel_target_velocity_2, raw_velocities[i][1])
+                setpoint1 = self._control_velocity_torque(i * 2, wheel_target_velocity_1, raw_velocities[i][0])
+                setpoint2 = self._control_velocity_torque(i * 2 + 1, wheel_target_velocity_2, raw_velocities[i][1])
 
             # Avoid sending close to zero velocities
             if self._driver_type == PlatformDriverType.VELOCITY:
@@ -233,14 +235,10 @@ class PlatformDriver:
 
             self._set_process_data(i, data)
 
-    def _control_velocity_torque(self, target_vel, current_vel):
-        P = 0.5
-        max_torque = 20.0
-
-        delta_vel = target_vel - current_vel
-        torque = P * delta_vel
-
-        torque = clip(torque, max_torque, -max_torque)
+    def _control_velocity_torque(self, wheel_index, target_vel, current_vel):
+        controller = self._wheel_controllers[wheel_index]
+        error_vel = target_vel - current_vel
+        torque = controller.control(error_vel)
         logger.debug(f"target_vel {target_vel:.2f} current_vel {current_vel:.2f} torque {torque:.2f}")
         return torque
 
@@ -251,3 +249,14 @@ class PlatformDriver:
     def _set_process_data(self, wheel_index: int, data: RxPDO1) -> None:
         ethercat_index = self._wheel_configs[wheel_index].ethercat_number
         self._master.slaves[ethercat_index - 1].output = bytes(data)
+
+
+class VelocityTorqueController:
+    def __init__(self):
+        self.P = 0.5
+        self._max_output = 20.0
+
+    def control(self, error_vel):
+        torque = self.P * error_vel
+        torque = clip(torque, self._max_output, -self._max_output)
+        return torque
