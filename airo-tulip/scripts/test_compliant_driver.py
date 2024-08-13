@@ -19,7 +19,7 @@ def test():
         mobi.step()
         time.sleep(0.050)
 
-    mobi.driver._driver_type = PlatformDriverType.COMPLIANT
+    mobi.driver.set_driver_type(PlatformDriverType.COMPLIANT)
     mobi.driver.set_platform_velocity_target(0.1, 0.0, 0.0, timeout=2.0)
 
     # Loop for 2 seconds

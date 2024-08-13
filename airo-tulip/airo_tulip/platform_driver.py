@@ -79,6 +79,13 @@ class PlatformDriver:
         self._timeout = time.time() + timeout
         self._timeout_message_printed = False
 
+    def set_driver_type(self, driver_type):
+        assert isinstance(
+            driver_type, PlatformDriverType
+        ), f"Driver type must be an instance of PlatformDriverType enum, got {type(driver_type)}"
+        self._driver_type = driver_type
+        self._wheel_controllers = [VelocityTorqueController() for _ in range(self._num_wheels * 2)]
+
     def step(self) -> bool:
         self._step_count += 1
 
@@ -91,7 +98,7 @@ class PlatformDriver:
         self._current_ts = self._process_data[0].sensor_ts
 
         if self._timeout < time.time():
-            self._vpc.set_platform_velocity_target(0.0, 0.0, 0.0, instantaneous=True)
+            self._vpc.set_platform_velocity_target(0.0, 0.0, 0.0, instantaneous=True, only_align_drives=False)
             if not self._timeout_message_printed:
                 logger.info("platform stopped early due to velocity target timeout")
                 self._timeout_message_printed = True
