@@ -5,7 +5,7 @@ from typing import List, Tuple
 import numpy as np
 import rerun as rr
 from airo_tulip.controllers.controller import Controller
-from airo_tulip.structs import PlatformLimits, WheelConfig, WheelParamVelocity, Attitude2DType
+from airo_tulip.structs import Attitude2DType, PlatformLimits, WheelConfig, WheelParamVelocity
 from airo_tulip.util import clip, clip_angle, get_shortest_angle
 from airo_typing import Vector2DType
 
@@ -48,8 +48,9 @@ class VelocityPlatformController(Controller):
         return pivot_position
 
     @staticmethod
-    def wheel_positions_relative_to_platform_centre(wheel_param: WheelParamVelocity,
-                                                    pivot_encoder_value: float) -> Tuple[Vector2DType, Vector2DType]:
+    def wheel_positions_relative_to_platform_centre(
+        wheel_param: WheelParamVelocity, pivot_encoder_value: float
+    ) -> Tuple[Vector2DType, Vector2DType]:
         """For a given drive's parameters and pivot angle, compute the left and right wheel positions with respect
         to the platform centre.
 
@@ -62,19 +63,23 @@ class VelocityPlatformController(Controller):
         pivot_position = VelocityPlatformController.get_pivot_position(wheel_param, pivot_encoder_value)
 
         # Compute position of the left wheel with respect to platform centre, taking into account the pivot's angle.
-        position_l = wheel_param.pivot_position + np.array([
-            wheel_param.relative_position_l[0] * pivot_position[0] - wheel_param.relative_position_l[1] *
-            pivot_position[1],
-            wheel_param.relative_position_l[0] * pivot_position[1] + wheel_param.relative_position_l[1] *
-            pivot_position[0]
-        ])
+        position_l = wheel_param.pivot_position + np.array(
+            [
+                wheel_param.relative_position_l[0] * pivot_position[0]
+                - wheel_param.relative_position_l[1] * pivot_position[1],
+                wheel_param.relative_position_l[0] * pivot_position[1]
+                + wheel_param.relative_position_l[1] * pivot_position[0],
+            ]
+        )
         # Same for right wheel.
-        position_r = wheel_param.pivot_position + np.array([
-            wheel_param.relative_position_r[0] * pivot_position[0] - wheel_param.relative_position_r[1] *
-            pivot_position[1],
-            wheel_param.relative_position_r[0] * pivot_position[1] + wheel_param.relative_position_r[1] *
-            pivot_position[0]
-        ])
+        position_r = wheel_param.pivot_position + np.array(
+            [
+                wheel_param.relative_position_r[0] * pivot_position[0]
+                - wheel_param.relative_position_r[1] * pivot_position[1],
+                wheel_param.relative_position_r[0] * pivot_position[1]
+                + wheel_param.relative_position_r[1] * pivot_position[0],
+            ]
+        )
 
         return position_l, position_r
 
@@ -94,12 +99,15 @@ class VelocityPlatformController(Controller):
         x, y = position
         return np.array([vx - va * y, vy + va * x])
 
-    def set_platform_velocity_target(self, vel_x: float, vel_y: float, vel_a: float, instantaneous: bool) -> None:
+    def set_platform_velocity_target(
+        self, vel_x: float, vel_y: float, vel_a: float, instantaneous: bool, only_align_drives: bool
+    ) -> None:
         """Set the target velocity of the platform."""
         self._platform_target_vel[0] = 0.0 if (abs(vel_x) < 0.0000001) else vel_x
         self._platform_target_vel[1] = 0.0 if (abs(vel_y) < 0.0000001) else vel_y
         self._platform_target_vel[2] = 0.0 if (abs(vel_a) < 0.0000001) else vel_a
         self._should_align_drives = not instantaneous
+        self._only_align_drives = only_align_drives
 
     def set_platform_max_velocity(self, max_vel_linear: float, max_vel_angular: float) -> None:
         """Set the maximum velocity that the platform is allowed to drive at."""
@@ -193,8 +201,9 @@ class VelocityPlatformController(Controller):
         pivot_angle = VelocityPlatformController.get_pivot_angle(wheel_param, raw_pivot_angle)
 
         # Velocity target vector at pivot position
-        target_vel_at_pivot = VelocityPlatformController.velocity_at_position(self._platform_ramped_vel,
-                                                                              wheel_param.pivot_position)
+        target_vel_at_pivot = VelocityPlatformController.velocity_at_position(
+            self._platform_ramped_vel, wheel_param.pivot_position
+        )
 
         # Target pivot vector to angle
         target_pivot_angle = math.atan2(target_vel_at_pivot[1], target_vel_at_pivot[0])
@@ -222,11 +231,12 @@ class VelocityPlatformController(Controller):
                 return False
         return True
 
-    def calculate_wheel_target_velocity(self, drive_index: int, raw_pivot_angle: float, drives_aligned: bool) -> Tuple[
-        float, float]:
+    def calculate_wheel_target_velocity(
+        self, drive_index: int, raw_pivot_angle: float, drives_aligned: bool
+    ) -> Tuple[float, float]:
         """
         Calculate the wheel velocity setpoints based on the set target velocity.
-        
+
         Args:
             drive_index: Index of the drive.
             raw_pivot_angle: Encoder pivot value for this drive.
@@ -242,8 +252,9 @@ class VelocityPlatformController(Controller):
         unit_pivot_vector = VelocityPlatformController.get_pivot_position(wheel_param, raw_pivot_angle)
 
         # Position of wheels relative to platform centre
-        position_l, position_r = VelocityPlatformController.wheel_positions_relative_to_platform_centre(wheel_param,
-                                                                                                        raw_pivot_angle)
+        position_l, position_r = VelocityPlatformController.wheel_positions_relative_to_platform_centre(
+            wheel_param, raw_pivot_angle
+        )
 
         # Calculate error pivot angle as shortest route
         pivot_error = self._compute_pivot_error(drive_index, raw_pivot_angle)
@@ -262,7 +273,7 @@ class VelocityPlatformController(Controller):
         # This means that the left and right wheel velocities should be equal, but with opposite sign (l = -r).
         # In other words, vel_l and vel_r (computed below) should then be 0, such that the target velocities are
         # -delta_vel and +delta_vel.
-        send_forward_velocities = drives_aligned or not self._should_align_drives
+        send_forward_velocities = (drives_aligned or not self._should_align_drives) and not self._only_align_drives
 
         # Target velocity of left wheel (dot product with unit pivot vector)
         vel_l = np.dot(target_vel_vec_l, unit_pivot_vector) if send_forward_velocities else 0.0
