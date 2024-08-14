@@ -8,7 +8,7 @@ class PeripheralClient:
         # Connect to the peripheral server
         self._ser = serial.Serial(port, baud_rate, timeout=1)
         time.sleep(1)
-        #assert self.ping(), "Could not establish connection to peripheral server"
+        assert self.ping(), "Could not establish connection to peripheral server"
 
     def _transceive(self, command):
         # Send command to server

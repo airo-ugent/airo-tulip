@@ -20,7 +20,10 @@ void loop() {
   if (Serial.available() > 0) {
     String command = Serial.readStringUntil('\n');
 
-    if (command.equals("FLOW")) {
+    if (command.equals("PING")) {
+      Serial.println("PONG");
+
+    } else if (command.equals("FLOW")) {
       // Get motion count since last call
       flow.readMotionCount(&deltaX, &deltaY);
 
