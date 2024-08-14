@@ -78,7 +78,7 @@ Now, you can access the UR robot via `localhost` on your laptop:
 ```python
 from airo_robots.manipulators.hardware.ur_rtde import URrtde
 
-ur = URrtde("localhost", URrtde.UR3E_CONFIG)
+ur = ur_rtde.URrtde("localhost", ur_rtde.URrtde.UR3E_CONFIG)
 print(ur.get_tcp_pose())
 ```
 

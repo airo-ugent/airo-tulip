@@ -2,6 +2,7 @@ import pysoem
 from airo_tulip.ethercat import EC_STATE_OPERATIONAL, EC_STATE_SAFE_OP
 from airo_tulip.logging.monitor_rerun import RerunMonitorLogger
 from airo_tulip.platform_driver import PlatformDriver, PlatformDriverType
+from airo_tulip.platform_driver import PlatformDriver
 from airo_tulip.platform_monitor import PlatformMonitor
 from airo_tulip.structs import WheelConfig
 from loguru import logger
