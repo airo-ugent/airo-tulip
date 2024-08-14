@@ -1,7 +1,7 @@
 import time
 
-from airo_tulip.robile_platform import RobilePlatform
 from airo_tulip.platform_driver import PlatformDriverType
+from airo_tulip.robile_platform import RobilePlatform
 from airo_tulip.structs import WheelConfig
 
 
@@ -11,24 +11,24 @@ def test():
     wheel_configs = create_wheel_configs()
     mobi = RobilePlatform(device, wheel_configs, PlatformDriverType.VELOCITY)
     mobi.init_ethercat()
+    mobi.driver.set_platform_velocity_target(0.1, 0.0, 0.0, timeout=2.0, only_align_drives=True)
 
-    # Wait one second
-    time_start = time.time()
-    while time.time() - time_start < 1:
+    # Loop for 2.0 seconds
+    start = time.time()
+    while time.time() - start < 2.0:
         mobi.step()
         time.sleep(0.050)
 
-    # Set target velocity
-    mobi.driver.set_platform_velocity_target(0.0, 0.0, 3.14/8, timeout=4)
+    mobi.driver.set_driver_type(PlatformDriverType.COMPLIANT)
+    mobi.driver.set_platform_velocity_target(0.1, 0.0, 0.0, timeout=2.0)
 
-    # Wait one second
-    time_start = time.time()
-    while time.time() - time_start < 4:
+    # Loop for 2 seconds
+    start = time.time()
+    while time.time() - start < 2.0:
         mobi.step()
         time.sleep(0.050)
 
-    # Set zero target velocity
-    mobi.driver.set_platform_velocity_target(0.0, 0.0, 0.0, timeout=1)
+    mobi.driver.set_platform_velocity_target(0.5, 0.0, 0.0, timeout=10000.0)
 
     # Loop indefinitely
     while True:

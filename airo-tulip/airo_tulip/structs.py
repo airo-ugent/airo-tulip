@@ -1,26 +1,10 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
+import numpy as np
+from airo_typing import Vector2DType
 
-@dataclass
-class Point2D:
-    """
-    A simple class representation of a point in 2D space using cartesian coordinates.
-    """
-
-    x: float = 0.0
-    y: float = 0.0
-
-
-@dataclass
-class Attitude2D:
-    """
-    A simple class representation of a pose in 2D space using cartesian coordinates.
-    The orientation is stored in the variable `a` in the form of an angle measured from the x-axis.
-    """
-
-    x: float = 0.0
-    y: float = 0.0
-    a: float = 0.0
+Attitude2DType = np.ndarray
+"""A (3,) np array representing a pose in 2D space with Cartesian coordinates, with `a` the angle measured from the X-axis."""
 
 
 @dataclass
@@ -62,10 +46,10 @@ class WheelParamVelocity:
     Class for storing the details and geometry of each drive as a part of the complete mobile platform.
     """
 
-    pivot_position: Point2D = field(default_factory=Point2D)  # pivot location relative to vehicle centre
+    pivot_position: Vector2DType = np.zeros((2,))  # pivot location relative to vehicle centre
     pivot_offset: float = 0.0  # pivot offset relative to vehicle direction of travel
-    relative_position_l: Point2D = field(default_factory=Point2D)  # location of left wheel relative to pivot
-    relative_position_r: Point2D = field(default_factory=Point2D)  # location of right wheel relative to pivot
+    relative_position_l: Vector2DType = np.zeros((2,))  # location of left wheel relative to pivot
+    relative_position_r: Vector2DType = np.zeros((2,))  # location of right wheel relative to pivot
     linear_to_angular_velocity: float = 0.0  # scaling m/s to rad/s
     angular_to_linear_velocity: float = 0.0  # scaling rad/s to m/s
     max_linear_velocity: float = 0.0  # maximum velocity of wheel

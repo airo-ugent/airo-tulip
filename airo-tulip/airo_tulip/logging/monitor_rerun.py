@@ -1,3 +1,4 @@
+import numpy as np
 import rerun as rr
 from airo_tulip.platform_monitor import PlatformMonitor
 
@@ -10,7 +11,7 @@ class RerunMonitorLogger:
             rerun_application_id: Application ID for rerun.
             rerun_max_memory_gb: Maximum amount of memory rerun is allowed to consume."""
         rr.init(rerun_application_id, spawn=False)
-        rr.spawn(memory_limit=f'{rerun_max_memory_gb}GB')
+        rr.serve(open_browser=False, server_memory_limit=f'{rerun_max_memory_gb}GB')
 
     def step(self, monitor: PlatformMonitor):
         """Log all values to rerun."""
@@ -28,6 +29,7 @@ class RerunMonitorLogger:
             pressure = monitor.get_pressure(drive_index)
             current_in = monitor.get_current_in(drive_index)
             power = monitor.get_power(drive_index)
+            odometry = monitor.get_estimated_robot_pose()
 
             rr.log(f"drive_{drive_index}/status1", rr.Scalar(status1))
             rr.log(f"drive_{drive_index}/status2", rr.Scalar(status2))
@@ -54,3 +56,8 @@ class RerunMonitorLogger:
             rr.log(f"drive_{drive_index}/pressure", rr.Scalar(pressure))
             rr.log(f"drive_{drive_index}/current_in", rr.Scalar(current_in))
             rr.log(f"drive_{drive_index}/power", rr.Scalar(power))
+
+            rr.log(f"platform/odometry/position", rr.Points2D([odometry[0], odometry[1]]))
+            rr.log(f"platform/odometry/direction", rr.Arrows2D(origins=[odometry[0], odometry[1]],
+                                                               vectors=[0.1 * np.cos(odometry[2]),
+                                                                        0.1 * np.sin(odometry[2])]))

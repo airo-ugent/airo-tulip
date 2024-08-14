@@ -4,11 +4,17 @@ from enum import Enum
 from typing import List
 
 import pysoem
+from airo_tulip.constants import *
 from airo_tulip.controllers.velocity_platform_controller import VelocityPlatformController
 from airo_tulip.ethercat import *
 from airo_tulip.structs import WheelConfig
 from airo_tulip.util import *
 from loguru import logger
+
+
+class PlatformDriverType(Enum):
+    VELOCITY = 1
+    COMPLIANT = 2
 
 
 class PlatformDriverState(Enum):
@@ -20,48 +26,65 @@ class PlatformDriverState(Enum):
 
 
 class PlatformDriver:
-    def __init__(self, master: pysoem.Master, wheel_configs: List[WheelConfig]):
+    def __init__(self, master: pysoem.Master, wheel_configs: List[WheelConfig], controller_type: PlatformDriverType):
         self._master = master
         self._wheel_configs = wheel_configs
         self._num_wheels = len(wheel_configs)
 
         self._state = PlatformDriverState.INIT
-        self._prev_encoder = [[0.0, 0.0]] * self._num_wheels
-        self._sum_encoder = [[0.0, 0.0]] * self._num_wheels
-        self._encoder_initialized = False
         self._current_ts = 0
         self._process_data = []
         self._wheel_enabled = [True] * self._num_wheels
         self._step_count = 0
         self._timeout = 0
         self._timeout_message_printed = True
+        self._last_step_time = None
 
-        # Constants taken directly from KELO: https://github.com/kelo-robotics/kelo_tulip/blob/1a8db0626b3d399b62b65b31c004e7b1831756d7/src/PlatformDriver.cpp
-        self._wheel_distance = 0.0775
-        self._wheel_diameter = 0.104
-        self._current_stop = 1
-        self._current_drive = 20
-        self._max_v_lin = 1.5
-        self._max_v_a = 1.0
-        self._max_v_lin_acc = 0.0025  # per millisecond, same value for deceleration
-        self._max_angle_acc = 0.01  # at vlin=0, per msec, same value for deceleration
-        self._max_v_a_acc = 0.01  # per millisecond, same value for deceleration
-        self._wheel_set_point_min = 0.01
-        self._wheel_set_point_max = 35.0
+        self._driver_type = controller_type
+        self._vpc = VelocityPlatformController(self._wheel_configs)
 
-        self._vpc = VelocityPlatformController()
-        self._vpc.initialise(self._wheel_configs)
+        self._wheel_controllers = [VelocityTorqueController() for _ in range(self._num_wheels * 2)]
 
-    def set_platform_velocity_target(self, vel_x: float, vel_y: float, vel_a: float, timeout: float) -> None:
-        if math.sqrt(vel_x**2 + vel_y**2) > 1.0:
-            raise ValueError("Cannot set target linear velocity higher than 1.0 m/s")
+    def set_platform_velocity_target(
+        self,
+        vel_x: float,
+        vel_y: float,
+        vel_a: float,
+        timeout: float = 1.0,
+        instantaneous: bool = True,
+        only_align_drives: bool = False,
+    ) -> None:
+        """Set the platform's velocity target.
+
+        This sets a target velocity for the platform, which it will attempt to achieve. This only works if the driver
+        is set to velocity mode. An internal check is done on the magnitude of the velocity to ensure safety.
+        ONLY OVERRIDE THESE CHECKS IF YOU KNOW WHAT YOU ARE DOING.
+
+        Args:
+            vel_x: Velocity along X axis.
+            vel_y: Velocity along Y axis.
+            vel_a: Angular velocity.
+            timeout: The platform will stop after this many seconds.
+            instantaneous: If true, the platform will move immediately, even if the individual drives are not aligned. If false, will first align all the drives.
+            only_align_drives: If true, the platform will only align the wheels in the correct orientation without driving into that directino."""
+        if math.sqrt(vel_x**2 + vel_y**2) > 0.5:
+            raise ValueError("Cannot set target linear velocity higher than 0.5 m/s")
         if abs(vel_a) > math.pi / 8:
             raise ValueError("Cannot set target angular velocity higher than pi/8 rad/s")
         if timeout < 0.0:
             raise ValueError("Cannot set negative timeout")
-        self._vpc.set_platform_velocity_target(vel_x, vel_y, vel_a)
+
+        self._vpc.set_platform_velocity_target(vel_x, vel_y, vel_a, instantaneous, only_align_drives)
+
         self._timeout = time.time() + timeout
         self._timeout_message_printed = False
+
+    def set_driver_type(self, driver_type):
+        assert isinstance(
+            driver_type, PlatformDriverType
+        ), f"Driver type must be an instance of PlatformDriverType enum, got {type(driver_type)}"
+        self._driver_type = driver_type
+        self._wheel_controllers = [VelocityTorqueController() for _ in range(self._num_wheels * 2)]
 
     def step(self) -> bool:
         self._step_count += 1
@@ -74,10 +97,8 @@ class PlatformDriver:
 
         self._current_ts = self._process_data[0].sensor_ts
 
-        self._update_encoders()
-
         if self._timeout < time.time():
-            self._vpc.set_platform_velocity_target(0.0, 0.0, 0.0)
+            self._vpc.set_platform_velocity_target(0.0, 0.0, 0.0, instantaneous=True, only_align_drives=False)
             if not self._timeout_message_printed:
                 logger.info("platform stopped early due to velocity target timeout")
                 self._timeout_message_printed = True
@@ -150,15 +171,16 @@ class PlatformDriver:
         # zero setpoints for all drives
         data = RxPDO1()
         data.timestamp = self._current_ts + 100 * 1000
-        data.limit1_p = self._current_stop
-        data.limit1_n = -self._current_stop
-        data.limit2_p = self._current_stop
-        data.limit2_n = -self._current_stop
+        data.limit1_p = CURRENT_STOP
+        data.limit1_n = -CURRENT_STOP
+        data.limit2_p = CURRENT_STOP
+        data.limit2_n = -CURRENT_STOP
         data.setpoint1 = 0
         data.setpoint2 = 0
 
         for i in range(self._num_wheels):
-            data.command1 = COM1_MODE_VELOCITY
+            data.command1 = COM1_MODE_VELOCITY  # we always want zero velocity (and not zero torque) when stopping
+
             if self._wheel_enabled[i]:
                 data.command1 |= COM1_ENABLE1 | COM1_ENABLE2
 
@@ -168,76 +190,71 @@ class PlatformDriver:
         # calculate setpoints for each drive
         data = RxPDO1()
         data.timestamp = self._current_ts + 100 * 1000
-        data.limit1_p = self._current_drive
-        data.limit1_n = -self._current_drive
-        data.limit2_p = self._current_drive
-        data.limit2_n = -self._current_drive
+        data.limit1_p = CURRENT_DRIVE
+        data.limit1_n = -CURRENT_DRIVE
+        data.limit2_p = CURRENT_DRIVE
+        data.limit2_n = -CURRENT_DRIVE
         data.setpoint1 = 0
         data.setpoint2 = 0
 
-        # Update desired platform velocity
+        # Update desired platform velocity if velocity control
         self._vpc.calculate_platform_ramped_velocities()
 
+        encoder_pivots = [self._process_data[i].encoder_pivot for i in range(self._num_wheels)]
+        drives_aligned = self._vpc.are_drives_aligned(encoder_pivots)
+        drives_aligned = True
+
+        raw_velocities = [[pd.velocity_1, pd.velocity_2] for pd in self._process_data]
+
         for i in range(self._num_wheels):
-            data.command1 = COM1_MODE_VELOCITY
+            if self._driver_type == PlatformDriverType.VELOCITY:
+                data.command1 = COM1_MODE_VELOCITY
+            elif self._driver_type == PlatformDriverType.COMPLIANT:
+                data.command1 = COM1_MODE_TORQUE
+
             if self._wheel_enabled[i]:
                 data.command1 |= COM1_ENABLE1 | COM1_ENABLE2
 
-            # Calculate wheel target velocities
-            setpoint1, setpoint2 = self._vpc.calculate_wheel_target_velocity(i, self._process_data[i].encoder_pivot)
-            setpoint1 *= -1  # because of inverted frame
+            # Calculate wheel setpoints
+            wheel_target_velocity_1, wheel_target_velocity_2 = self._vpc.calculate_wheel_target_velocity(
+                i, self._process_data[i].encoder_pivot, drives_aligned
+            )
+            wheel_target_velocity_1 *= -1  # because of inverted frame
 
-            # Avoid sending close to zero values
-            if abs(setpoint1) < self._wheel_set_point_min:
-                setpoint1 = 0
-            if abs(setpoint2) < self._wheel_set_point_min:
-                setpoint2 = 0
+            # Calculate setpoints
+            if self._driver_type == PlatformDriverType.VELOCITY:
+                setpoint1 = wheel_target_velocity_1
+                setpoint2 = wheel_target_velocity_2
+            elif self._driver_type == PlatformDriverType.COMPLIANT:
+                logger.debug(f"wheel_index {i}")
+                setpoint1 = self._control_velocity_torque(i * 2, wheel_target_velocity_1, raw_velocities[i][0])
+                setpoint2 = self._control_velocity_torque(i * 2 + 1, wheel_target_velocity_2, raw_velocities[i][1])
+
+            # Avoid sending close to zero velocities
+            if self._driver_type == PlatformDriverType.VELOCITY:
+                if abs(setpoint1) < WHEEL_SET_POINT_MIN:
+                    setpoint1 = 0
+                if abs(setpoint2) < WHEEL_SET_POINT_MIN:
+                    setpoint2 = 0
 
             # Avoid sending very large values
-            setpoint1 = clip(setpoint1, self._wheel_set_point_max, -self._wheel_set_point_max)
-            setpoint2 = clip(setpoint2, self._wheel_set_point_max, -self._wheel_set_point_max)
+            setpoint1 = clip(setpoint1, WHEEL_SET_POINT_MAX, -WHEEL_SET_POINT_MAX)
+            setpoint2 = clip(setpoint2, WHEEL_SET_POINT_MAX, -WHEEL_SET_POINT_MAX)
 
             # Send calculated setpoints
             data.setpoint1 = setpoint1
             data.setpoint2 = setpoint2
 
-            logger.trace(
-                f"wheel {i} enabled {self._wheel_enabled[i]} sp1 {setpoint1} sp2 {setpoint2} enc {self._process_data[i].encoder_pivot}"
-            )
+            logger.trace(f"wheel {i} enabled {self._wheel_enabled[i]} sp1 {setpoint1} sp2 {setpoint2}")
 
             self._set_process_data(i, data)
 
-    def _update_encoders(self):
-        if not self._encoder_initialized:
-            for i in range(self._num_wheels):
-                data = self._process_data[i]
-                self._prev_encoder[i][0] = data.encoder_1
-                self._prev_encoder[i][1] = data.encoder_2
-
-        # count accumulative encoder value
-        for i in range(self._num_wheels):
-            data = self._process_data[i]
-            curr_encoder1 = data.encoder_1
-            curr_encoder2 = data.encoder_2
-
-            if abs(curr_encoder1 - self._prev_encoder[i][0]) > math.pi:
-                if curr_encoder1 < self._prev_encoder[i][0]:
-                    self._sum_encoder[i][0] += curr_encoder1 - self._prev_encoder[i][0] + 2 * math.pi
-                else:
-                    self._sum_encoder[i][0] += curr_encoder1 - self._prev_encoder[i][0] - 2 * math.pi
-            else:
-                self._sum_encoder[i][0] += curr_encoder1 - self._prev_encoder[i][0]
-
-            if abs(curr_encoder2 - self._prev_encoder[i][1]) > math.pi:
-                if curr_encoder2 < self._prev_encoder[i][1]:
-                    self._sum_encoder[i][1] += curr_encoder2 - self._prev_encoder[i][1] + 2 * math.pi
-                else:
-                    self._sum_encoder[i][1] += curr_encoder2 - self._prev_encoder[i][1] - 2 * math.pi
-            else:
-                self._sum_encoder[i][1] += curr_encoder2 - self._prev_encoder[i][1]
-
-            self._prev_encoder[i][0] = curr_encoder1
-            self._prev_encoder[i][1] = curr_encoder2
+    def _control_velocity_torque(self, wheel_index, target_vel, current_vel):
+        controller = self._wheel_controllers[wheel_index]
+        error_vel = target_vel - current_vel
+        torque = controller.control(error_vel)
+        logger.debug(f"target_vel {target_vel:.2f} current_vel {current_vel:.2f} torque {torque:.2f}")
+        return torque
 
     def _get_process_data(self, wheel_index: int) -> TxPDO1:
         ethercat_index = self._wheel_configs[wheel_index].ethercat_number
@@ -246,3 +263,34 @@ class PlatformDriver:
     def _set_process_data(self, wheel_index: int, data: RxPDO1) -> None:
         ethercat_index = self._wheel_configs[wheel_index].ethercat_number
         self._master.slaves[ethercat_index - 1].output = bytes(data)
+
+
+class VelocityTorqueController:
+    def __init__(self):
+        self.P = 0.4
+        self.D = 0.03
+        self.I = 2.0
+        self._max_output = 5.0
+        self._max_sum_error_vel = 1.0
+
+        self._prev_time = None
+        self._prev_error_vel = None
+        self._sum_error_vel = 0.0
+
+    def control(self, error_vel):
+        if self._prev_time != None:
+            delta_time = time.time() - self._prev_time
+            diff_error = (error_vel - self._prev_error_vel) / delta_time
+        else:
+            delta_time = 0.0
+            diff_error = 0.0
+
+        torque = self.P * error_vel + self.D * diff_error + self.I * self._sum_error_vel
+
+        self._prev_time = time.time()
+        self._prev_error_vel = error_vel
+        self._sum_error_vel += error_vel * delta_time
+        self._sum_error_vel = clip(self._sum_error_vel, self._max_sum_error_vel, -self._max_sum_error_vel)
+
+        torque = clip(torque, self._max_output, -self._max_output)
+        return torque
