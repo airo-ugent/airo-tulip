@@ -5,10 +5,10 @@ from typing import List
 
 import numpy as np
 import pysoem
-from airo_tulip.constants import *
+from airo_tulip.constants import CASTOR_OFFSET, WHEEL_DISTANCE, WHEEL_RADIUS
 from airo_tulip.ethercat import RxPDO1, TxPDO1
-from airo_tulip.platform_driver import PlatformDriver
-from airo_tulip.structs import WheelConfig, Attitude2DType
+from airo_tulip.peripheral_client import PeripheralClient
+from airo_tulip.structs import Attitude2DType, WheelConfig
 
 
 def _norm_angle(a: float) -> float:
@@ -82,7 +82,7 @@ class PlatformPoseEstimator:
             dx = vx * dt
             dy = vy * dt
         else:
-            linear_velocity = math.sqrt(vx ** 2 + vy ** 2)
+            linear_velocity = math.sqrt(vx**2 + vy**2)
             direction = math.atan2(vy, vx)
 
             # Displacement relative to the direction of movement.
@@ -118,11 +118,12 @@ class PlatformPoseEstimator:
 
 
 class PlatformMonitor:
-    def __init__(self, master: pysoem.Master, wheel_configs: List[WheelConfig]):
+    def __init__(self, master: pysoem.Master, wheel_configs: List[WheelConfig], peripheral_client: PeripheralClient):
         # Configuration.
         self._master = master
         self._wheel_configs = wheel_configs
         self._num_wheels = len(wheel_configs)
+        self._peripheral_client = peripheral_client
 
         # Monitored values.
         self._status1: List[int]
@@ -137,6 +138,9 @@ class PlatformMonitor:
         self._gyro: List[List[float]]
         self._pressure: List[float]
         self._current_in: List[float]
+        self._flow_x: int = 0
+        self._flow_y: int = 0
+
         # Odometry.
         self._prev_encoder = [[0.0, 0.0] for _ in range(self._num_wheels)]
         self._sum_encoder = [[0.0, 0.0] for _ in range(self._num_wheels)]
@@ -200,6 +204,11 @@ class PlatformMonitor:
         self._gyro = [[pd.gyro_x, pd.gyro_y, pd.gyro_z] for pd in process_data]
         self._pressure = [pd.pressure for pd in process_data]
         self._current_in = [pd.current_in for pd in process_data]
+
+        # Read values for peripheral server
+        flow_x, flow_y = self._peripheral_client.get_flow()
+        self._flow_x += flow_x
+        self._flow_y += flow_y
 
         self._update_encoders()
 
@@ -279,6 +288,10 @@ class PlatformMonitor:
     def get_power_total(self) -> float:
         """Returns the total power for all drives."""
         return sum([self._voltage_bus[i] * self._current_in[i] for i in range(self._num_wheels)])
+
+    def get_flow(self) -> float:
+        """Returns the total accumulated flow ticks for x and y"""
+        return [self._flow_x, self._flow_y]
 
     def _get_process_data(self, wheel_index: int) -> TxPDO1:
         ethercat_index = self._wheel_configs[wheel_index].ethercat_number

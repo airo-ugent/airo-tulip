@@ -22,6 +22,7 @@ def fancy_print_sensors(monitor):
     for i in range(4):
         print(f"accel {i} ", monitor.get_acceleration(i))
         print(f"temp {i} ", monitor.get_temperature(i))
+    print("flow ", monitor.get_flow())
     print()
 
 

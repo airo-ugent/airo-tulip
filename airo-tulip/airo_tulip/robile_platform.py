@@ -1,16 +1,23 @@
+from typing import List
+
 import pysoem
 from airo_tulip.ethercat import EC_STATE_OPERATIONAL, EC_STATE_SAFE_OP
 from airo_tulip.logging.monitor_rerun import RerunMonitorLogger
+from airo_tulip.peripheral_client import PeripheralClient
 from airo_tulip.platform_driver import PlatformDriver, PlatformDriverType
 from airo_tulip.platform_monitor import PlatformMonitor
 from airo_tulip.structs import WheelConfig
 from loguru import logger
-from typing import List
 
 
 class RobilePlatform:
-    def __init__(self, device: str, wheel_configs: List[WheelConfig], controller_type: PlatformDriverType,
-                 enable_rerun: bool = True):
+    def __init__(
+        self,
+        device: str,
+        wheel_configs: List[WheelConfig],
+        controller_type: PlatformDriverType,
+        enable_rerun: bool = True,
+    ):
         """Initialize the RobilePlatform.
 
         Args:
@@ -21,8 +28,9 @@ class RobilePlatform:
         self._ethercat_initialized = False
 
         self._master = pysoem.Master()
+        self._peripheral_client = PeripheralClient("/dev/ttyACM0", 115200)
         self._driver = PlatformDriver(self._master, wheel_configs, controller_type)
-        self._monitor = PlatformMonitor(self._master, wheel_configs)
+        self._monitor = PlatformMonitor(self._master, wheel_configs, self._peripheral_client)
 
         self._enable_rerun = enable_rerun
         if self._enable_rerun:
