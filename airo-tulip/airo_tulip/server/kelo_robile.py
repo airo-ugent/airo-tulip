@@ -6,6 +6,7 @@ from airo_tulip.server.messages import (
     ResponseMessage,
     SetPlatformVelocityTargetMessage,
     StopServerMessage,
+    SetDriverTypeMessage
 )
 from airo_tulip.structs import Attitude2DType
 from loguru import logger
@@ -21,14 +22,14 @@ class KELORobile:
         logger.info(f"Connected to {address}.")
 
     def set_platform_velocity_target(
-        self,
-        vel_x: float,
-        vel_y: float,
-        vel_a: float,
-        *,
-        timeout: float = 1.0,
-        instantaneous: bool = True,
-        only_align_drives: bool = False,
+            self,
+            vel_x: float,
+            vel_y: float,
+            vel_a: float,
+            *,
+            timeout: float = 1.0,
+            instantaneous: bool = True,
+            only_align_drives: bool = False,
     ) -> ResponseMessage:
         """Set the x, y and angular velocity of the complete mobile platform.
 
