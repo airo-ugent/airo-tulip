@@ -1,6 +1,7 @@
 import time
 
 from airo_tulip.robile_platform import RobilePlatform
+from airo_tulip.platform_driver import PlatformDriverType
 from airo_tulip.structs import WheelConfig
 
 
@@ -8,7 +9,7 @@ def test():
     # Init stuff
     device = "eno1"
     wheel_configs = create_wheel_configs()
-    mobi = RobilePlatform(device, wheel_configs)
+    mobi = RobilePlatform(device, wheel_configs, PlatformDriverType.VELOCITY)
     mobi.init_ethercat()
 
     # Loop indefinitely
