@@ -15,6 +15,7 @@ from airo_tulip.server.messages import (
     ResponseMessage,
     SetPlatformVelocityTargetMessage,
     StopServerMessage,
+    SetDriverTypeMessage,
 )
 from airo_tulip.structs import WheelConfig
 from loguru import logger
