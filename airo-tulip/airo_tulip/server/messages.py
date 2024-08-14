@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 
+from airo_tulip.platform_driver import PlatformDriverType
 from airo_tulip.structs import Attitude2DType
 
 
@@ -20,6 +21,12 @@ class SetPlatformVelocityTargetMessage(RequestMessage):
     vel_a: float
     timeout: float
     instantaneous: bool
+    only_align_drives: bool
+
+
+@dataclass
+class SetDriverTypeMessage(RequestMessage):
+    driver_type: PlatformDriverType
 
 
 @dataclass
