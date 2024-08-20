@@ -14,7 +14,9 @@ from loguru import logger
 
 class PlatformDriverType(Enum):
     VELOCITY = 1
-    COMPLIANT = 2
+    COMPLIANT_WEAK = 2
+    COMPLIANT_MODERATE = 3
+    COMPLIANT_STRONG = 4
 
 
 class PlatformDriverState(Enum):
@@ -43,7 +45,7 @@ class PlatformDriver:
         self._driver_type = controller_type
         self._vpc = VelocityPlatformController(self._wheel_configs)
 
-        self._wheel_controllers = [VelocityTorqueController() for _ in range(self._num_wheels * 2)]
+        self._wheel_controllers = [VelocityTorqueController(self._driver_type) for _ in range(self._num_wheels * 2)]
 
     def set_platform_velocity_target(
         self,
@@ -84,7 +86,7 @@ class PlatformDriver:
             driver_type, PlatformDriverType
         ), f"Driver type must be an instance of PlatformDriverType enum, got {type(driver_type)}"
         self._driver_type = driver_type
-        self._wheel_controllers = [VelocityTorqueController() for _ in range(self._num_wheels * 2)]
+        self._wheel_controllers = [VelocityTorqueController(driver_type) for _ in range(self._num_wheels * 2)]
 
     def step(self) -> bool:
         self._step_count += 1
@@ -209,7 +211,7 @@ class PlatformDriver:
         for i in range(self._num_wheels):
             if self._driver_type == PlatformDriverType.VELOCITY:
                 data.command1 = COM1_MODE_VELOCITY
-            elif self._driver_type == PlatformDriverType.COMPLIANT:
+            else:
                 data.command1 = COM1_MODE_TORQUE
 
             if self._wheel_enabled[i]:
@@ -225,7 +227,7 @@ class PlatformDriver:
             if self._driver_type == PlatformDriverType.VELOCITY:
                 setpoint1 = wheel_target_velocity_1
                 setpoint2 = wheel_target_velocity_2
-            elif self._driver_type == PlatformDriverType.COMPLIANT:
+            else:
                 logger.debug(f"wheel_index {i}")
                 setpoint1 = self._control_velocity_torque(i * 2, wheel_target_velocity_1, raw_velocities[i][0])
                 setpoint2 = self._control_velocity_torque(i * 2 + 1, wheel_target_velocity_2, raw_velocities[i][1])
@@ -266,12 +268,25 @@ class PlatformDriver:
 
 
 class VelocityTorqueController:
-    def __init__(self):
-        self.P = 0.4
-        self.D = 0.03
-        self.I = 2.0
-        self._max_output = 5.0
-        self._max_sum_error_vel = 1.0
+    def __init__(self, driver_type):
+        if driver_type == PlatformDriverType.COMPLIANT_MODERATE:
+            self.P = 0.3
+            self.D = 0.002
+            self.I = 1.0
+            self._max_output = 5.0
+            self._max_sum_error_vel = 3.0
+        elif driver_type == PlatformDriverType.COMPLIANT_STRONG:
+            self.P = 0.3
+            self.D = 0.005
+            self.I = 1.0
+            self._max_output = 10.0
+            self._max_sum_error_vel = 8.0
+        elif driver_type == PlatformDriverType.COMPLIANT_WEAK:
+            self.P = 0.3
+            self.D = 0.0
+            self.I = 1.0
+            self._max_output = 2.5
+            self._max_sum_error_vel = 2.0
 
         self._prev_time = None
         self._prev_error_vel = None
