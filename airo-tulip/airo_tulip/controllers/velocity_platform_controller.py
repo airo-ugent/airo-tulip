@@ -231,7 +231,7 @@ class VelocityPlatformController(Controller):
         return True
 
     def calculate_wheel_target_velocity(
-        self, drive_index: int, raw_pivot_angle: float, drives_aligned: bool
+        self, drive_index: int, raw_pivot_angle: float
     ) -> Tuple[float, float]:
         """
         Calculate the wheel velocity setpoints based on the set target velocity.
@@ -239,7 +239,6 @@ class VelocityPlatformController(Controller):
         Args:
             drive_index: Index of the drive.
             raw_pivot_angle: Encoder pivot value for this drive.
-            drives_aligned: True if all drives are considered aligned. Will not send forward velocities if false.
 
         Returns:
             The target velocities for the right and left wheel, respectively.
@@ -272,7 +271,7 @@ class VelocityPlatformController(Controller):
         # This means that the left and right wheel velocities should be equal, but with opposite sign (l = -r).
         # In other words, vel_l and vel_r (computed below) should then be 0, such that the target velocities are
         # -delta_vel and +delta_vel.
-        send_forward_velocities = drives_aligned and not self._only_align_drives
+        send_forward_velocities = not self._only_align_drives
 
         # Target velocity of left wheel (dot product with unit pivot vector)
         vel_l = np.dot(target_vel_vec_l, unit_pivot_vector) if send_forward_velocities else 0.0
