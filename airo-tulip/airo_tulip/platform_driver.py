@@ -120,7 +120,7 @@ class PlatformDriver:
         self._current_ts = self._process_data[0].sensor_ts
 
         if self._timeout < time.time():
-            self._vpc.set_platform_velocity_target(0.0, 0.0, 0.0, instantaneous=True, only_align_drives=False)
+            self._vpc.set_platform_velocity_target(0.0, 0.0, 0.0)
             if not self._timeout_message_printed:
                 logger.info("platform stopped early due to velocity target timeout")
                 self._timeout_message_printed = True
