@@ -189,6 +189,10 @@ class PlatformMonitor:
             self._prev_encoder[i][0] = curr_encoder1
             self._prev_encoder[i][1] = curr_encoder2
 
+    @property
+    def num_wheels(self) -> int:
+        return self._num_wheels
+
     def step(self) -> None:
         # Read data from drives.
         process_data = [self._get_process_data(i) for i in range(self._num_wheels)]

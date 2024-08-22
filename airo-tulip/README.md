@@ -82,6 +82,15 @@ ur = URrtde("localhost", URrtde.UR3E_CONFIG)
 print(ur.get_tcp_pose())
 ```
 
+### Robotiq 2F85
+
+The Robotiq 2F85 gripper communicates on port 63352, so you should also create an SSH tunnel for this.
+
+
+```commandline
+ssh -N -L localhost:63352:10.42.0.162:63352 kelo@10.10.129.20
+```
+
 ## Structure
 
 The `airo-tulip` package consists of the following main Python classes and files:

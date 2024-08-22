@@ -6,8 +6,17 @@ import zmq
 import zmq.asyncio
 from airo_tulip.platform_driver import PlatformDriverType
 from airo_tulip.robile_platform import RobilePlatform
-from airo_tulip.server.messages import ErrorResponse, OkResponse, SetPlatformVelocityTargetMessage, StopServerMessage, \
-    ResponseMessage, GetOdometryMessage, RequestMessage, OdometryResponse
+from airo_tulip.server.messages import (
+    ErrorResponse,
+    GetOdometryMessage,
+    OdometryResponse,
+    OkResponse,
+    RequestMessage,
+    ResponseMessage,
+    SetDriverTypeMessage,
+    SetPlatformVelocityTargetMessage,
+    StopServerMessage,
+)
 from airo_tulip.structs import WheelConfig
 from loguru import logger
 
@@ -34,11 +43,11 @@ class TulipServer:
     message pattern (https://learning-0mq-with-pyzmq.readthedocs.io/en/latest/pyzmq/patterns/client_server.html)."""
 
     def __init__(
-            self,
-            robot_ip: str,
-            robot_port: int,
-            robot_configuration: RobotConfiguration,
-            loop_frequency: float = 20,
+        self,
+        robot_ip: str,
+        robot_port: int,
+        robot_configuration: RobotConfiguration,
+        loop_frequency: float = 20,
     ):
         """Initialize the server.
 
@@ -62,6 +71,7 @@ class TulipServer:
         # TCP request handlers for passing instructions to the robot.
         self._request_handlers = {
             SetPlatformVelocityTargetMessage.__name__: self._handle_set_platform_velocity_target_request,
+            SetDriverTypeMessage.__name__: self._handle_set_driver_type_request,
             StopServerMessage.__name__: self._handle_stop_server_request,
             GetOdometryMessage.__name__: self._handle_get_odometry_request,
         }
@@ -119,17 +129,31 @@ class TulipServer:
         logger.trace(f"Request type: {request_class_name}.")
         return self._request_handlers[request_class_name](request)
 
-    def _handle_set_platform_velocity_target_request(self,
-                                                     request: SetPlatformVelocityTargetMessage) -> ResponseMessage:
+    def _handle_set_platform_velocity_target_request(
+        self, request: SetPlatformVelocityTargetMessage
+    ) -> ResponseMessage:
         try:
             self._platform.driver.set_platform_velocity_target(
-                request.vel_x, request.vel_y, request.vel_a, request.timeout, request.instantaneous
+                request.vel_x,
+                request.vel_y,
+                request.vel_a,
+                request.timeout,
+                request.instantaneous,
+                request.only_align_drives,
             )
             logger.info("Request handled successfully.")
             return OkResponse()
         except ValueError as e:
             logger.error(f"Safety limits exceeded: {e}")
             return ErrorResponse("Safety limits exceeded", str(e))
+
+    def _handle_set_driver_type_request(self, request: SetDriverTypeMessage) -> ResponseMessage:
+        try:
+            self._platform.driver.set_driver_type(request.driver_type)
+            return OkResponse()
+        except Exception as e:
+            logger.error(f"Could not set driver type: {e}")
+            return ErrorResponse("Could not set driver type", str(e))
 
     def _handle_stop_server_request(self, _request: StopServerMessage) -> ResponseMessage:
         logger.info("Received stop request.")
