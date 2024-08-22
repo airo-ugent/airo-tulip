@@ -112,9 +112,58 @@ class PlatformPoseEstimator:
             cur_pivots: The current pivot values.
 
         Returns:
-            The pose (x, y, a) of the platform."""
+            The pose (x, y, a) of the platform and the velocity of the platform."""
         v = self._estimate_velocity(dt, encoder_values, cur_pivots)
-        return self._estimate_pose(dt, v)
+        return self._estimate_pose(dt, v), v
+
+
+class PlatformPoseEstimatorFused:
+    def transition_function(state, noise):
+        dt = 0.05
+        F = np.eye(6)
+        F[0:3, 3:6] = np.eye(3) * dt
+        return np.dot(F, state) + noise
+
+    def observation_function(state, noise):
+        dt = 0.05
+        R = 0.232
+        [p_x, p_y, p_a, v_x, v_y, v_a] = state[0:6]
+
+        flow_x = v_x * np.cos(p_a) + v_y * np.sin(p_a) - R * v_a * dt
+        flow_y = -v_x * np.sin(p_a) + v_y * np.cos(p_a)
+
+        return np.array([flow_x, flow_y, p_x, p_y, p_a, v_x, v_y, v_a]) + noise
+
+    def __init__(self):
+        transition_covariance = np.eye(6)
+        observation_covariance = np.eye(8)
+        initial_state_mean = np.array([0] * 6)
+        initial_state_covariance = np.eye(6)
+
+        self._kf = UnscentedKalmanFilter(
+            transition_function,
+            observation_function,
+            transition_covariance,
+            observation_covariance,
+            initial_state_mean,
+            initial_state_covariance,
+        )
+        self._state_mean = initial_state_mean
+        self._state_covariance = initial_state_covariance
+
+    def get_pose(self, raw_flow: List[int], odometry_pose: np.ndarray, odometry_velocity) -> np.ndarray:
+        """Update the robot platform's estimated pose by fusing various sensor data using a Kalman filter.
+
+        Args:
+            TODO
+
+        Returns:
+            The pose (x, y, a) of the platform."""
+        observation = [*raw_flow, *odometry_pose, *odometry_velocity]
+        self._state_mean, self._state_covariance = kf.filter_update(
+            self._state_mean, self._state_covariance, observation
+        )
+        return self._state_mean[0:3]
 
 
 class PlatformMonitor:
@@ -145,12 +194,14 @@ class PlatformMonitor:
         self._prev_encoder = [[0.0, 0.0] for _ in range(self._num_wheels)]
         self._sum_encoder = [[0.0, 0.0] for _ in range(self._num_wheels)]
         self._encoder_initialized = False
-        self._odometry: Attitude2DType = np.zeros((3,))
+        self._odometry_pose: Attitude2DType = np.zeros((3,))
+        self._odometry_velocity: Attitude2DType = np.zeros((3,))
 
         # Intermediate state.
         self._last_step_time: float = time.time()
 
         self._pose_estimator = PlatformPoseEstimator(self._num_wheels, self._wheel_configs)
+        self._fused_pose_estimator = PlatformPoseEstimatorFused()
 
     @property
     def num_wheels(self) -> int:
@@ -210,9 +261,7 @@ class PlatformMonitor:
         self._current_in = [pd.current_in for pd in process_data]
 
         # Read values for peripheral server
-        flow_x, flow_y = self._peripheral_client.get_flow()
-        self._flow_x += flow_x
-        self._flow_y += flow_y
+        self._flow_x, self._flow_y = self._peripheral_client.get_flow()
 
         self._update_encoders()
 
@@ -223,11 +272,18 @@ class PlatformMonitor:
 
         # Estimate odometry.
         pivots = [pd.encoder_pivot for pd in process_data]
-        self._odometry = self._pose_estimator.get_odometry(delta_time, self._sum_encoder, pivots)
+        self._odometry_pose, self._odometry_velocity = self._pose_estimator.get_odometry(
+            delta_time, self._sum_encoder, pivots
+        )
 
-    def get_estimated_robot_pose(self) -> Attitude2DType:
-        """Get the robot platform's odometry."""
-        return self._odometry
+        # Update Kalman filter
+        self._fused_pose = self._fused_pose_estimator.get_pose(
+            [self._flow_x, self._flow_y], self._odometry_pose, self._odometry_velocity
+        )
+
+    def get_estimated_platform_pose(self) -> Attitude2DType:
+        """Get the robot platform's estimated pose based on fused estimator."""
+        return self._fused_pose
 
     def get_status1(self, wheel_index: int) -> int:
         """Returns the status1 register value for a specific drive, see `ethercat.py`."""

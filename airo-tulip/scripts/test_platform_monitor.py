@@ -1,7 +1,7 @@
 import time
 
-from airo_tulip.robile_platform import RobilePlatform
 from airo_tulip.platform_driver import PlatformDriverType
+from airo_tulip.robile_platform import RobilePlatform
 from airo_tulip.structs import WheelConfig
 
 
@@ -33,6 +33,7 @@ def fancy_print_sensors(monitor):
         print(f"accel {i} ", monitor.get_acceleration(i))
         print(f"temp {i} ", monitor.get_temperature(i))
     print("flow ", monitor.get_flow())
+    print("pose ", monitor.get_estimated_platform_pose())
     print()
 
 
