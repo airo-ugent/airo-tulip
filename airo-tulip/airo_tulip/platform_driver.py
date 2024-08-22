@@ -93,6 +93,7 @@ class PlatformDriver:
             y: Velocity along Y axis.
             a: Angular velocity."""
         self._vpc.align_drives(x, y, a)
+        self._timeout = time.time() + 5.0  # Allow up to 5 seconds for drive alignment.
 
     def are_drives_aligned(self) -> bool:
         """Check whether the drives are aligned with the values given to the last call to

@@ -19,6 +19,7 @@ def test():
         time.sleep(0.050)
 
     mobi.driver.align_drives(1, 0, 0)
+    start = time.time()
     while time.time() - start < 2.0:
         mobi.step()
         time.sleep(0.050)
