@@ -20,7 +20,6 @@ class SetPlatformVelocityTargetMessage(RequestMessage):
     vel_y: float
     vel_a: float
     timeout: float
-    instantaneous: bool
     only_align_drives: bool
 
 

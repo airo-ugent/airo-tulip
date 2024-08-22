@@ -138,7 +138,6 @@ class TulipServer:
                 request.vel_y,
                 request.vel_a,
                 request.timeout,
-                request.instantaneous,
                 request.only_align_drives,
             )
             logger.info("Request handled successfully.")

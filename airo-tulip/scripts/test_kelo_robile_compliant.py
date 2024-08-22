@@ -10,7 +10,7 @@ def test():
     mobi.set_platform_velocity_target(0.1, 0.0, 0.0, timeout=2.0, only_align_drives=True)
     time.sleep(2.0)
 
-    mobi.set_driver_type(PlatformDriverType.COMPLIANT)
+    mobi.set_driver_type(PlatformDriverType.COMPLIANT_WEAK)
     mobi.set_platform_velocity_target(0.2, 0.0, 0.0, timeout=10.0)
     time.sleep(2.0)
     exit(1)

@@ -53,7 +53,6 @@ class PlatformDriver:
         vel_y: float,
         vel_a: float,
         timeout: float = 1.0,
-        instantaneous: bool = True,
         only_align_drives: bool = False,
     ) -> None:
         """Set the platform's velocity target.
@@ -67,7 +66,6 @@ class PlatformDriver:
             vel_y: Velocity along Y axis.
             vel_a: Angular velocity.
             timeout: The platform will stop after this many seconds.
-            instantaneous: If true, the platform will move immediately, even if the individual drives are not aligned. If false, will first align all the drives.
             only_align_drives: If true, the platform will only align the wheels in the correct orientation without driving into that directino."""
         if math.sqrt(vel_x**2 + vel_y**2) > 0.5:
             raise ValueError("Cannot set target linear velocity higher than 0.5 m/s")
@@ -76,7 +74,7 @@ class PlatformDriver:
         if timeout < 0.0:
             raise ValueError("Cannot set negative timeout")
 
-        self._vpc.set_platform_velocity_target(vel_x, vel_y, vel_a, instantaneous, only_align_drives)
+        self._vpc.set_platform_velocity_target(vel_x, vel_y, vel_a, only_align_drives)
 
         self._timeout = time.time() + timeout
         self._timeout_message_printed = False
