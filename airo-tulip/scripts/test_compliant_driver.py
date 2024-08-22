@@ -19,7 +19,9 @@ def test():
         time.sleep(0.050)
 
     mobi.driver.align_drives(1, 0, 0)
-    time.sleep(2.0)
+    while time.time() - start < 2.0:
+        mobi.step()
+        time.sleep(0.050)
     assert mobi.driver.are_drives_aligned()
 
     # Loop for 2.0 seconds
