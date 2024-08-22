@@ -10,8 +10,8 @@ def test():
     device = "eno1"
     wheel_configs = create_wheel_configs()
     mobi = RobilePlatform(device, wheel_configs, PlatformDriverType.VELOCITY)
-    mobi.driver.set_platform_velocity_target(0.1, 0.0, 0.0, timeout=2.0, only_align_drives=True)
     mobi.init_ethercat()
+    mobi.driver.set_platform_velocity_target(0.1, 0.0, 0.0, timeout=2.0, only_align_drives=True)
 
     # Loop for 2.0 seconds
     start = time.time()
@@ -19,7 +19,8 @@ def test():
         mobi.step()
         time.sleep(0.050)
 
-    mobi.driver.set_platform_velocity_target(0.5, 0.0, 0.0, timeout=2.0)
+    mobi.driver.set_driver_type(PlatformDriverType.COMPLIANT_WEAK)
+    mobi.driver.set_platform_velocity_target(0.1, 0.0, 0.0, timeout=1000.0)
 
     # Loop indefinitely
     while True:
@@ -33,7 +34,7 @@ def fancy_print_sensors(monitor):
         print(f"accel {i} ", monitor.get_acceleration(i))
         print(f"temp {i} ", monitor.get_temperature(i))
     print("flow ", monitor.get_flow())
-    print("pose ", monitor.get_estimated_platform_pose())
+    print("pose ", monitor.get_estimated_robot_pose())
     print()
 
 

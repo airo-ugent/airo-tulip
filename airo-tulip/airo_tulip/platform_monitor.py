@@ -2,6 +2,7 @@ import copy
 import math
 import time
 from typing import List
+from pykalman import UnscentedKalmanFilter
 
 import numpy as np
 import pysoem
@@ -118,13 +119,13 @@ class PlatformPoseEstimator:
 
 
 class PlatformPoseEstimatorFused:
-    def transition_function(state, noise):
+    def transition_function(self, state, noise):
         dt = 0.05
         F = np.eye(6)
         F[0:3, 3:6] = np.eye(3) * dt
         return np.dot(F, state) + noise
 
-    def observation_function(state, noise):
+    def observation_function(self, state, noise):
         dt = 0.05
         R = 0.232
         [p_x, p_y, p_a, v_x, v_y, v_a] = state[0:6]
@@ -141,8 +142,8 @@ class PlatformPoseEstimatorFused:
         initial_state_covariance = np.eye(6)
 
         self._kf = UnscentedKalmanFilter(
-            transition_function,
-            observation_function,
+            self.transition_function,
+            self.observation_function,
             transition_covariance,
             observation_covariance,
             initial_state_mean,
@@ -160,7 +161,7 @@ class PlatformPoseEstimatorFused:
         Returns:
             The pose (x, y, a) of the platform."""
         observation = [*raw_flow, *odometry_pose, *odometry_velocity]
-        self._state_mean, self._state_covariance = kf.filter_update(
+        self._state_mean, self._state_covariance = self._kf.filter_update(
             self._state_mean, self._state_covariance, observation
         )
         return self._state_mean[0:3]
@@ -262,6 +263,8 @@ class PlatformMonitor:
 
         # Read values for peripheral server
         self._flow_x, self._flow_y = self._peripheral_client.get_flow()
+        self._flow_x /= 13000.0
+        self._flow_y /= 13000.0
 
         self._update_encoders()
 
@@ -281,7 +284,7 @@ class PlatformMonitor:
             [self._flow_x, self._flow_y], self._odometry_pose, self._odometry_velocity
         )
 
-    def get_estimated_platform_pose(self) -> Attitude2DType:
+    def get_estimated_robot_pose(self) -> Attitude2DType:
         """Get the robot platform's estimated pose based on fused estimator."""
         return self._fused_pose
 
