@@ -9,7 +9,7 @@ def test():
 
     mobi.driver.align_drives(1, 0, 0)
     time.sleep(2.0)
-    assert mobi.are_drives_aligned()
+    assert mobi.driver.are_drives_aligned()
 
     mobi.set_driver_type(PlatformDriverType.COMPLIANT)
     mobi.set_platform_velocity_target(0.2, 0.0, 0.0, timeout=10.0)

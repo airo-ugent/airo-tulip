@@ -13,7 +13,7 @@ def test():
     mobi.init_ethercat()
     mobi.driver.align_drives(1, 0, 0)
     time.sleep(2.0)
-    assert mobi.are_drives_aligned()
+    assert mobi.driver.are_drives_aligned()
 
     # Loop for 2.0 seconds
     start = time.time()
