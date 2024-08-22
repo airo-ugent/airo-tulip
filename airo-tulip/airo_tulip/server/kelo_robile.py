@@ -6,7 +6,9 @@ from airo_tulip.server.messages import (
     ResponseMessage,
     SetPlatformVelocityTargetMessage,
     StopServerMessage,
-    SetDriverTypeMessage
+    SetDriverTypeMessage,
+    AlignDrivesMessage,
+    AreDrivesAlignedMessage
 )
 from airo_tulip.structs import Attitude2DType
 from loguru import logger
@@ -28,8 +30,6 @@ class KELORobile:
             vel_a: float,
             *,
             timeout: float = 1.0,
-            instantaneous: bool = True,
-            only_align_drives: bool = False,
     ) -> ResponseMessage:
         """Set the x, y and angular velocity of the complete mobile platform.
 
@@ -38,13 +38,29 @@ class KELORobile:
             vel_y: Linear velocity of platform in y (left) direction in m/s.
             vel_a: Linear velocity of platform in angular direction in rad/s.
             timeout: Duration in seconds after which the movement is automatically stopped (default 1.0).
-            instantaneous: If true (default), the platform will move immediately, even if the individual drives are not aligned. If false, will first align all the drives.
-            only_align_drives: If true (not default), the platform will only move the drives such that they are aligned with the provided travel direction, but not move into that direction.
 
         Returns:
             A ResponseMessage object indicating the response status of the request.
         """
-        msg = SetPlatformVelocityTargetMessage(vel_x, vel_y, vel_a, timeout, instantaneous, only_align_drives)
+        msg = SetPlatformVelocityTargetMessage(vel_x, vel_y, vel_a, timeout)
+        return self._transceive_message(msg)
+
+    def align_drives(self, x: float, y: float, a: float) -> ResponseMessage:
+        """Align the drives such they are oriented for moving with a velocity in the directions given by the arguments.
+
+        This is a non-blocking call; check `are_drives_aligned` to see whether the drives have been aligned.
+
+        Args:
+            x: Linear velocity of platform in x (forward) direction in m/s.
+            y: Linear velocity of platform in y (left) direction in m/s.
+            a: Linear velocity of platform in angular direction in rad/s."""
+        msg = AlignDrivesMessage(x, y, a)
+        return self._transceive_message(msg)
+
+    def are_drives_aligned(self) -> ResponseMessage:
+        """Check whether the drives are aligned for the velocities given in the last call to `align_drives` or
+        `set_platform_velocity_target`."""
+        msg = AreDrivesAlignedMessage()
         return self._transceive_message(msg)
 
     def set_driver_type(self, driver_type: PlatformDriverType) -> ResponseMessage:

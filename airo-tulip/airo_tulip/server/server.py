@@ -16,6 +16,9 @@ from airo_tulip.server.messages import (
     SetPlatformVelocityTargetMessage,
     StopServerMessage,
     SetDriverTypeMessage,
+    AlignDrivesMessage,
+    AreDrivesAlignedMessage,
+    AreDrivesAlignedResponse,
 )
 from airo_tulip.structs import WheelConfig
 from loguru import logger
@@ -43,11 +46,11 @@ class TulipServer:
     message pattern (https://learning-0mq-with-pyzmq.readthedocs.io/en/latest/pyzmq/patterns/client_server.html)."""
 
     def __init__(
-        self,
-        robot_ip: str,
-        robot_port: int,
-        robot_configuration: RobotConfiguration,
-        loop_frequency: float = 20,
+            self,
+            robot_ip: str,
+            robot_port: int,
+            robot_configuration: RobotConfiguration,
+            loop_frequency: float = 20,
     ):
         """Initialize the server.
 
@@ -74,6 +77,8 @@ class TulipServer:
             SetDriverTypeMessage.__name__: self._handle_set_driver_type_request,
             StopServerMessage.__name__: self._handle_stop_server_request,
             GetOdometryMessage.__name__: self._handle_get_odometry_request,
+            AlignDrivesMessage.__name__: self._handle_align_drives_request,
+            AreDrivesAlignedMessage.__name__: self._handle_are_drives_aligned_request,
         }
 
         # Robot platform.
@@ -130,7 +135,7 @@ class TulipServer:
         return self._request_handlers[request_class_name](request)
 
     def _handle_set_platform_velocity_target_request(
-        self, request: SetPlatformVelocityTargetMessage
+            self, request: SetPlatformVelocityTargetMessage
     ) -> ResponseMessage:
         try:
             self._platform.driver.set_platform_velocity_target(
@@ -138,14 +143,22 @@ class TulipServer:
                 request.vel_y,
                 request.vel_a,
                 request.timeout,
-                request.instantaneous,
-                request.only_align_drives,
             )
             logger.info("Request handled successfully.")
             return OkResponse()
         except ValueError as e:
             logger.error(f"Safety limits exceeded: {e}")
             return ErrorResponse("Safety limits exceeded", str(e))
+
+    def _handle_align_drives_request(self, request: AlignDrivesMessage) -> ResponseMessage:
+        self._platform.driver.align_drives(request.x, request.y, request.a)
+        logger.info("Request handled successfully.")
+        return OkResponse()
+
+    def _handle_are_drives_aligned_request(self, request: AreDrivesAlignedMessage) -> ResponseMessage:
+        v = self._platform.driver.are_drives_aligned()
+        logger.info("Request handled successfully.")
+        return AreDrivesAlignedResponse(v)
 
     def _handle_set_driver_type_request(self, request: SetDriverTypeMessage) -> ResponseMessage:
         try:

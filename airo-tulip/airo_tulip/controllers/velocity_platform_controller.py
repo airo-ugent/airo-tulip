@@ -19,7 +19,7 @@ class VelocityPlatformController(Controller):
         self._platform_ramped_vel = np.zeros((3,))
         self._platform_limits = PlatformLimits()
         self._time_last_ramping: float | None = None
-        self._should_align_drives = True
+        self._only_align_drives = False
 
     @staticmethod
     def get_pivot_angle(wheel_param: WheelParamVelocity, pivot_encoder_value: float) -> float:
@@ -49,7 +49,7 @@ class VelocityPlatformController(Controller):
 
     @staticmethod
     def wheel_positions_relative_to_platform_centre(
-        wheel_param: WheelParamVelocity, pivot_encoder_value: float
+            wheel_param: WheelParamVelocity, pivot_encoder_value: float
     ) -> Tuple[Vector2DType, Vector2DType]:
         """For a given drive's parameters and pivot angle, compute the left and right wheel positions with respect
         to the platform centre.
@@ -100,14 +100,22 @@ class VelocityPlatformController(Controller):
         return np.array([vx - va * y, vy + va * x])
 
     def set_platform_velocity_target(
-        self, vel_x: float, vel_y: float, vel_a: float, instantaneous: bool, only_align_drives: bool
+            self, vel_x: float, vel_y: float, vel_a: float
     ) -> None:
         """Set the target velocity of the platform."""
         self._platform_target_vel[0] = 0.0 if (abs(vel_x) < 0.0000001) else vel_x
         self._platform_target_vel[1] = 0.0 if (abs(vel_y) < 0.0000001) else vel_y
         self._platform_target_vel[2] = 0.0 if (abs(vel_a) < 0.0000001) else vel_a
-        self._should_align_drives = not instantaneous
-        self._only_align_drives = only_align_drives
+        self._only_align_drives = False
+
+    def align_drives(
+            self, x: float, y: float, a: float
+    ) -> None:
+        """Align the drives such that they are pointing in the right direction for the target velocity."""
+        self._platform_target_vel[0] = 0.0 if (abs(x) < 0.0000001) else x
+        self._platform_target_vel[1] = 0.0 if (abs(y) < 0.0000001) else y
+        self._platform_target_vel[2] = 0.0 if (abs(a) < 0.0000001) else a
+        self._only_align_drives = True
 
     def set_platform_max_velocity(self, max_vel_linear: float, max_vel_angular: float) -> None:
         """Set the maximum velocity that the platform is allowed to drive at."""
@@ -232,7 +240,7 @@ class VelocityPlatformController(Controller):
         return True
 
     def calculate_wheel_target_velocity(
-        self, drive_index: int, raw_pivot_angle: float, drives_aligned: bool
+            self, drive_index: int, raw_pivot_angle: float
     ) -> Tuple[float, float]:
         """
         Calculate the wheel velocity setpoints based on the set target velocity.
@@ -240,11 +248,16 @@ class VelocityPlatformController(Controller):
         Args:
             drive_index: Index of the drive.
             raw_pivot_angle: Encoder pivot value for this drive.
-            drives_aligned: True if all drives are considered aligned. Will not send forward velocities if false.
 
         Returns:
             The target velocities for the right and left wheel, respectively.
         """
+
+        # Command 0 angular vel when platform has been commanded 0 vel
+        # If this is not done, then the wheels pivot to face front of platform
+        # even when the platform is commanded zero velocity.
+        if self._platform_ramped_vel.x == 0 and self._platform_ramped_vel.y == 0 and self._platform_ramped_vel.a == 0:
+            return 0.0, 0.0
 
         wheel_param = self._wheel_params[drive_index]
 
@@ -269,11 +282,11 @@ class VelocityPlatformController(Controller):
         # Differential correction speed to minimise pivot_error
         delta_vel = pivot_error * wheel_param.pivot_kp
 
-        # If all drives are not yet aligned, we should not send any forward velocities.
+        # If we only want to align drives, we do not want to send forward velocities.
         # This means that the left and right wheel velocities should be equal, but with opposite sign (l = -r).
         # In other words, vel_l and vel_r (computed below) should then be 0, such that the target velocities are
         # -delta_vel and +delta_vel.
-        send_forward_velocities = (drives_aligned or not self._should_align_drives) and not self._only_align_drives
+        send_forward_velocities = not self._only_align_drives
 
         # Target velocity of left wheel (dot product with unit pivot vector)
         vel_l = np.dot(target_vel_vec_l, unit_pivot_vector) if send_forward_velocities else 0.0
@@ -330,7 +343,7 @@ if __name__ == "__main__":
     vpc = VelocityPlatformController(wheel_configs)
 
     # Set some target velocity
-    vpc.set_platform_velocity_target(1.0, 0.0, 0.0, True)
+    vpc.set_platform_velocity_target(1.0, 0.0, 0.0)
 
     # Calculate velocities for each wheel
     for j in range(5):
@@ -344,7 +357,7 @@ if __name__ == "__main__":
         input()
 
     # Set zero target velocity
-    vpc.set_platform_velocity_target(0.0, 0.0, 0.0, True)
+    vpc.set_platform_velocity_target(0.0, 0.0, 0.0)
 
     # Calculate velocities for each wheel
     for j in range(5):

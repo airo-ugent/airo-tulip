@@ -20,8 +20,13 @@ class SetPlatformVelocityTargetMessage(RequestMessage):
     vel_y: float
     vel_a: float
     timeout: float
-    instantaneous: bool
-    only_align_drives: bool
+
+
+@dataclass
+class AlignDrivesMessage(RequestMessage):
+    x: float
+    y: float
+    a: float
 
 
 @dataclass
@@ -31,6 +36,11 @@ class SetDriverTypeMessage(RequestMessage):
 
 @dataclass
 class StopServerMessage(RequestMessage):
+    pass
+
+
+@dataclass
+class AreDrivesAlignedMessage(RequestMessage):
     pass
 
 
@@ -53,3 +63,8 @@ class ErrorResponse(ResponseMessage):
 @dataclass
 class OkResponse(ResponseMessage):
     pass
+
+
+@dataclass
+class AreDrivesAlignedResponse(ResponseMessage):
+    aligned: bool
