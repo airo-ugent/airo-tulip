@@ -7,7 +7,7 @@ from airo_tulip.server.kelo_robile import KELORobile
 def test():
     mobi = KELORobile("localhost", 49789)
 
-    mobi.set_platform_velocity_target(0.1, 0.0, 0.0, timeout=2.0, only_align_drives=True)
+    mobi.align_drives(0.1, 0.0, 0.0, timeout=2.0)
     time.sleep(2.0)
 
     mobi.set_driver_type(PlatformDriverType.COMPLIANT_WEAK)
