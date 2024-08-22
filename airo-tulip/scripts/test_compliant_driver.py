@@ -11,6 +11,13 @@ def test():
     wheel_configs = create_wheel_configs()
     mobi = RobilePlatform(device, wheel_configs, PlatformDriverType.VELOCITY)
     mobi.init_ethercat()
+
+    # Loop for 2.0 seconds
+    start = time.time()
+    while time.time() - start < 2.0:
+        mobi.step()
+        time.sleep(0.050)
+
     mobi.driver.align_drives(1, 0, 0)
     time.sleep(2.0)
     assert mobi.driver.are_drives_aligned()
