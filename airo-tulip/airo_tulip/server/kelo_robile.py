@@ -6,7 +6,8 @@ from airo_tulip.server.messages import (
     ResponseMessage,
     SetPlatformVelocityTargetMessage,
     StopServerMessage,
-    SetDriverTypeMessage
+    SetDriverTypeMessage,
+    AreDrivesAlignedMessage
 )
 from airo_tulip.structs import Attitude2DType
 from loguru import logger
@@ -57,6 +58,14 @@ class KELORobile:
         """
         msg = SetPlatformVelocityTargetMessage(vel_x, vel_y, vel_a, timeout, True)
         return self._transceive_message(msg)
+
+    def are_drives_aligned(self) -> bool:
+        """Check whether the drives are aligned with the last sent velocity command orientation.
+
+        Returns:
+            A boolean indicating the alignment."""
+        msg = AreDrivesAlignedMessage()
+        return self._transceive_message(msg).aligned
 
     def set_driver_type(self, driver_type: PlatformDriverType) -> ResponseMessage:
         """Set the mode of the platform driver.
