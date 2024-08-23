@@ -19,8 +19,7 @@ def test():
         mobi.step()
         time.sleep(0.050)
 
-    mobi.driver.set_driver_type(PlatformDriverType.COMPLIANT_WEAK)
-    mobi.driver.set_platform_velocity_target(0.1, 0.0, 0.0, timeout=1000.0)
+    mobi.driver.set_platform_velocity_target(0.2, 0.0, 0.0, timeout=3.0)
 
     # Loop indefinitely
     while True:
@@ -32,8 +31,11 @@ def test():
 def fancy_print_sensors(monitor):
     for i in range(4):
         print(f"accel {i} ", monitor.get_acceleration(i))
-        print(f"temp {i} ", monitor.get_temperature(i))
+        print(f"gyro {i} ", monitor.get_gyro(i))
+        print(f"enc {i} vel ", monitor.get_velocity(i))
     print("flow ", monitor.get_flow())
+    print("odom pose ", monitor._odometry_pose)
+    print("odom vel ", monitor._odometry_velocity)
     print("pose ", monitor.get_estimated_robot_pose())
     print()
 

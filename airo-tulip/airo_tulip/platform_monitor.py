@@ -132,16 +132,22 @@ class PlatformPoseEstimatorFused:
 
         flow_x = v_x * np.cos(p_a) + v_y * np.sin(p_a) - R * v_a * dt
         flow_y = -v_x * np.sin(p_a) + v_y * np.cos(p_a)
+        odom_v_x = v_x
+        odom_v_y = v_y
+        odom_v_a = v_a
+        gyro = v_a
 
-        return np.array([flow_x, flow_y, p_x, p_y, p_a, v_x, v_y, v_a]) + noise
+        return np.array([flow_x, flow_y, odom_v_x, odom_v_y, odom_v_a, gyro]) + noise
 
     def __init__(self):
-        transition_covariance = np.eye(6)
-        observation_covariance = np.eye(8)
-        observation_covariance[2:5] *= 100  # absolute odometry is lot less precise than flow sensor
-        observation_covariance[5:8] *= 10  # diffential odometry is less precise than flow sensor
+        transition_covariance = np.eye(6) * 0.001**2
+        observation_covariance = np.eye(6)
+        observation_covariance[0:2,0:2] *= 0.0001**2
+        observation_covariance[2:4,2:4] *= 0.1**2
+        observation_covariance[4,4] *= 0.5**2
+        observation_covariance[5,5] *= 0.5**2
         initial_state_mean = np.array([0] * 6)
-        initial_state_covariance = np.eye(6)
+        initial_state_covariance = np.eye(6) * 0.001
 
         self._kf = UnscentedKalmanFilter(
             self.transition_function,
@@ -156,7 +162,7 @@ class PlatformPoseEstimatorFused:
 
         self._time_last_update = None
 
-    def get_pose(self, raw_flow: List[int], odometry_pose: np.ndarray, odometry_velocity) -> np.ndarray:
+    def get_pose(self, raw_flow: List[int], odom_velocity, raw_gyro: float) -> np.ndarray:
         """Update the robot platform's estimated pose by fusing various sensor data using a Kalman filter.
 
         Args:
@@ -171,7 +177,7 @@ class PlatformPoseEstimatorFused:
         self._delta_time = time.time() - self._time_last_update
         self._time_last_update = time.time()
 
-        observation = [*raw_flow, *odometry_pose, *odometry_velocity]
+        observation = [*raw_flow, *odom_velocity, raw_gyro]
         self._state_mean, self._state_covariance = self._kf.filter_update(
             self._state_mean, self._state_covariance, observation
         )
@@ -291,8 +297,12 @@ class PlatformMonitor:
         )
 
         # Update Kalman filter
+        gyro = 0.0
+        for i in range(len(self._gyro)):
+            gyro += self._gyro[i][2]
+        gyro /= len(self._gyro)
         self._fused_pose = self._fused_pose_estimator.get_pose(
-            [self._flow_x, self._flow_y], self._odometry_pose, self._odometry_velocity
+            [self._flow_x, self._flow_y], self._odometry_velocity, gyro
         )
 
     def get_estimated_robot_pose(self) -> Attitude2DType:
