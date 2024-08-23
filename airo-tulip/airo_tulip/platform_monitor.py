@@ -2,7 +2,6 @@ import copy
 import math
 import time
 from typing import List
-from pykalman import UnscentedKalmanFilter
 
 import numpy as np
 import pysoem
@@ -10,6 +9,7 @@ from airo_tulip.constants import CASTOR_OFFSET, WHEEL_DISTANCE, WHEEL_RADIUS
 from airo_tulip.ethercat import RxPDO1, TxPDO1
 from airo_tulip.peripheral_client import PeripheralClient
 from airo_tulip.structs import Attitude2DType, WheelConfig
+from pykalman import UnscentedKalmanFilter
 
 
 def _norm_angle(a: float) -> float:
@@ -120,14 +120,14 @@ class PlatformPoseEstimator:
 
 class PlatformPoseEstimatorFused:
     def transition_function(self, state, noise):
-        dt = 0.05
+        dt = self._delta_time
         F = np.eye(6)
         F[0:3, 3:6] = np.eye(3) * dt
         return np.dot(F, state) + noise
 
     def observation_function(self, state, noise):
-        dt = 0.05
-        R = 0.232
+        dt = self._delta_time
+        R = 0.227  # mounting position of the flow sensor
         [p_x, p_y, p_a, v_x, v_y, v_a] = state[0:6]
 
         flow_x = v_x * np.cos(p_a) + v_y * np.sin(p_a) - R * v_a * dt
@@ -138,6 +138,8 @@ class PlatformPoseEstimatorFused:
     def __init__(self):
         transition_covariance = np.eye(6)
         observation_covariance = np.eye(8)
+        observation_covariance[2:5] *= 100  # absolute odometry is lot less precise than flow sensor
+        observation_covariance[5:8] *= 10  # diffential odometry is less precise than flow sensor
         initial_state_mean = np.array([0] * 6)
         initial_state_covariance = np.eye(6)
 
@@ -152,6 +154,8 @@ class PlatformPoseEstimatorFused:
         self._state_mean = initial_state_mean
         self._state_covariance = initial_state_covariance
 
+        self._time_last_update = None
+
     def get_pose(self, raw_flow: List[int], odometry_pose: np.ndarray, odometry_velocity) -> np.ndarray:
         """Update the robot platform's estimated pose by fusing various sensor data using a Kalman filter.
 
@@ -160,6 +164,13 @@ class PlatformPoseEstimatorFused:
 
         Returns:
             The pose (x, y, a) of the platform."""
+        if self._time_last_update is None:
+            self._time_last_update = time.time()
+            return np.array([0.0, 0.0, 0.0])
+
+        self._delta_time = time.time() - self._time_last_update
+        self._time_last_update = time.time()
+
         observation = [*raw_flow, *odometry_pose, *odometry_velocity]
         self._state_mean, self._state_covariance = self._kf.filter_update(
             self._state_mean, self._state_covariance, observation
