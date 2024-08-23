@@ -16,6 +16,8 @@ from airo_tulip.server.messages import (
     SetPlatformVelocityTargetMessage,
     StopServerMessage,
     SetDriverTypeMessage,
+AreDrivesAlignedMessage,
+AreDrivesAlignedResponse,
 )
 from airo_tulip.structs import WheelConfig
 from loguru import logger
@@ -74,6 +76,7 @@ class TulipServer:
             SetDriverTypeMessage.__name__: self._handle_set_driver_type_request,
             StopServerMessage.__name__: self._handle_stop_server_request,
             GetOdometryMessage.__name__: self._handle_get_odometry_request,
+            AreDrivesAlignedMessage.__name__: self._handle_are_drives_aligned_request,
         }
 
         # Robot platform.
@@ -138,7 +141,6 @@ class TulipServer:
                 request.vel_y,
                 request.vel_a,
                 request.timeout,
-                request.instantaneous,
                 request.only_align_drives,
             )
             logger.info("Request handled successfully.")
@@ -146,6 +148,10 @@ class TulipServer:
         except ValueError as e:
             logger.error(f"Safety limits exceeded: {e}")
             return ErrorResponse("Safety limits exceeded", str(e))
+
+    def _handle_are_drives_aligned_request(self, request: AreDrivesAlignedMessage) -> ResponseMessage:
+        aligned = self._platform.driver.are_drives_aligned()
+        return AreDrivesAlignedResponse(aligned)
 
     def _handle_set_driver_type_request(self, request: SetDriverTypeMessage) -> ResponseMessage:
         try:

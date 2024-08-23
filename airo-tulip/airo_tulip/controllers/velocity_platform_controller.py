@@ -100,13 +100,12 @@ class VelocityPlatformController(Controller):
         return np.array([vx - va * y, vy + va * x])
 
     def set_platform_velocity_target(
-        self, vel_x: float, vel_y: float, vel_a: float, instantaneous: bool, only_align_drives: bool
+        self, vel_x: float, vel_y: float, vel_a: float, only_align_drives: bool
     ) -> None:
         """Set the target velocity of the platform."""
         self._platform_target_vel[0] = 0.0 if (abs(vel_x) < 0.0000001) else vel_x
         self._platform_target_vel[1] = 0.0 if (abs(vel_y) < 0.0000001) else vel_y
         self._platform_target_vel[2] = 0.0 if (abs(vel_a) < 0.0000001) else vel_a
-        self._should_align_drives = not instantaneous
         self._only_align_drives = only_align_drives
 
     def set_platform_max_velocity(self, max_vel_linear: float, max_vel_angular: float) -> None:
@@ -232,7 +231,7 @@ class VelocityPlatformController(Controller):
         return True
 
     def calculate_wheel_target_velocity(
-        self, drive_index: int, raw_pivot_angle: float, drives_aligned: bool
+        self, drive_index: int, raw_pivot_angle: float
     ) -> Tuple[float, float]:
         """
         Calculate the wheel velocity setpoints based on the set target velocity.
@@ -240,7 +239,6 @@ class VelocityPlatformController(Controller):
         Args:
             drive_index: Index of the drive.
             raw_pivot_angle: Encoder pivot value for this drive.
-            drives_aligned: True if all drives are considered aligned. Will not send forward velocities if false.
 
         Returns:
             The target velocities for the right and left wheel, respectively.
@@ -273,7 +271,7 @@ class VelocityPlatformController(Controller):
         # This means that the left and right wheel velocities should be equal, but with opposite sign (l = -r).
         # In other words, vel_l and vel_r (computed below) should then be 0, such that the target velocities are
         # -delta_vel and +delta_vel.
-        send_forward_velocities = (drives_aligned or not self._should_align_drives) and not self._only_align_drives
+        send_forward_velocities = not self._only_align_drives
 
         # Target velocity of left wheel (dot product with unit pivot vector)
         vel_l = np.dot(target_vel_vec_l, unit_pivot_vector) if send_forward_velocities else 0.0

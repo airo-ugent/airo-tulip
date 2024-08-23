@@ -6,7 +6,8 @@ from airo_tulip.server.messages import (
     ResponseMessage,
     SetPlatformVelocityTargetMessage,
     StopServerMessage,
-    SetDriverTypeMessage
+    SetDriverTypeMessage,
+    AreDrivesAlignedMessage
 )
 from airo_tulip.structs import Attitude2DType
 from loguru import logger
@@ -28,8 +29,6 @@ class KELORobile:
             vel_a: float,
             *,
             timeout: float = 1.0,
-            instantaneous: bool = True,
-            only_align_drives: bool = False,
     ) -> ResponseMessage:
         """Set the x, y and angular velocity of the complete mobile platform.
 
@@ -38,14 +37,35 @@ class KELORobile:
             vel_y: Linear velocity of platform in y (left) direction in m/s.
             vel_a: Linear velocity of platform in angular direction in rad/s.
             timeout: Duration in seconds after which the movement is automatically stopped (default 1.0).
-            instantaneous: If true (default), the platform will move immediately, even if the individual drives are not aligned. If false, will first align all the drives.
-            only_align_drives: If true (not default), the platform will only move the drives such that they are aligned with the provided travel direction, but not move into that direction.
 
         Returns:
             A ResponseMessage object indicating the response status of the request.
         """
-        msg = SetPlatformVelocityTargetMessage(vel_x, vel_y, vel_a, timeout, instantaneous, only_align_drives)
+        msg = SetPlatformVelocityTargetMessage(vel_x, vel_y, vel_a, timeout, False)
         return self._transceive_message(msg)
+
+    def align_drives(self, vel_x: float, vel_y: float, vel_a: float, *, timeout: float = 1.0) -> ResponseMessage:
+        """Align the drives for the given velocity values, such that they are oriented correctly. Does not send forward velocities.
+
+        Args:
+            vel_x: Linear velocity of platform in x (forward) direction in m/s.
+            vel_y: Linear velocity of platform in y (left) direction in m/s.
+            vel_a: Linear velocity of platform in angular direction in rad/s.
+            timeout: Duration in seconds after which the movement is automatically stopped (default 1.0).
+
+        Returns:
+            A ResponseMessage object indicating the response status of the request.
+        """
+        msg = SetPlatformVelocityTargetMessage(vel_x, vel_y, vel_a, timeout, True)
+        return self._transceive_message(msg)
+
+    def are_drives_aligned(self) -> bool:
+        """Check whether the drives are aligned with the last sent velocity command orientation.
+
+        Returns:
+            A boolean indicating the alignment."""
+        msg = AreDrivesAlignedMessage()
+        return self._transceive_message(msg).aligned
 
     def set_driver_type(self, driver_type: PlatformDriverType) -> ResponseMessage:
         """Set the mode of the platform driver.
