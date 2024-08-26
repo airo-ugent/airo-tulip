@@ -39,8 +39,8 @@ If you want to connect to a UR cobot mounted on the KELO, you need to set up:
 
 The following instructions were copied from [here](https://github.com/airo-ugent/airo-mono/blob/main/airo-robots/airo_robots/manipulators/hardware/universal_robots_setup.md).
 
-Establish a Ethernet connection between the control box and the external computer:
-* Connect an UTP cable from the control box to the external computer.
+Establish an Ethernet connection between the control box and the external computer:
+* Connect a UTP cable from the control box to the external computer.
 * Create a new network profile on the external computer in `Settings > Network > Wired > +`. Give it any name e.g. `UR` and in the IPv4 tab select `Shared to other computers`.
 * On the control box, go to `Settings > System > Network` and select Static Address and set:
     * IP address: `10.42.0.162`
@@ -48,19 +48,23 @@ Establish a Ethernet connection between the control box and the external compute
     * Gateway: `10.42.0.1`
     * Preferred DNS server: `10.42.0.1`
 
-On MacOS, this corresponds to creating a network with IPv4 configured manually at 10.42.0.1 (subnet mask 255.255.0.0) and configure IPv4 automatically.
+On macOS, this corresponds to creating a network with IPv4 configured manually at 10.42.0.1 (subnet mask 255.255.0.0) and configure IPv4 automatically.
 
 If you're lucky, the control box will already say "Network is connected".
 If pinging the control box from the external computer works, you're done and can read the next section to Enable remote control mode:
+
 ```bash
 ping 10.42.0.162
 ```
+
 If not, you can try to manually bringing up the network profile you created:
+
 ```bash
 nmcli connection up UR
 ```
-If pinging still doesn't, try restarting the robot control box.
-If still not successful, try swapping ethernet cables, ports or computers.
+
+If pinging still doesn't work, try restarting the robot control box.
+If still not successful, try swapping Ethernet cables, ports or computers.
 
 Now, make sure the robot is in remote control.
 
@@ -89,6 +93,12 @@ The Robotiq 2F85 gripper communicates on port 63352, so you should also create a
 
 ```commandline
 ssh -N -L localhost:63352:10.42.0.162:63352 kelo@10.10.129.20
+```
+
+The two tunnels can be set up in one single command:
+
+```commandline
+ssh -N -L localhost:29999:10.42.0.162:29999 -L localhost:30001:10.42.0.162:30001 -L localhost:30002:10.42.0.162:30002 -L localhost:30003:10.42.0.162:30003 -L localhost:30004:10.42.0.162:30004 -L localhost:63352:10.42.0.162:63352 kelo@10.10.129.20
 ```
 
 ## Structure
@@ -121,7 +131,7 @@ When using `airo-tulip`, we recommend building an abstraction layer over your cl
 The drives of the KELO Robile are quite strong, so care should be taken when controlling them.
 The `airo-tulip` package incorporates various safety checks to limit the speed and torque of each of the wheels.
 
-For example, one cannot set a platform target velocity higher than 1 m/s linear or pi/8 rad/s angular in the wrapper method of the `RobilePlatform` class.
+For example, one cannot set a platform target velocity higher than 0.5 m/s linear or pi/8 rad/s angular in the wrapper method of the `RobilePlatform` class.
 The acceleration and deceleration of each drive is limited to 0.5 m/s^2 linear and 0.8 m/s^2 angular by attributes of the `PlatformLimits` dataclass that is used in the `VelocityPlatformController`.
 Additionally, the value for each wheel setpoint is once more limited by the `_wheel_set_point_max` attribute in the `PlatformDriver` class.
 And the maximum current that the motors of each drive will supply is limited to 20 amps during acceleration and 1 amp during braking, as specified in each EtherCAT message that is transmitted.
@@ -134,7 +144,7 @@ The KELO Robile makes use of an EtherCAT bus for communication between the vario
 As such, the integrated compute brick on which the `airo-tulip` package runs, needs to send and receive EtherCAT messages to and from this shared bus.
 For this, we make use of the `PySOEM` library.
 
-An EtherCAT bus works by daisy chaining nodes on the bus.
+An EtherCAT bus works by daisy-chaining nodes on the bus.
 To communicate over the bus, an EtherCAT telegram is constructed on the master node (the compute brick in the case of a KELO Robile) and transmitted on the bus to the first slave device.
 The first slave device checks if there is any data in the telegram for itself, reads it and optionally write its own data into the telegram.
 It also increases the *working counter* field in the telegram if it read or wrote from or to the telegram.
@@ -152,7 +162,7 @@ We've provided the `_get_process_data()` and `_set_process_data()` functions to 
 Note that you'll find that there are 9 slaves in total: 2 times 4 drives and 1 compute unit.
 Only one of the two slaves for each drive is addressable via input and output buffers, the other doesn't have any.
 
-Drives continuously need the receive EtherCAT telegrams in order for them to stay enabled.
+Drives continuously need to receive EtherCAT telegrams in order for them to stay enabled.
 If too much time passes since the last time they received data, the drives will automatically go into a safe state and stop supplying current to the motors.
 Therefor, the `RobilePlatform.step()` function needs to be called inside the main application update loop, preferably at a frequency of 20 Hz.
 This limitation poses special requirements on the implementation of the driver code, as it is run in a separate thread to ensure that it is called without interruption.
