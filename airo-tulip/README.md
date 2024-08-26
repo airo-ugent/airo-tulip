@@ -14,7 +14,7 @@ This folder also contains additional documentation files:
 ## Installation
 
 To install this package, clone the repository with `git` and use `pip` to install the `airo-tulip/` package.
-Note that the `main` branch is the active development branch: you may want to checkout a certain commit associated with
+Note that the `main` branch is the active development branch: you may want to check out a certain commit associated with
 a version tag. The package requires at least Python 3.10.
 
 For example, using [pyenv](https://github.com/pyenv) to set the local Python version to 3.10:
