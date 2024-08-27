@@ -101,6 +101,11 @@ The two tunnels can be set up in one single command:
 ssh -N -L localhost:29999:10.42.0.162:29999 -L localhost:30001:10.42.0.162:30001 -L localhost:30002:10.42.0.162:30002 -L localhost:30003:10.42.0.162:30003 -L localhost:30004:10.42.0.162:30004 -L localhost:63352:10.42.0.162:63352 kelo@10.10.129.20
 ```
 
+### Turning on the robot arm remotely.
+
+See `../utils/start_ur.py` and `../utils/stop_ur.py` to start the robot arm remotely, without needing to connect
+peripherals and/or a monitor.
+
 ## Structure
 
 The `airo-tulip` package consists of the following main Python classes and files:
