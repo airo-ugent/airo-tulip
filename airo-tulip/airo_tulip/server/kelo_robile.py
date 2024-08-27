@@ -7,13 +7,24 @@ from airo_tulip.server.messages import (
     SetPlatformVelocityTargetMessage,
     StopServerMessage,
     SetDriverTypeMessage,
-    AreDrivesAlignedMessage
+    AreDrivesAlignedMessage,
+    ErrorResponse
 )
 from airo_tulip.structs import Attitude2DType
 from loguru import logger
 
 
+class KELORobileError(RuntimeError):
+    def __init__(self, message):
+        super().__init__(message)
+
+
 class KELORobile:
+    """The KELORobile is a client that interfaces with the TulipServer (see server.py).
+
+    Methods are translated into network calls (essentially performing RPC). All the methods
+    can raise a KELORobileError in case of an error."""
+
     def __init__(self, robot_ip: str, robot_port: int):
         address = f"tcp://{robot_ip}:{robot_port}"
         logger.info(f"Connecting to {address}...")
@@ -95,7 +106,9 @@ class KELORobile:
 
     def _transceive_message(self, req: RequestMessage) -> ResponseMessage:
         self._zmq_socket.send_pyobj(req)
-        return self._zmq_socket.recv_pyobj()
+        response = self._zmq_socket.recv_pyobj()
+        if isinstance(response, ErrorResponse):
+            raise KELORobileError(f"Error: {response.message} caused by {response.cause}")
 
     def close(self):
         self._zmq_socket.close()
