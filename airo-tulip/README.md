@@ -106,6 +106,24 @@ ssh -N -L localhost:29999:10.42.0.162:29999 -L localhost:30001:10.42.0.162:30001
 See `../utils/start_ur.py` and `../utils/stop_ur.py` to start the robot arm remotely, without needing to connect
 peripherals and/or a monitor.
 
+## Automatically starting the robot on boot
+
+You can set up the KELO to start the robot automatically on boot, by editing the root user's crontab file.
+
+```commandline
+sudo crontab -e
+```
+
+Enter the following line(s) at the bottom:
+
+```
+@reboot /home/kelo/start_server.sh
+@reboot /home/kelo/start_ur.sh
+```
+
+Copy the `airo-tulip/utils/start_server.sh` and `airo-tulip/utils/start_ur.sh` scripts to the `/home/kelo` directory
+and reboot. The server and UR should start automatically and the UR should release its brakes.
+
 ## Structure
 
 The `airo-tulip` package consists of the following main Python classes and files:
