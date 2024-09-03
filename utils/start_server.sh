@@ -7,6 +7,7 @@ if [ "$EUID" -ne 0 ]
   exit
 fi
 
+sleep 60
 cd /home/kelo || { echo /home/kelo does not exist & exit; }
 cd airo-tulip || { echo airo-tulip directory does not exist  && exit; }
 source env/bin/activate
