@@ -80,6 +80,7 @@ class PlatformDriver:
         self._timeout_message_printed = False
 
     def are_drives_aligned(self) -> bool:
+        """Check if the drives are aligned with the last provided velocity command."""
         encoder_pivots = [self._process_data[i].encoder_pivot for i in range(self._num_wheels)]
         return self._vpc.are_drives_aligned(encoder_pivots)
 
@@ -226,7 +227,7 @@ class PlatformDriver:
                 setpoint1 = wheel_target_velocity_1
                 setpoint2 = wheel_target_velocity_2
             else:
-                logger.debug(f"wheel_index {i}")
+                # logger.debug(f"wheel_index {i}")
                 setpoint1 = self._control_velocity_torque(i * 2, wheel_target_velocity_1, raw_velocities[i][0])
                 setpoint2 = self._control_velocity_torque(i * 2 + 1, wheel_target_velocity_2, raw_velocities[i][1])
 
@@ -253,7 +254,7 @@ class PlatformDriver:
         controller = self._wheel_controllers[wheel_index]
         error_vel = target_vel - current_vel
         torque = controller.control(error_vel)
-        logger.debug(f"target_vel {target_vel:.2f} current_vel {current_vel:.2f} torque {torque:.2f}")
+        # logger.debug(f"target_vel {target_vel:.2f} current_vel {current_vel:.2f} torque {torque:.2f}")
         return torque
 
     def _get_process_data(self, wheel_index: int) -> TxPDO1:
@@ -291,7 +292,7 @@ class VelocityTorqueController:
         self._sum_error_vel = 0.0
 
     def control(self, error_vel):
-        if self._prev_time != None:
+        if self._prev_time is not None:
             delta_time = time.time() - self._prev_time
             diff_error = (error_vel - self._prev_error_vel) / delta_time
         else:

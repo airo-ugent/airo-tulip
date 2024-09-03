@@ -25,7 +25,12 @@ class KELORobile:
     Methods are translated into network calls (essentially performing RPC). All the methods
     can raise a KELORobileError in case of an error."""
 
-    def __init__(self, robot_ip: str, robot_port: int):
+    def __init__(self, robot_ip: str, robot_port: int=49789):
+        """Initialize the client and connect to the server.
+
+        Args:
+            robot_ip: The IP address of the robot. Use 0.0.0.0 for access from the local network.
+            robot_port: The port on which to run this server (default: 49789)."""
         address = f"tcp://{robot_ip}:{robot_port}"
         logger.info(f"Connecting to {address}...")
         self._zmq_ctx = zmq.Context()

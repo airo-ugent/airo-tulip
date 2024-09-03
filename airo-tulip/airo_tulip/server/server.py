@@ -16,8 +16,8 @@ from airo_tulip.server.messages import (
     SetPlatformVelocityTargetMessage,
     StopServerMessage,
     SetDriverTypeMessage,
-AreDrivesAlignedMessage,
-AreDrivesAlignedResponse,
+    AreDrivesAlignedMessage,
+    AreDrivesAlignedResponse,
 )
 from airo_tulip.structs import WheelConfig
 from loguru import logger
@@ -45,18 +45,18 @@ class TulipServer:
     message pattern (https://learning-0mq-with-pyzmq.readthedocs.io/en/latest/pyzmq/patterns/client_server.html)."""
 
     def __init__(
-        self,
-        robot_ip: str,
-        robot_port: int,
-        robot_configuration: RobotConfiguration,
-        loop_frequency: float = 20,
+            self,
+            robot_configuration: RobotConfiguration,
+            robot_ip: str,
+            robot_port: int = 49789,
+            loop_frequency: float = 20,
     ):
         """Initialize the server.
 
         Args:
-            robot_ip: The IP address of the robot.
-            robot_port: The port on which to run this server.
             robot_configuration: The robot configuration.
+            robot_ip: The IP address of the robot. Use 0.0.0.0 for access from the local network.
+            robot_port: The port on which to run this server (default: 49789).
             loop_frequency: The frequency (Hz) with which EtherCAT messages are received and sent.
         """
         # ZMQ socket.
@@ -133,7 +133,7 @@ class TulipServer:
         return self._request_handlers[request_class_name](request)
 
     def _handle_set_platform_velocity_target_request(
-        self, request: SetPlatformVelocityTargetMessage
+            self, request: SetPlatformVelocityTargetMessage
     ) -> ResponseMessage:
         try:
             self._platform.driver.set_platform_velocity_target(

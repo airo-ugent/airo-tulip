@@ -1,7 +1,5 @@
-"""Start the UR robot arm remotely, without needing to connect a monitor and peripherals to the control box."""
+"""Stop the UR robot arm remotely, without needing to connect a monitor and peripherals to the control box."""
 import argparse
-import socket
-import sys
 
 from utils.start_ur import Dashboard
 
@@ -21,7 +19,8 @@ if __name__ == "__main__":
     # Check to see if robot is in remote mode.
     remote_check = dash.send_and_receive('is in remote control')
     if 'false' in remote_check:
-        print("Robot is in local mode. Some commands may not function.\nYou will need to reboot the robot or manually enabled remote control.")
+        print(
+            "Robot is in local mode. Some commands may not function.\nYou will need to reboot the robot or manually enabled remote control.")
         exit(1)
     else:
         print("Robot is in remote mode. Will continue")

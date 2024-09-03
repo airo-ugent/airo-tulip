@@ -13,9 +13,11 @@ class RequestMessage:
 class ResponseMessage:
     pass
 
+
 @dataclass
 class AreDrivesAlignedMessage(RequestMessage):
     pass
+
 
 @dataclass
 class SetPlatformVelocityTargetMessage(RequestMessage):
@@ -45,9 +47,11 @@ class GetOdometryMessage(RequestMessage):
 class OdometryResponse(ResponseMessage):
     odometry: Attitude2DType
 
+
 @dataclass
 class AreDrivesAlignedResponse(ResponseMessage):
     aligned: bool
+
 
 @dataclass
 class ErrorResponse(ResponseMessage):

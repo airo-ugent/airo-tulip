@@ -102,14 +102,24 @@ class VelocityPlatformController(Controller):
     def set_platform_velocity_target(
         self, vel_x: float, vel_y: float, vel_a: float, only_align_drives: bool
     ) -> None:
-        """Set the target velocity of the platform."""
+        """Set the target velocity of the platform.
+
+        Args:
+            vel_x: The linear velocity (m/s) along the x axis.
+            vel_y: The linear velocity (m/s) along the y axis.
+            vel_a: The angular velocity (rad/s) around the center of the platform.
+            only_align_drives: If set, does not more the platform but simply aligns the drives."""
         self._platform_target_vel[0] = 0.0 if (abs(vel_x) < 0.0000001) else vel_x
         self._platform_target_vel[1] = 0.0 if (abs(vel_y) < 0.0000001) else vel_y
         self._platform_target_vel[2] = 0.0 if (abs(vel_a) < 0.0000001) else vel_a
         self._only_align_drives = only_align_drives
 
     def set_platform_max_velocity(self, max_vel_linear: float, max_vel_angular: float) -> None:
-        """Set the maximum velocity that the platform is allowed to drive at."""
+        """Set the maximum velocity that the platform is allowed to drive at.
+
+        Args:
+            max_vel_linear: The maximum linear velocity (m/s).
+            max_vel_angular: The maximum angular velocity (m/s)."""
         self._platform_limits.max_vel_linear = max_vel_linear
         self._platform_limits.max_vel_angular = max_vel_angular
 
