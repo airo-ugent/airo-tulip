@@ -114,6 +114,7 @@ class KELORobile:
         response = self._zmq_socket.recv_pyobj()
         if isinstance(response, ErrorResponse):
             raise KELORobileError(f"Error: {response.message} caused by {response.cause}")
+        return response
 
     def close(self):
         self._zmq_socket.close()
