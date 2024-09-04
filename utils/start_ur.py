@@ -2,6 +2,7 @@
 import argparse
 import socket
 import sys
+import time
 
 
 class Dashboard:
@@ -70,6 +71,9 @@ if __name__ == "__main__":
 
     print("Loading installation file.")
     dash.send_and_receive(f"load {args.installation}.urp")
+
+    # Give UR some time to apply safety configuration.
+    time.sleep(5.0)
 
     print("Powering on.")
     dash.send_and_receive("power on")
