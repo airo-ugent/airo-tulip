@@ -61,7 +61,6 @@ class PlatformDriver:
         vel_y: float,
         vel_a: float,
         timeout: float = 1.0,
-        instantaneous: bool = True,
         only_align_drives: bool = False,
     ) -> None:
         """Set the platform's velocity target.
@@ -75,7 +74,6 @@ class PlatformDriver:
             vel_y: Velocity along Y axis.
             vel_a: Angular velocity.
             timeout: The platform will stop after this many seconds.
-            instantaneous: If true, the platform will move immediately, even if the individual drives are not aligned. If false, will first align all the drives.
             only_align_drives: If true, the platform will only align the wheels in the correct orientation without driving into that directino."""
         if math.sqrt(vel_x**2 + vel_y**2) > 0.5:
             raise ValueError("Cannot set target linear velocity higher than 0.5 m/s")
@@ -84,10 +82,15 @@ class PlatformDriver:
         if timeout < 0.0:
             raise ValueError("Cannot set negative timeout")
 
-        self._vpc.set_platform_velocity_target(vel_x, vel_y, vel_a, instantaneous, only_align_drives)
+        self._vpc.set_platform_velocity_target(vel_x, vel_y, vel_a, only_align_drives)
 
         self._timeout = time.time() + timeout
         self._timeout_message_printed = False
+
+    def are_drives_aligned(self) -> bool:
+        """Check if the drives are aligned with the last provided velocity command."""
+        encoder_pivots = [self._process_data[i].encoder_pivot for i in range(self._num_wheels)]
+        return self._vpc.are_drives_aligned(encoder_pivots)
 
     def set_driver_type(self, driver_type):
         assert isinstance(
@@ -108,7 +111,7 @@ class PlatformDriver:
         self._current_ts = self._process_data[0].sensor_ts
 
         if self._timeout < time.time():
-            self._vpc.set_platform_velocity_target(0.0, 0.0, 0.0, instantaneous=True, only_align_drives=False)
+            self._vpc.set_platform_velocity_target(0.0, 0.0, 0.0, only_align_drives=False)
             if not self._timeout_message_printed:
                 logger.info("platform stopped early due to velocity target timeout")
                 self._timeout_message_printed = True
@@ -211,10 +214,6 @@ class PlatformDriver:
         # Update desired platform velocity if velocity control
         self._vpc.calculate_platform_ramped_velocities()
 
-        encoder_pivots = [self._process_data[i].encoder_pivot for i in range(self._num_wheels)]
-        drives_aligned = self._vpc.are_drives_aligned(encoder_pivots)
-        drives_aligned = True
-
         raw_velocities = [[pd.velocity_1, pd.velocity_2] for pd in self._process_data]
 
         for i in range(self._num_wheels):
@@ -228,7 +227,7 @@ class PlatformDriver:
 
             # Calculate wheel setpoints
             wheel_target_velocity_1, wheel_target_velocity_2 = self._vpc.calculate_wheel_target_velocity(
-                i, self._process_data[i].encoder_pivot, drives_aligned
+                i, self._process_data[i].encoder_pivot
             )
             wheel_target_velocity_1 *= -1  # because of inverted frame
 
@@ -237,7 +236,7 @@ class PlatformDriver:
                 setpoint1 = wheel_target_velocity_1
                 setpoint2 = wheel_target_velocity_2
             else:
-                logger.debug(f"wheel_index {i}")
+                # logger.debug(f"wheel_index {i}")
                 setpoint1 = self._control_velocity_torque(i * 2, wheel_target_velocity_1, raw_velocities[i][0])
                 setpoint2 = self._control_velocity_torque(i * 2 + 1, wheel_target_velocity_2, raw_velocities[i][1])
 
@@ -264,7 +263,7 @@ class PlatformDriver:
         controller = self._wheel_controllers[wheel_index]
         error_vel = target_vel - current_vel
         torque = controller.control(error_vel)
-        logger.debug(f"target_vel {target_vel:.2f} current_vel {current_vel:.2f} torque {torque:.2f}")
+        # logger.debug(f"target_vel {target_vel:.2f} current_vel {current_vel:.2f} torque {torque:.2f}")
         return torque
 
     def _get_process_data(self, wheel_index: int) -> TxPDO1:
@@ -302,7 +301,7 @@ class VelocityTorqueController:
         self._sum_error_vel = 0.0
 
     def control(self, error_vel):
-        if self._prev_time != None:
+        if self._prev_time is not None:
             delta_time = time.time() - self._prev_time
             diff_error = (error_vel - self._prev_error_vel) / delta_time
         else:

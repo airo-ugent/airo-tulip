@@ -15,12 +15,16 @@ class ResponseMessage:
 
 
 @dataclass
+class AreDrivesAlignedMessage(RequestMessage):
+    pass
+
+
+@dataclass
 class SetPlatformVelocityTargetMessage(RequestMessage):
     vel_x: float
     vel_y: float
     vel_a: float
     timeout: float
-    instantaneous: bool
     only_align_drives: bool
 
 
@@ -42,6 +46,11 @@ class GetOdometryMessage(RequestMessage):
 @dataclass
 class OdometryResponse(ResponseMessage):
     odometry: Attitude2DType
+
+
+@dataclass
+class AreDrivesAlignedResponse(ResponseMessage):
+    aligned: bool
 
 
 @dataclass

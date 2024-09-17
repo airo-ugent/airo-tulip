@@ -7,6 +7,8 @@ import zmq.asyncio
 from airo_tulip.platform_driver import PlatformDriverType
 from airo_tulip.robile_platform import RobilePlatform
 from airo_tulip.server.messages import (
+    AreDrivesAlignedMessage,
+    AreDrivesAlignedResponse,
     ErrorResponse,
     GetOdometryMessage,
     OdometryResponse,
@@ -44,17 +46,17 @@ class TulipServer:
 
     def __init__(
         self,
-        robot_ip: str,
-        robot_port: int,
         robot_configuration: RobotConfiguration,
+        robot_ip: str,
+        robot_port: int = 49789,
         loop_frequency: float = 20,
     ):
         """Initialize the server.
 
         Args:
-            robot_ip: The IP address of the robot.
-            robot_port: The port on which to run this server.
             robot_configuration: The robot configuration.
+            robot_ip: The IP address of the robot. Use 0.0.0.0 for access from the local network.
+            robot_port: The port on which to run this server (default: 49789).
             loop_frequency: The frequency (Hz) with which EtherCAT messages are received and sent.
         """
         # ZMQ socket.
@@ -74,6 +76,7 @@ class TulipServer:
             SetDriverTypeMessage.__name__: self._handle_set_driver_type_request,
             StopServerMessage.__name__: self._handle_stop_server_request,
             GetOdometryMessage.__name__: self._handle_get_odometry_request,
+            AreDrivesAlignedMessage.__name__: self._handle_are_drives_aligned_request,
         }
 
         # Robot platform.
@@ -138,7 +141,6 @@ class TulipServer:
                 request.vel_y,
                 request.vel_a,
                 request.timeout,
-                request.instantaneous,
                 request.only_align_drives,
             )
             logger.info("Request handled successfully.")
@@ -146,6 +148,10 @@ class TulipServer:
         except ValueError as e:
             logger.error(f"Safety limits exceeded: {e}")
             return ErrorResponse("Safety limits exceeded", str(e))
+
+    def _handle_are_drives_aligned_request(self, request: AreDrivesAlignedMessage) -> ResponseMessage:
+        aligned = self._platform.driver.are_drives_aligned()
+        return AreDrivesAlignedResponse(aligned)
 
     def _handle_set_driver_type_request(self, request: SetDriverTypeMessage) -> ResponseMessage:
         try:
