@@ -10,8 +10,10 @@ WS2812Serial leds(NUM_LED, display_memory, drawing_memory, PIN_LED, WS2812_GRB);
 
 #define LED_STATE_IDLE 0
 #define LED_STATE_ACTIVE 1
-#define LED_STATE_MOVE 2
+#define LED_STATE_ERROR 2
 char led_state = LED_STATE_IDLE;
+
+int time_last_receive = millis();
 
 void setup() {
   Serial.begin(115200);
@@ -29,6 +31,7 @@ void loop() {
 void check_serial() {
   if (Serial.available() > 0) {
     String command = Serial.readStringUntil('\n');
+    time_last_receive = millis();
 
     if (command.equals("PING")) {
       Serial.println("PONG");
@@ -40,8 +43,8 @@ void check_serial() {
         led_state = LED_STATE_IDLE;
       } else if (command.equals("ACTIVE")) {
         led_state = LED_STATE_ACTIVE;
-      } else if (command.startsWith("MOVE ")) {
-        led_state = LED_STATE_MOVE;
+      } else if (command.equals("ERROR")) {
+        led_state = LED_STATE_ERROR;
       }
 
       Serial.println("OK");
@@ -50,21 +53,22 @@ void check_serial() {
 }
 
 void update_underglow() {
+  if (led_state == LED_STATE_ACTIVE && millis() > time_last_receive + 1000) {
+    led_state = LED_STATE_ERROR;
+  }
+
   int color;
   switch (led_state) {
     case LED_STATE_IDLE:
       set_all_leds(0x222222);
-      leds.show();
       break;
     case LED_STATE_ACTIVE:
       color = (millis()%1000 < 500) ? 0xff00ff : 0x000000;
       set_all_leds(color);
-      leds.show();
       break;
-    case LED_STATE_MOVE:
+    case LED_STATE_ERROR:
       color = (millis()%500 < 250) ? 0xff0000 : 0x000000;
       set_all_leds(color);
-      leds.show();
       break;
   }
 }
