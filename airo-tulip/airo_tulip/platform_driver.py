@@ -160,7 +160,6 @@ class PlatformDriver:
 
     def _step_active(self) -> bool:
         self._do_control()
-        self._peripheral_client.set_leds_active()
         return True
 
     def _step_error(self) -> bool:
@@ -216,6 +215,12 @@ class PlatformDriver:
 
         # Update desired platform velocity if velocity control
         self._vpc.calculate_platform_ramped_velocities()
+
+        # Update underglow
+        [vel_x, vel_y, vel_a] = self._vpc._platform_ramped_vel
+        underglow_angle = np.atan(vel_y, vel_x)
+        underglow_velocity = np.sqrt(vel_x**2 + vel_y**2)
+        self._peripheral_client.set_leds_active(underglow_angle, underglow_velocity)
 
         raw_velocities = [[pd.velocity_1, pd.velocity_2] for pd in self._process_data]
 

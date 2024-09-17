@@ -26,19 +26,20 @@ class PeripheralClient:
         return res == "PONG"
 
     def get_flow(self):
-        #res = self._transceive("FLOW")
-        #tokens = res.split(",")
-        #x = int(tokens[0])
-        #y = int(tokens[1])
-        #return x, y
+        # res = self._transceive("FLOW")
+        # tokens = res.split(",")
+        # x = int(tokens[0])
+        # y = int(tokens[1])
+        # return x, y
         return 0, 0
 
     def set_leds_idle(self):
         res = self._transceive("LED IDLE")
         return res == "OK"
 
-    def set_leds_active(self):
-        res = self._transceive("LED ACTIVE")
+    def set_leds_active(self, angle, velocity):
+        angle = angle % 2 * 3.1415
+        res = self._transceive(f"LED ACTIVE {angle} {velocity}")
         return res == "OK"
 
     def set_leds_error(self):
