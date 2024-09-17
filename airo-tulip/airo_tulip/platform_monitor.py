@@ -291,3 +291,6 @@ class PlatformMonitor:
     def _set_process_data(self, wheel_index: int, data: RxPDO1) -> None:
         ethercat_index = self._wheel_configs[wheel_index].ethercat_number
         self._master.slaves[ethercat_index - 1].output = bytes(data)
+
+    def reset_odometry(self):
+        self._odometry = np.zeros((3,))
