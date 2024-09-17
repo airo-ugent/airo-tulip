@@ -65,22 +65,27 @@ void update_underglow() {
 
   int color;
   int led;
+  int num_led_bar;
   switch (led_state) {
     case LED_STATE_IDLE:
       set_all_leds(0x222222);
       break;
     case LED_STATE_ACTIVE:
       led = angle_to_led(led_active_angle);
-      leds.clear();
-      leds.setPixel((led-2)%NUM_LED, 0xff00ff);
-      leds.setPixel((led-1)%NUM_LED, 0xff00ff);
-      leds.setPixel(led, 0xff00ff);
-      leds.setPixel((led+1)%NUM_LED, 0xff00ff);
-      leds.setPixel((led+2)%NUM_LED, 0xff00ff);
+      num_led_bar = led_active_velocity * 30;
+      color = (millis()%1000 < 500) ? 0x400040 : 0x000000;
+      for (int i=0; i<NUM_LED; i++) {
+        leds.setPixel(i, color);
+      }
+      color = 0xffffff;
+      for (int i=0; i<num_led_bar/2; i++) {
+        leds.setPixel((led-i)%NUM_LED, color);
+        leds.setPixel((led+i)%NUM_LED, color);
+      }
       leds.show();
       break;
     case LED_STATE_ERROR:
-      color = (millis()%500 < 250) ? 0xff0000 : 0x000000;
+      color = (millis()%500 < 200) ? 0xff0000 : 0x000000;
       set_all_leds(color);
       break;
   }
