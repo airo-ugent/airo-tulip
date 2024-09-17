@@ -29,7 +29,7 @@ class RobilePlatform:
 
         self._master = pysoem.Master()
         self._peripheral_client = PeripheralClient("/dev/ttyACM0", 115200)
-        self._driver = PlatformDriver(self._master, wheel_configs, controller_type)
+        self._driver = PlatformDriver(self._master, wheel_configs, controller_type, self._peripheral_client)
         self._monitor = PlatformMonitor(self._master, wheel_configs, self._peripheral_client)
 
         self._enable_rerun = enable_rerun
