@@ -7,6 +7,7 @@ import pysoem
 from airo_tulip.constants import *
 from airo_tulip.controllers.velocity_platform_controller import VelocityPlatformController
 from airo_tulip.ethercat import *
+from airo_tulip.peripheral_client import PeripheralClient
 from airo_tulip.structs import WheelConfig
 from airo_tulip.util import *
 from loguru import logger
@@ -28,10 +29,17 @@ class PlatformDriverState(Enum):
 
 
 class PlatformDriver:
-    def __init__(self, master: pysoem.Master, wheel_configs: List[WheelConfig], controller_type: PlatformDriverType):
+    def __init__(
+        self,
+        master: pysoem.Master,
+        wheel_configs: List[WheelConfig],
+        controller_type: PlatformDriverType,
+        peripheral_client: PeripheralClient,
+    ):
         self._master = master
         self._wheel_configs = wheel_configs
         self._num_wheels = len(wheel_configs)
+        self._peripheral_client = peripheral_client
 
         self._state = PlatformDriverState.INIT
         self._current_ts = 0
@@ -147,6 +155,7 @@ class PlatformDriver:
 
     def _step_active(self) -> bool:
         self._do_control()
+        self._peripheral_client.set_leds_active()
         return True
 
     def _step_error(self) -> bool:

@@ -31,3 +31,15 @@ class PeripheralClient:
         x = int(tokens[0])
         y = int(tokens[1])
         return x, y
+
+    def set_leds_idle(self):
+        res = self._transceive("LED IDLE")
+        return res == "OK"
+
+    def set_leds_active(self):
+        res = self._transceive("LED ACTIVE")
+        return res == "OK"
+
+    def set_leds_move(self):
+        res = self._transceive("LED MOVE")
+        return res == "OK"
