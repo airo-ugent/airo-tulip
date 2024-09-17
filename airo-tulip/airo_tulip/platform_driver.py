@@ -2,6 +2,7 @@ import math
 import time
 from enum import Enum
 from typing import List
+import numpy as np
 
 import pysoem
 from airo_tulip.constants import *
@@ -218,7 +219,7 @@ class PlatformDriver:
 
         # Update underglow
         [vel_x, vel_y, vel_a] = self._vpc._platform_ramped_vel
-        underglow_angle = np.atan(vel_y, vel_x)
+        underglow_angle = np.arctan2(vel_y, vel_x)
         underglow_velocity = np.sqrt(vel_x**2 + vel_y**2)
         self._peripheral_client.set_leds_active(underglow_angle, underglow_velocity)
 

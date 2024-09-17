@@ -38,7 +38,7 @@ class PeripheralClient:
         return res == "OK"
 
     def set_leds_active(self, angle, velocity):
-        angle = angle % 2 * 3.1415
+        angle = angle % (2 * 3.1415)
         res = self._transceive(f"LED ACTIVE {angle} {velocity}")
         return res == "OK"
 
