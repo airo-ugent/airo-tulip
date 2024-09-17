@@ -39,7 +39,9 @@ class PlatformDriver:
         self._master = master
         self._wheel_configs = wheel_configs
         self._num_wheels = len(wheel_configs)
+
         self._peripheral_client = peripheral_client
+        self._peripheral_client.set_leds_idle()
 
         self._state = PlatformDriverState.INIT
         self._current_ts = 0
@@ -163,6 +165,7 @@ class PlatformDriver:
 
     def _step_error(self) -> bool:
         self._do_stop()
+        self._peripheral_client.set_leds_error()
         return True
 
     def _has_wheel_status_enabled(self, wheel: int) -> bool:
