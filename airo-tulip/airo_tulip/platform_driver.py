@@ -69,8 +69,8 @@ class PlatformDriver:
             only_align_drives: If true, the platform will only align the wheels in the correct orientation without driving into that directino."""
         if math.sqrt(vel_x ** 2 + vel_y ** 2) > 0.5:
             raise ValueError("Cannot set target linear velocity higher than 0.5 m/s")
-        if abs(vel_a) > math.pi / 8:
-            raise ValueError("Cannot set target angular velocity higher than pi/8 rad/s")
+        if abs(vel_a) > math.pi / 4:
+            raise ValueError("Cannot set target angular velocity higher than pi/4 rad/s")
         if timeout < 0.0:
             raise ValueError("Cannot set negative timeout")
 
