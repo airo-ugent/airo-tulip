@@ -126,26 +126,41 @@ class PlatformPoseEstimatorFused:
         return np.dot(F, state) + noise
 
     def observation_function(self, state, noise):
-        dt = self._delta_time
-        R = 0.227  # mounting position of the flow sensor
+        self._delta_time
         [p_x, p_y, p_a, v_x, v_y, v_a] = state[0:6]
 
-        flow_x = v_x * np.cos(p_a) + v_y * np.sin(p_a) - R * v_a * dt
-        flow_y = -v_x * np.sin(p_a) + v_y * np.cos(p_a)
-        odom_v_x = v_x
-        odom_v_y = v_y
-        odom_v_a = v_a
-        gyro = v_a
+        T_X = 0.348  # mounting position of the flow sensor on robot
+        T_Y = 0.232  # mounting position of the flow sensor on robot
+        R = np.sqrt(T_X**2 + T_Y**2)
+        alpha = np.arctan2(T_Y, T_X)
 
-        return np.array([flow_x, flow_y, odom_v_x, odom_v_y, odom_v_a, gyro]) + noise
+        flow_x1 = (
+            np.sqrt(2) / 2 * v_x * np.cos(p_a)
+            + np.sqrt(2) / 2 * v_y * np.sin(p_a)
+            + R * v_a * np.cos(alpha + np.pi / 4)
+        )
+        flow_y1 = (
+            -np.sqrt(2) / 2 * v_x * np.sin(p_a)
+            + np.sqrt(2) / 2 * v_y * np.cos(p_a)
+            + R * v_a * np.sin(alpha + np.pi / 4)
+        )
+        flow_x2 = (
+            -np.sqrt(2) / 2 * v_x * np.cos(p_a)
+            - np.sqrt(2) / 2 * v_y * np.sin(p_a)
+            + R * v_a * np.cos(alpha + np.pi / 4)
+        )
+        flow_y2 = (
+            np.sqrt(2) / 2 * v_x * np.sin(p_a)
+            - np.sqrt(2) / 2 * v_y * np.cos(p_a)
+            + R * v_a * np.sin(alpha + np.pi / 4)
+        )
+
+        return np.array([flow_x1, flow_y1, flow_x2, flow_y2]) + noise
 
     def __init__(self):
         transition_covariance = np.eye(6) * 0.001**2
-        observation_covariance = np.eye(6)
-        observation_covariance[0:2,0:2] *= 0.0001**2
-        observation_covariance[2:4,2:4] *= 0.1**2
-        observation_covariance[4,4] *= 0.5**2
-        observation_covariance[5,5] *= 0.5**2
+        observation_covariance = np.eye(4)
+        observation_covariance *= 0.0001**2
         initial_state_mean = np.array([0] * 6)
         initial_state_covariance = np.eye(6) * 0.001
 
@@ -162,7 +177,7 @@ class PlatformPoseEstimatorFused:
 
         self._time_last_update = None
 
-    def get_pose(self, raw_flow: List[int], odom_velocity, raw_gyro: float) -> np.ndarray:
+    def get_pose(self, raw_flow: List[float], odom_velocity, raw_gyro: float) -> np.ndarray:
         """Update the robot platform's estimated pose by fusing various sensor data using a Kalman filter.
 
         Args:
@@ -177,7 +192,7 @@ class PlatformPoseEstimatorFused:
         self._delta_time = time.time() - self._time_last_update
         self._time_last_update = time.time()
 
-        observation = [*raw_flow, *odom_velocity, raw_gyro]
+        observation = [*raw_flow]
         self._state_mean, self._state_covariance = self._kf.filter_update(
             self._state_mean, self._state_covariance, observation
         )
@@ -205,8 +220,7 @@ class PlatformMonitor:
         self._gyro: List[List[float]]
         self._pressure: List[float]
         self._current_in: List[float]
-        self._flow_x: int = 0
-        self._flow_y: int = 0
+        self._flow: List[float]
 
         # Odometry.
         self._prev_encoder = [[0.0, 0.0] for _ in range(self._num_wheels)]
@@ -279,9 +293,8 @@ class PlatformMonitor:
         self._current_in = [pd.current_in for pd in process_data]
 
         # Read values for peripheral server
-        self._flow_x, self._flow_y = self._peripheral_client.get_flow()
-        self._flow_x /= 13000.0
-        self._flow_y /= 13000.0
+        self._flow = numpy.array(self._peripheral_client.get_flow())
+        self._flow /= 13000.0  # conversion from dimensionless to meters
 
         self._update_encoders()
 
@@ -297,13 +310,7 @@ class PlatformMonitor:
         )
 
         # Update Kalman filter
-        gyro = 0.0
-        for i in range(len(self._gyro)):
-            gyro += self._gyro[i][2]
-        gyro /= len(self._gyro)
-        self._fused_pose = self._fused_pose_estimator.get_pose(
-            [self._flow_x, self._flow_y], self._odometry_velocity, gyro
-        )
+        self._fused_pose = self._fused_pose_estimator.get_pose(self._flow)
 
     def get_estimated_robot_pose(self) -> Attitude2DType:
         """Get the robot platform's estimated pose based on fused estimator."""

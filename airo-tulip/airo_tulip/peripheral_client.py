@@ -26,12 +26,13 @@ class PeripheralClient:
         return res == "PONG"
 
     def get_flow(self):
-        # res = self._transceive("FLOW")
-        # tokens = res.split(",")
-        # x = int(tokens[0])
-        # y = int(tokens[1])
-        # return x, y
-        return 0, 0
+        res = self._transceive("FLOW")
+        tokens = res.split(",")
+        x1 = int(tokens[0])
+        y1 = int(tokens[1])
+        x2 = int(tokens[2])
+        y2 = int(tokens[3])
+        return x1, y1, x2, y2
 
     def set_leds_idle(self):
         res = self._transceive("LED IDLE")
