@@ -1,5 +1,7 @@
 #include "WS2812Serial.h"
+#include "Bitcraze_PMW3901.h"
 #include <math.h>
+#include <SPI.h>
 
 #define NUM_LED 62
 #define PIN_LED 1
@@ -16,10 +18,30 @@ char led_state = LED_STATE_IDLE;
 float led_active_angle;
 float led_active_velocity;
 
+// Using digital pin 10 and pin 9 for chip select
+#define PIN_CS_FLOW1 10
+#define PIN_CS_FLOW2 9
+Bitcraze_PMW3901 flow1(PIN_CS_FLOW1);
+Bitcraze_PMW3901 flow2(PIN_CS_FLOW2);
+
 int time_last_receive = millis();
 
 void setup() {
   Serial.begin(115200);
+
+  // Setup SPI port
+  SPI.begin();
+  pinMode(PIN_CS_FLOW1, OUTPUT);
+  pinMode(PIN_CS_FLOW2, OUTPUT);
+  digitalWrite(PIN_CS_FLOW1, HIGH);
+  digitalWrite(PIN_CS_FLOW2, HIGH);
+
+  if (!flow1.begin() || !flow2.begin()) {
+    Serial.println("ERROR_FLOW_INIT");
+    while (1) {}
+  }
+  flow1.setLed(true);
+  flow2.setLed(true);
 
   leds.begin();
 }
@@ -31,6 +53,8 @@ void loop() {
   delay(1);
 }
 
+int16_t deltaX1,deltaY1,deltaX2,deltaY2;
+
 void check_serial() {
   if (Serial.available() > 0) {
     String command = Serial.readStringUntil('\n');
@@ -38,6 +62,19 @@ void check_serial() {
 
     if (command.equals("PING")) {
       Serial.println("PONG");
+
+    } else if (command.equals("FLOW")) {
+      // Get motion count since last call
+      flow1.readMotionCount(&deltaX1, &deltaY1);
+      flow2.readMotionCount(&deltaX2, &deltaY2);
+
+      Serial.print(deltaX1);
+      Serial.print(",");
+      Serial.print(deltaY1);
+      Serial.print(",");
+      Serial.print(deltaX2);
+      Serial.print(",");
+      Serial.println(deltaY2);
 
     } else if (command.startsWith("LED ")) {
       command = command.substring(4);
