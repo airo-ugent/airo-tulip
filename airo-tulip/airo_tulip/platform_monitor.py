@@ -126,7 +126,7 @@ class PlatformPoseEstimatorFused:
         return np.dot(F, state) + noise
 
     def observation_function(self, state, noise):
-        self._delta_time
+        dt = self._delta_time
         [p_x, p_y, p_a, v_x, v_y, v_a] = state[0:6]
 
         T_X = 0.348  # mounting position of the flow sensor on robot
@@ -134,26 +134,29 @@ class PlatformPoseEstimatorFused:
         R = np.sqrt(T_X**2 + T_Y**2)
         alpha = np.arctan2(T_Y, T_X)
 
+        v_x_mobi = v_x * np.cos(p_a) - v_y * np.sin(p_a)
+        v_y_mobi = v_x * np.sin(p_a) + v_y * np.cos(p_a)
+
         flow_x1 = (
-            np.sqrt(2) / 2 * v_x * np.cos(p_a)
-            + np.sqrt(2) / 2 * v_y * np.sin(p_a)
-            + R * v_a * np.cos(alpha + np.pi / 4)
-        )
+            np.sqrt(2) / 2 * v_x_mobi
+            - np.sqrt(2) / 2 * v_y_mobi
+            - R * v_a * np.cos(alpha + np.pi / 4)
+        ) * dt
         flow_y1 = (
-            -np.sqrt(2) / 2 * v_x * np.sin(p_a)
-            + np.sqrt(2) / 2 * v_y * np.cos(p_a)
-            + R * v_a * np.sin(alpha + np.pi / 4)
-        )
+            -np.sqrt(2) / 2 * v_x_mobi
+            - np.sqrt(2) / 2 * v_y_mobi
+            - R * v_a * np.sin(alpha + np.pi / 4)
+        ) * dt
         flow_x2 = (
-            -np.sqrt(2) / 2 * v_x * np.cos(p_a)
-            - np.sqrt(2) / 2 * v_y * np.sin(p_a)
-            + R * v_a * np.cos(alpha + np.pi / 4)
-        )
+            -np.sqrt(2) / 2 * v_x_mobi
+            + np.sqrt(2) / 2 * v_y_mobi
+            - R * v_a * np.cos(alpha + np.pi / 4)
+        ) * dt
         flow_y2 = (
-            np.sqrt(2) / 2 * v_x * np.sin(p_a)
-            - np.sqrt(2) / 2 * v_y * np.cos(p_a)
-            + R * v_a * np.sin(alpha + np.pi / 4)
-        )
+            np.sqrt(2) / 2 * v_x_mobi
+            + np.sqrt(2) / 2 * v_y_mobi
+            - R * v_a * np.sin(alpha + np.pi / 4)
+        ) * dt
 
         return np.array([flow_x1, flow_y1, flow_x2, flow_y2]) + noise
 
@@ -177,7 +180,7 @@ class PlatformPoseEstimatorFused:
 
         self._time_last_update = None
 
-    def get_pose(self, raw_flow: List[float], odom_velocity, raw_gyro: float) -> np.ndarray:
+    def get_pose(self, raw_flow: List[float]) -> np.ndarray:
         """Update the robot platform's estimated pose by fusing various sensor data using a Kalman filter.
 
         Args:
@@ -293,7 +296,7 @@ class PlatformMonitor:
         self._current_in = [pd.current_in for pd in process_data]
 
         # Read values for peripheral server
-        self._flow = numpy.array(self._peripheral_client.get_flow())
+        self._flow = np.array(self._peripheral_client.get_flow(), dtype=np.float64)
         self._flow /= 13000.0  # conversion from dimensionless to meters
 
         self._update_encoders()
@@ -314,7 +317,8 @@ class PlatformMonitor:
 
     def get_estimated_robot_pose(self) -> Attitude2DType:
         """Get the robot platform's estimated pose based on fused estimator."""
-        return self._odometry_pose
+        #return self._odometry_pose
+        return self._fused_pose
 
     def get_status1(self, wheel_index: int) -> int:
         """Returns the status1 register value for a specific drive, see `ethercat.py`."""
@@ -382,7 +386,7 @@ class PlatformMonitor:
 
     def get_flow(self) -> float:
         """Returns the total accumulated flow ticks for x and y"""
-        return [self._flow_x, self._flow_y]
+        return self._flow
 
     def _get_process_data(self, wheel_index: int) -> TxPDO1:
         ethercat_index = self._wheel_configs[wheel_index].ethercat_number
