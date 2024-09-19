@@ -131,7 +131,7 @@ class TulipServer:
     def _handle_request(self, request: RequestMessage) -> ResponseMessage:
         # Delegate based on the request class.
         request_class_name = type(request).__name__
-        logger.trace(f"Request type: {request_class_name}.")
+        logger.info (f"Request type: {request_class_name}.")
         return self._request_handlers[request_class_name](request)
 
     def _handle_set_platform_velocity_target_request(

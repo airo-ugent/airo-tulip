@@ -7,7 +7,6 @@ import numpy as np
 import pysoem
 from airo_tulip.constants import *
 from airo_tulip.ethercat import RxPDO1, TxPDO1
-from airo_tulip.platform_driver import PlatformDriver
 from airo_tulip.structs import WheelConfig, Attitude2DType
 
 
@@ -25,6 +24,9 @@ class PlatformPoseEstimator:
         self._num_drives = num_drives
         self._wheel_configs = wheel_configs
 
+        self.reset()
+
+    def reset(self):
         self._prev_encoder = []  # Will be initialised on first iteration in _estimate_velocity.
         self._odom_x, self._odom_y, self._odom_a = 0, 0, 0
 
@@ -294,3 +296,4 @@ class PlatformMonitor:
 
     def reset_odometry(self):
         self._odometry = np.zeros((3,))
+        self._pose_estimator.reset()
