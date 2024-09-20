@@ -134,28 +134,28 @@ class PlatformPoseEstimatorFused:
         R = np.sqrt(T_X**2 + T_Y**2)
         alpha = np.arctan2(T_Y, T_X)
 
-        v_x_mobi = v_x * np.cos(p_a) - v_y * np.sin(p_a)
-        v_y_mobi = v_x * np.sin(p_a) + v_y * np.cos(p_a)
+        v_x_mobi = v_x * np.cos(p_a) + v_y * np.sin(p_a)
+        v_y_mobi = -v_x * np.sin(p_a) + v_y * np.cos(p_a)
 
         flow_x1 = (
             np.sqrt(2) / 2 * v_x_mobi
             - np.sqrt(2) / 2 * v_y_mobi
-            - R * v_a * np.cos(alpha + np.pi / 4)
+            + R * v_a * np.cos(np.pi * 5 / 4 - alpha)
         ) * dt
         flow_y1 = (
             -np.sqrt(2) / 2 * v_x_mobi
             - np.sqrt(2) / 2 * v_y_mobi
-            - R * v_a * np.sin(alpha + np.pi / 4)
+            - R * v_a * np.sin(np.pi * 5 / 4 - alpha)
         ) * dt
         flow_x2 = (
             -np.sqrt(2) / 2 * v_x_mobi
             + np.sqrt(2) / 2 * v_y_mobi
-            - R * v_a * np.cos(alpha + np.pi / 4)
+            + R * v_a * np.cos(np.pi * 5 / 4 - alpha)
         ) * dt
         flow_y2 = (
             np.sqrt(2) / 2 * v_x_mobi
             + np.sqrt(2) / 2 * v_y_mobi
-            - R * v_a * np.sin(alpha + np.pi / 4)
+            - R * v_a * np.sin(np.pi * 5 / 4 - alpha)
         ) * dt
 
         return np.array([flow_x1, flow_y1, flow_x2, flow_y2]) + noise
@@ -196,9 +196,11 @@ class PlatformPoseEstimatorFused:
         self._time_last_update = time.time()
 
         observation = [*raw_flow]
+        print(observation)
         self._state_mean, self._state_covariance = self._kf.filter_update(
             self._state_mean, self._state_covariance, observation
         )
+        print(self._state_mean[0:3])
         return self._state_mean[0:3]
 
 
