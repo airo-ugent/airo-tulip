@@ -323,8 +323,8 @@ class PlatformMonitor:
 
     def get_estimated_robot_pose(self) -> Attitude2DType:
         """Get the robot platform's estimated pose based on fused estimator."""
-        #return self._odometry_pose
-        return self._fused_pose
+        return self._odometry_pose
+        # return self._fused_pose
 
     def get_status1(self, wheel_index: int) -> int:
         """Returns the status1 register value for a specific drive, see `ethercat.py`."""
