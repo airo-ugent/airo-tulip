@@ -196,11 +196,11 @@ class PlatformPoseEstimatorFused:
         self._time_last_update = time.time()
 
         observation = [*raw_flow]
-        print(observation)
+        # print(observation)
         self._state_mean, self._state_covariance = self._kf.filter_update(
             self._state_mean, self._state_covariance, observation
         )
-        print(self._state_mean[0:3])
+        # print(self._state_mean[0:3])
         return self._state_mean[0:3]
 
 
