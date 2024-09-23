@@ -42,6 +42,9 @@ class StopServerMessage(RequestMessage):
 class GetOdometryMessage(RequestMessage):
     pass
 
+@dataclass
+class ResetOdometryMessage(RequestMessage):
+    pass
 
 @dataclass
 class OdometryResponse(ResponseMessage):

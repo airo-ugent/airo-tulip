@@ -101,14 +101,14 @@ The two tunnels can be set up in one single command:
 ssh -N -L localhost:29999:10.42.0.162:29999 -L localhost:30001:10.42.0.162:30001 -L localhost:30002:10.42.0.162:30002 -L localhost:30003:10.42.0.162:30003 -L localhost:30004:10.42.0.162:30004 -L localhost:63352:10.42.0.162:63352 kelo@10.10.129.20
 ```
 
-### Turning on the robot arm remotely.
+### Turning on the robot arm remotely
 
 See `../utils/start_ur.py` and `../utils/stop_ur.py` to start the robot arm remotely, without needing to connect
 peripherals and/or a monitor.
 
-## Automatically starting the robot on boot
+### Automatically starting the robot on boot
 
-You can set up the KELO to start the robot automatically on boot, by editing the root user's crontab file.
+You can set up the KELO to start the robot arm automatically on boot, by editing the root user's crontab file.
 
 ```commandline
 sudo crontab -e
@@ -123,6 +123,12 @@ Enter the following line(s) at the bottom:
 
 Copy the `airo-tulip/utils/start_server.sh` and `airo-tulip/utils/start_ur.sh` scripts to the `/home/kelo` directory
 and reboot. The server and UR should start automatically and the UR should release its brakes.
+
+## Connecting to other devices mounted on the KELO
+
+You can mount other devices on the KELO, and patch them to the KELO via Ethernet. Follow the instructions above to set up the KELO as a router, and assign a static IP address to the device you have mounted on the KELO.
+
+The device will be able to access the KELO at IP address `10.42.0.1` and will be accessible through the KELO via SSH tunnels, as explained above for the UR arm.
 
 ## Structure
 

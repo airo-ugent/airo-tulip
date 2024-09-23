@@ -10,6 +10,7 @@ from airo_tulip.ethercat import RxPDO1, TxPDO1
 from airo_tulip.peripheral_client import PeripheralClient
 from airo_tulip.structs import Attitude2DType, WheelConfig
 from pykalman import UnscentedKalmanFilter
+from airo_tulip.structs import WheelConfig, Attitude2DType
 
 
 def _norm_angle(a: float) -> float:
@@ -26,6 +27,9 @@ class PlatformPoseEstimator:
         self._num_drives = num_drives
         self._wheel_configs = wheel_configs
 
+        self.reset()
+
+    def reset(self):
         self._prev_encoder = []  # Will be initialised on first iteration in _estimate_velocity.
         self._odom_x, self._odom_y, self._odom_a = 0, 0, 0
 
@@ -83,7 +87,7 @@ class PlatformPoseEstimator:
             dx = vx * dt
             dy = vy * dt
         else:
-            linear_velocity = math.sqrt(vx**2 + vy**2)
+            linear_velocity = math.sqrt(vx ** 2 + vy ** 2)
             direction = math.atan2(vy, vx)
 
             # Displacement relative to the direction of movement.
@@ -397,3 +401,7 @@ class PlatformMonitor:
     def _set_process_data(self, wheel_index: int, data: RxPDO1) -> None:
         ethercat_index = self._wheel_configs[wheel_index].ethercat_number
         self._master.slaves[ethercat_index - 1].output = bytes(data)
+
+    def reset_odometry(self):
+        self._odometry = np.zeros((3,))
+        self._pose_estimator.reset()

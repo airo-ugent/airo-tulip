@@ -78,6 +78,9 @@ if __name__ == "__main__":
     print("Powering on.")
     dash.send_and_receive("power on")
 
+    # Give it some time to power on.
+    time.sleep(5.0)
+
     print("Releasing brakes.")
     dash.send_and_receive("brake release")
 

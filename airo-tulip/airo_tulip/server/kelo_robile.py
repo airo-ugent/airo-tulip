@@ -9,6 +9,10 @@ from airo_tulip.server.messages import (
     SetDriverTypeMessage,
     SetPlatformVelocityTargetMessage,
     StopServerMessage,
+    SetDriverTypeMessage,
+    AreDrivesAlignedMessage,
+    ErrorResponse,
+    ResetOdometryMessage
 )
 from airo_tulip.structs import Attitude2DType
 from loguru import logger
@@ -108,6 +112,11 @@ class KELORobile:
         """Get the robot platform's odometry."""
         msg = GetOdometryMessage()
         return self._transceive_message(msg).odometry
+
+    def reset_odometry(self):
+        """Reset the platform's odometry to 0."""
+        msg = ResetOdometryMessage()
+        self._transceive_message(msg)
 
     def _transceive_message(self, req: RequestMessage) -> ResponseMessage:
         self._zmq_socket.send_pyobj(req)
