@@ -118,6 +118,44 @@ class PlatformPoseEstimator:
         return self._estimate_pose(dt, v), v
 
 
+class PlatformPoseEstimatorPeripherals:
+    def __init__(self):
+        self._time_last_update = None
+        self._pose = np.array([0.0, 0.0, 0.0])
+
+    def _calculate_velocities(self, delta_t: float, raw_flow: List[float]):
+        [flow_x_1, flow_y_1, flow_x_2, flow_y_2] = raw_flow
+
+        v_x_1 = (flow_x_1 - flow_y_1) * np.sqrt(2) / 2 / delta_t
+        v_y_1 = (-flow_x_1 - flow_y_1) * np.sqrt(2) / 2 / delta_t
+        v_x_2 = (-flow_x_2 + flow_y_2) * np.sqrt(2) / 2 / delta_t
+        v_y_2 = (flow_x_2 + flow_y_2) * np.sqrt(2) / 2 / delta_t
+
+        v_x = (v_x_1 + v_x_2) / 2
+        v_y = (v_y_1 + v_y_2) / 2
+
+        return v_x, v_y
+
+    def _update_pose(self, delta_t: float, v_x, v_y, p_a):
+        self._pose[0] += v_x * np.cos(p_a) * delta_t
+        self._pose[1] += v_y * np.sin(p_a) * delta_t
+        self._pose[2] = p_a
+
+    def get_pose(self, raw_flow: List[float], raw_orientation_x: float) -> np.ndarray:
+        if self._time_last_update is None:
+            self._time_last_update = time.time()
+            return np.array([0.0, 0.0, 0.0])
+
+        delta_time = time.time() - self._time_last_update
+        self._time_last_update = time.time()
+
+        v_x, v_y = self._calculate_velocities(delta_time, raw_flow)
+        p_a = (-raw_orientation_x) % (2 * np.pi)
+        self._update_pose(delta_time, v_x, v_y, p_a)
+
+        return self._pose
+
+
 class PlatformPoseEstimatorFused:
     def transition_function(self, state, noise):
         dt = self._delta_time
@@ -238,6 +276,7 @@ class PlatformMonitor:
 
         self._pose_estimator = PlatformPoseEstimator(self._num_wheels, self._wheel_configs)
         self._fused_pose_estimator = PlatformPoseEstimatorFused()
+        self._peripheral_pose_estimator = PlatformPoseEstimatorPeripherals()
 
     @property
     def num_wheels(self) -> int:
@@ -319,13 +358,17 @@ class PlatformMonitor:
             delta_time, self._sum_encoder, pivots
         )
 
+        # Update peripheral pose estimator
+        self._peripheral_pose = self._peripheral_pose_estimator.get_pose(self._flow, self._orientation[0])
+
         # Update Kalman filter
         self._fused_pose = self._fused_pose_estimator.get_pose(self._flow, self._orientation[0])
 
     def get_estimated_robot_pose(self) -> Attitude2DType:
         """Get the robot platform's estimated pose based on fused estimator."""
         # return self._odometry_pose
-        return self._fused_pose
+        # return self._fused_pose
+        return self._peripheral_pose
 
     def get_status1(self, wheel_index: int) -> int:
         """Returns the status1 register value for a specific drive, see `ethercat.py`."""
