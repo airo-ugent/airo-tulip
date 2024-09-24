@@ -1,5 +1,7 @@
 #include "WS2812Serial.h"
 #include "Bitcraze_PMW3901.h"
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BNO055.h>
 #include <math.h>
 #include <SPI.h>
 
@@ -24,6 +26,9 @@ float led_active_velocity;
 Bitcraze_PMW3901 flow1(PIN_CS_FLOW1);
 Bitcraze_PMW3901 flow2(PIN_CS_FLOW2);
 
+// Variables for BNO055
+Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28);
+
 int time_last_receive = millis();
 
 void setup() {
@@ -42,6 +47,13 @@ void setup() {
   }
   flow1.setLed(true);
   flow2.setLed(true);
+
+  // Setup BNO055
+  if (!bno.begin()) {
+    Serial.println("ERROR_BNO_INIT");
+    while (1) {}
+  }
+  bno.setExtCrystalUse(true);
 
   leds.begin();
 }
@@ -75,6 +87,17 @@ void check_serial() {
       Serial.print(deltaX2);
       Serial.print(",");
       Serial.println(deltaY2);
+
+    } else if (command.equals("BNO")) {
+      // Get orientation
+      sensors_event_t event;
+      bno.getEvent(&event);
+
+      Serial.print(event.orientation.x);
+      Serial.print(",");
+      Serial.print(event.orientation.y);
+      Serial.print(",");
+      Serial.println(event.orientation.z);
 
     } else if (command.startsWith("LED ")) {
       command = command.substring(4);
