@@ -126,20 +126,29 @@ class PlatformPoseEstimatorPeripherals:
     def _calculate_velocities(self, delta_t: float, raw_flow: List[float]):
         [flow_x_1, flow_y_1, flow_x_2, flow_y_2] = raw_flow
 
+        T_X = 0.348  # mounting position of the flow sensor on robot
+        T_Y = 0.232  # mounting position of the flow sensor on robot
+        R = np.sqrt(T_X**2 + T_Y**2)
+        beta = np.arctan2(T_Y, T_X)
+
         v_x_1 = (flow_x_1 - flow_y_1) * np.sqrt(2) / 2 / delta_t
         v_y_1 = (-flow_x_1 - flow_y_1) * np.sqrt(2) / 2 / delta_t
+        v_a_1 = (-flow_x_1 * np.cos(beta) - flow_y_1 * np.sin(beta)) / R / delta_t
         v_x_2 = (-flow_x_2 + flow_y_2) * np.sqrt(2) / 2 / delta_t
         v_y_2 = (flow_x_2 + flow_y_2) * np.sqrt(2) / 2 / delta_t
+        v_a_2 = (-flow_x_2 * np.cos(beta) - flow_y_2 * np.sin(beta)) / R / delta_t
 
         v_x = (v_x_1 + v_x_2) / 2
         v_y = (v_y_1 + v_y_2) / 2
+        v_a = (v_a_1 + v_a_2) / 2
 
-        return v_x, v_y
+        return v_x, v_y, v_a
 
-    def _update_pose(self, delta_t: float, v_x, v_y, p_a):
+    def _update_pose(self, delta_t: float, v_x, v_y, v_a):
+        p_a = self._pose[2]
         self._pose[0] += (v_x * np.cos(p_a) - v_y * np.sin(p_a)) * delta_t
         self._pose[1] += (v_x * np.sin(p_a) + v_y * np.cos(p_a)) * delta_t
-        self._pose[2] = p_a
+        self._pose[2] += v_a * delta_t
 
     def get_pose(self, raw_flow: List[float], raw_orientation_x: float) -> np.ndarray:
         if self._time_last_update is None:
@@ -149,9 +158,8 @@ class PlatformPoseEstimatorPeripherals:
         delta_time = time.time() - self._time_last_update
         self._time_last_update = time.time()
 
-        v_x, v_y = self._calculate_velocities(delta_time, raw_flow)
-        p_a = (-raw_orientation_x) % (2 * np.pi)
-        self._update_pose(delta_time, v_x, v_y, p_a)
+        v_x, v_y, v_a = self._calculate_velocities(delta_time, raw_flow)
+        self._update_pose(delta_time, v_x, v_y, v_a)
 
         return self._pose
 
@@ -337,7 +345,7 @@ class PlatformMonitor:
 
         # Read values for peripheral server
         self._flow = np.array(self._peripheral_client.get_flow(), dtype=np.float64)
-        self._flow /= 13000.0  # conversion from dimensionless to meters
+        self._flow /= 12000.0  # conversion from dimensionless to meters
 
         self._orientation = np.array(self._peripheral_client.get_orientation(), dtype=np.float64)
         self._orientation *= np.pi / 180.0  # conversion from degrees to radians
