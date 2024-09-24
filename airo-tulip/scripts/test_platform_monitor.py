@@ -29,13 +29,14 @@ def test():
 
 
 def fancy_print_sensors(monitor):
-    #for i in range(4):
+    # for i in range(4):
     #    print(f"accel {i} ", monitor.get_acceleration(i))
     #    print(f"gyro {i} ", monitor.get_gyro(i))
     #    print(f"enc {i} vel ", monitor.get_velocity(i))
     print("flow ", monitor.get_flow())
+    print("orient ", monitor.get_orientation())
     print("odom pose ", monitor._odometry_pose)
-    #print("odom vel ", monitor._odometry_velocity)
+    # print("odom vel ", monitor._odometry_velocity)
     print("pose ", monitor.get_estimated_robot_pose())
     print()
 

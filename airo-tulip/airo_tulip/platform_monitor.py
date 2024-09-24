@@ -138,32 +138,27 @@ class PlatformPoseEstimatorFused:
         v_y_mobi = -v_x * np.sin(p_a) + v_y * np.cos(p_a)
 
         flow_x1 = (
-            np.sqrt(2) / 2 * v_x_mobi
-            - np.sqrt(2) / 2 * v_y_mobi
-            + R * v_a * np.cos(np.pi * 5 / 4 - alpha)
+            np.sqrt(2) / 2 * v_x_mobi - np.sqrt(2) / 2 * v_y_mobi + R * v_a * np.cos(np.pi * 5 / 4 - alpha)
         ) * dt
         flow_y1 = (
-            -np.sqrt(2) / 2 * v_x_mobi
-            - np.sqrt(2) / 2 * v_y_mobi
-            - R * v_a * np.sin(np.pi * 5 / 4 - alpha)
+            -np.sqrt(2) / 2 * v_x_mobi - np.sqrt(2) / 2 * v_y_mobi - R * v_a * np.sin(np.pi * 5 / 4 - alpha)
         ) * dt
         flow_x2 = (
-            -np.sqrt(2) / 2 * v_x_mobi
-            + np.sqrt(2) / 2 * v_y_mobi
-            + R * v_a * np.cos(np.pi * 5 / 4 - alpha)
+            -np.sqrt(2) / 2 * v_x_mobi + np.sqrt(2) / 2 * v_y_mobi + R * v_a * np.cos(np.pi * 5 / 4 - alpha)
         ) * dt
         flow_y2 = (
-            np.sqrt(2) / 2 * v_x_mobi
-            + np.sqrt(2) / 2 * v_y_mobi
-            - R * v_a * np.sin(np.pi * 5 / 4 - alpha)
+            np.sqrt(2) / 2 * v_x_mobi + np.sqrt(2) / 2 * v_y_mobi - R * v_a * np.sin(np.pi * 5 / 4 - alpha)
         ) * dt
 
-        return np.array([flow_x1, flow_y1, flow_x2, flow_y2]) + noise
+        orientation_x = p_a
+
+        return np.array([flow_x1, flow_y1, flow_x2, flow_y2, orientation_x]) + noise
 
     def __init__(self):
         transition_covariance = np.eye(6) * 0.001**2
-        observation_covariance = np.eye(4)
-        observation_covariance *= 0.0001**2
+        observation_covariance = np.eye(5)
+        observation_covariance[0:4, 0:4] *= 0.0001**2
+        observation_covariance[4, 4] *= 0.001**2
         initial_state_mean = np.array([0] * 6)
         initial_state_covariance = np.eye(6) * 0.001
 
@@ -180,7 +175,7 @@ class PlatformPoseEstimatorFused:
 
         self._time_last_update = None
 
-    def get_pose(self, raw_flow: List[float]) -> np.ndarray:
+    def get_pose(self, raw_flow: List[float], raw_orientation_x: float) -> np.ndarray:
         """Update the robot platform's estimated pose by fusing various sensor data using a Kalman filter.
 
         Args:
@@ -195,7 +190,9 @@ class PlatformPoseEstimatorFused:
         self._delta_time = time.time() - self._time_last_update
         self._time_last_update = time.time()
 
-        observation = [*raw_flow]
+        orientation_x = raw_orientation_x % (2 * np.pi)
+
+        observation = [*raw_flow, orientation_x]
         # print(observation)
         self._state_mean, self._state_covariance = self._kf.filter_update(
             self._state_mean, self._state_covariance, observation
@@ -226,6 +223,7 @@ class PlatformMonitor:
         self._pressure: List[float]
         self._current_in: List[float]
         self._flow: List[float]
+        self._orientation: List[float]
 
         # Odometry.
         self._prev_encoder = [[0.0, 0.0] for _ in range(self._num_wheels)]
@@ -301,6 +299,9 @@ class PlatformMonitor:
         self._flow = np.array(self._peripheral_client.get_flow(), dtype=np.float64)
         self._flow /= 13000.0  # conversion from dimensionless to meters
 
+        self._orientation = np.array(self._peripheral_client.get_orientation(), dtype=np.float64)
+        self._orientation *= np.pi / 180.0  # conversion from degrees to radians
+
         self._update_encoders()
 
         # Update delta time.
@@ -315,11 +316,11 @@ class PlatformMonitor:
         )
 
         # Update Kalman filter
-        self._fused_pose = self._fused_pose_estimator.get_pose(self._flow)
+        self._fused_pose = self._fused_pose_estimator.get_pose(self._flow, self._orientation[0])
 
     def get_estimated_robot_pose(self) -> Attitude2DType:
         """Get the robot platform's estimated pose based on fused estimator."""
-        #return self._odometry_pose
+        # return self._odometry_pose
         return self._fused_pose
 
     def get_status1(self, wheel_index: int) -> int:
@@ -389,6 +390,10 @@ class PlatformMonitor:
     def get_flow(self) -> float:
         """Returns the total accumulated flow ticks for x and y"""
         return self._flow
+
+    def get_orientation(self) -> float:
+        """Returns the orientation measured by the BNO055"""
+        return self._orientation
 
     def _get_process_data(self, wheel_index: int) -> TxPDO1:
         ethercat_index = self._wheel_configs[wheel_index].ethercat_number
