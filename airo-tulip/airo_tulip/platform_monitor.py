@@ -190,7 +190,7 @@ class PlatformPoseEstimatorFused:
         self._delta_time = time.time() - self._time_last_update
         self._time_last_update = time.time()
 
-        orientation_x = raw_orientation_x % (2 * np.pi)
+        orientation_x = (-raw_orientation_x) % (2 * np.pi)
 
         observation = [*raw_flow, orientation_x]
         # print(observation)
@@ -224,6 +224,7 @@ class PlatformMonitor:
         self._current_in: List[float]
         self._flow: List[float]
         self._orientation: List[float]
+        self._orientation_start: List[float] = None
 
         # Odometry.
         self._prev_encoder = [[0.0, 0.0] for _ in range(self._num_wheels)]
@@ -301,6 +302,9 @@ class PlatformMonitor:
 
         self._orientation = np.array(self._peripheral_client.get_orientation(), dtype=np.float64)
         self._orientation *= np.pi / 180.0  # conversion from degrees to radians
+        if self._orientation_start is None:
+            self._orientation_start = self._orientation.copy()
+        self._orientation -= self._orientation_start
 
         self._update_encoders()
 
