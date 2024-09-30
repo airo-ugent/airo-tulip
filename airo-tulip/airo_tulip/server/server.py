@@ -12,6 +12,8 @@ from airo_tulip.server.messages import (
     ErrorResponse,
     GetOdometryMessage,
     OdometryResponse,
+    VelocityResponse,
+    GetVelocityMessage,
     ResetOdometryMessage,
     OkResponse,
     RequestMessage,
@@ -175,3 +177,7 @@ class TulipServer:
     def _handle_get_odometry_request(self, _request: GetOdometryMessage) -> ResponseMessage:
         odometry = self._platform.monitor.get_estimated_robot_pose()
         return OdometryResponse(odometry)
+
+    def _handle_get_velocity_request(self, _request: GetVelocityMessage) -> ResponseMessage:
+        velocity = self._platform.monitor.get_estimated_velocity()
+        return VelocityResponse(velocity)

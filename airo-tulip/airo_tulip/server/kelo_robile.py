@@ -1,12 +1,10 @@
 import zmq
 from airo_tulip.platform_driver import PlatformDriverType
 from airo_tulip.server.messages import (
-    AreDrivesAlignedMessage,
-    ErrorResponse,
     GetOdometryMessage,
+    GetVelocityMessage,
     RequestMessage,
     ResponseMessage,
-    SetDriverTypeMessage,
     SetPlatformVelocityTargetMessage,
     StopServerMessage,
     SetDriverTypeMessage,
@@ -15,6 +13,7 @@ from airo_tulip.server.messages import (
     ResetOdometryMessage
 )
 from airo_tulip.structs import Attitude2DType
+from airo_typing import Vector3DType
 from loguru import logger
 
 
@@ -43,12 +42,12 @@ class KELORobile:
         logger.info(f"Connected to {address}.")
 
     def set_platform_velocity_target(
-        self,
-        vel_x: float,
-        vel_y: float,
-        vel_a: float,
-        *,
-        timeout: float = 1.0,
+            self,
+            vel_x: float,
+            vel_y: float,
+            vel_a: float,
+            *,
+            timeout: float = 1.0,
     ) -> ResponseMessage:
         """Set the x, y and angular velocity of the complete mobile platform.
 
@@ -117,6 +116,11 @@ class KELORobile:
         """Reset the platform's odometry to 0."""
         msg = ResetOdometryMessage()
         self._transceive_message(msg)
+
+    def get_velocity(self) -> Vector3DType:
+        """Get the robot platform's velocity."""
+        msg = GetVelocityMessage()
+        return self._transceive_message(msg).velocity
 
     def _transceive_message(self, req: RequestMessage) -> ResponseMessage:
         self._zmq_socket.send_pyobj(req)

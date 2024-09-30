@@ -8,9 +8,9 @@ import pysoem
 from airo_tulip.constants import CASTOR_OFFSET, WHEEL_DISTANCE, WHEEL_RADIUS
 from airo_tulip.ethercat import RxPDO1, TxPDO1
 from airo_tulip.peripheral_client import PeripheralClient
-from airo_tulip.structs import Attitude2DType, WheelConfig
-from pykalman import UnscentedKalmanFilter
 from airo_tulip.structs import WheelConfig, Attitude2DType
+from airo_typing import Vector3DType
+from pykalman import UnscentedKalmanFilter
 
 
 def _norm_angle(a: float) -> float:
@@ -135,39 +135,39 @@ class PlatformPoseEstimatorFused:
 
         T_X = 0.348  # mounting position of the flow sensor on robot
         T_Y = 0.232  # mounting position of the flow sensor on robot
-        R = np.sqrt(T_X**2 + T_Y**2)
+        R = np.sqrt(T_X ** 2 + T_Y ** 2)
         alpha = np.arctan2(T_Y, T_X)
 
         v_x_mobi = v_x * np.cos(p_a) + v_y * np.sin(p_a)
         v_y_mobi = -v_x * np.sin(p_a) + v_y * np.cos(p_a)
 
         flow_x1 = (
-            np.sqrt(2) / 2 * v_x_mobi
-            - np.sqrt(2) / 2 * v_y_mobi
-            + R * v_a * np.cos(np.pi * 5 / 4 - alpha)
-        ) * dt
+                          np.sqrt(2) / 2 * v_x_mobi
+                          - np.sqrt(2) / 2 * v_y_mobi
+                          + R * v_a * np.cos(np.pi * 5 / 4 - alpha)
+                  ) * dt
         flow_y1 = (
-            -np.sqrt(2) / 2 * v_x_mobi
-            - np.sqrt(2) / 2 * v_y_mobi
-            - R * v_a * np.sin(np.pi * 5 / 4 - alpha)
-        ) * dt
+                          -np.sqrt(2) / 2 * v_x_mobi
+                          - np.sqrt(2) / 2 * v_y_mobi
+                          - R * v_a * np.sin(np.pi * 5 / 4 - alpha)
+                  ) * dt
         flow_x2 = (
-            -np.sqrt(2) / 2 * v_x_mobi
-            + np.sqrt(2) / 2 * v_y_mobi
-            + R * v_a * np.cos(np.pi * 5 / 4 - alpha)
-        ) * dt
+                          -np.sqrt(2) / 2 * v_x_mobi
+                          + np.sqrt(2) / 2 * v_y_mobi
+                          + R * v_a * np.cos(np.pi * 5 / 4 - alpha)
+                  ) * dt
         flow_y2 = (
-            np.sqrt(2) / 2 * v_x_mobi
-            + np.sqrt(2) / 2 * v_y_mobi
-            - R * v_a * np.sin(np.pi * 5 / 4 - alpha)
-        ) * dt
+                          np.sqrt(2) / 2 * v_x_mobi
+                          + np.sqrt(2) / 2 * v_y_mobi
+                          - R * v_a * np.sin(np.pi * 5 / 4 - alpha)
+                  ) * dt
 
         return np.array([flow_x1, flow_y1, flow_x2, flow_y2]) + noise
 
     def __init__(self):
-        transition_covariance = np.eye(6) * 0.001**2
+        transition_covariance = np.eye(6) * 0.001 ** 2
         observation_covariance = np.eye(4)
-        observation_covariance *= 0.0001**2
+        observation_covariance *= 0.0001 ** 2
         initial_state_mean = np.array([0] * 6)
         initial_state_covariance = np.eye(6) * 0.001
 
@@ -323,8 +323,12 @@ class PlatformMonitor:
 
     def get_estimated_robot_pose(self) -> Attitude2DType:
         """Get the robot platform's estimated pose based on fused estimator."""
-        return self._odometry_pose
-        # return self._fused_pose
+        # return self._odometry_pose
+        return self._fused_pose
+
+    def get_estimated_velocity(self) -> Vector3DType:
+        """Get the robot platform's estimated velocity based on odometry."""
+        return self._odometry_velocity
 
     def get_status1(self, wheel_index: int) -> int:
         """Returns the status1 register value for a specific drive, see `ethercat.py`."""
