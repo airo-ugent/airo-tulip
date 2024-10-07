@@ -4,14 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "airo-tulip"
-version = "0.0.9"
+version = "0.0.10"
 authors = [
   { name = "Mathieu De Coster", email = "mathieu.decoster@ugent.be" },
   { name = "Thomas Van Acker", email = "thovacke.vanacker@ugent.be" }
 ]
 description = "Python driver for the KELO Robile platform based on KELO tulip."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.9"
 classifiers = [
   "Programming Language :: Python :: 3",
   "License :: OSI Approved :: MIT License",
