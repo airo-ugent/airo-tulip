@@ -1,3 +1,5 @@
+from uuid import uuid4
+
 import zmq
 from airo_tulip.hardware.platform_driver import PlatformDriverType
 from airo_tulip.api.messages import (
@@ -10,7 +12,8 @@ from airo_tulip.api.messages import (
     SetDriverTypeMessage,
     AreDrivesAlignedMessage,
     ErrorResponse,
-    ResetOdometryMessage
+    ResetOdometryMessage,
+    HandshakeMessage
 )
 from airo_tulip.hardware.structs import Attitude2DType
 from airo_typing import Vector3DType
@@ -35,11 +38,23 @@ class KELORobile:
             robot_ip: The IP address of the robot. Use 0.0.0.0 for access from the local network.
             robot_port: The port on which to run this server (default: 49789)."""
         address = f"tcp://{robot_ip}:{robot_port}"
+
         logger.info(f"Connecting to {address}...")
         self._zmq_ctx = zmq.Context()
         self._zmq_socket = self._zmq_ctx.socket(zmq.REQ)
+        # Set timeout in milliseconds.
+        self._zmq_socket.setsockopt(zmq.RCVTIMEO, 500)
         self._zmq_socket.connect(address)
         logger.info(f"Connected to {address}.")
+
+        logger.info("Performing handshake.")
+        self._handshake()
+        logger.info("Connection established!")
+
+    def _handshake(self):
+        handshake_message = HandshakeMessage(str(uuid4()))
+        handshake_reply = self._transceive_message(handshake_message)
+        assert handshake_reply.uuid == handshake_message.uuid
 
     def set_platform_velocity_target(
             self,
@@ -123,11 +138,14 @@ class KELORobile:
         return self._transceive_message(msg).velocity
 
     def _transceive_message(self, req: RequestMessage) -> ResponseMessage:
-        self._zmq_socket.send_pyobj(req)
-        response = self._zmq_socket.recv_pyobj()
-        if isinstance(response, ErrorResponse):
-            raise KELORobileError(f"Error: {response.message} caused by {response.cause}")
-        return response
+        try:
+            self._zmq_socket.send_pyobj(req)
+            response = self._zmq_socket.recv_pyobj()
+            if isinstance(response, ErrorResponse):
+                raise KELORobileError(f"Error: {response.message} caused by {response.cause}")
+            return response
+        except zmq.Again:
+            raise RuntimeError("Did not receive a reply in time from the tulip server. Is it running?")
 
     def close(self):
         self._zmq_socket.close()

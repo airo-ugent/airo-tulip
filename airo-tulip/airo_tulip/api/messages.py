@@ -16,6 +16,16 @@ class ResponseMessage:
 
 
 @dataclass
+class HandshakeMessage:
+    uuid: str
+
+
+@dataclass
+class HandshakeReply:
+    uuid: str
+
+
+@dataclass
 class AreDrivesAlignedMessage(RequestMessage):
     pass
 
