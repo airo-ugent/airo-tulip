@@ -1,3 +1,5 @@
+"""The RobilePlatform drives the robot through EtherCAT."""
+
 from typing import List
 
 import pysoem
@@ -11,6 +13,7 @@ from loguru import logger
 
 
 class RobilePlatform:
+    """The RobilePlatform drives the robot through EtherCAT."""
     def __init__(
         self,
         device: str,

@@ -1,3 +1,5 @@
+"""Controller base class with common functionality for all controllers."""
+
 from typing import List
 
 import numpy as np

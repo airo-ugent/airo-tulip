@@ -1,7 +1,9 @@
+"""This module contains the PlatformMonitor class, which is responsible for monitoring the robot platform's state."""
+
 import copy
 import math
 import time
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
 import pysoem
@@ -24,13 +26,20 @@ def _norm_angle(a: float) -> float:
 
 
 class PlatformPoseEstimator:
+    """Estimate the robot platform's pose and velocity based on encoder values and pivot values."""
     def __init__(self, num_drives: int, wheel_configs: List[WheelConfig]):
+        """Initialise the pose estimator.
+
+        Args:
+            num_drives: The number of drives.
+            wheel_configs: The configurations for each drive."""
         self._num_drives = num_drives
         self._wheel_configs = wheel_configs
 
         self.reset()
 
     def reset(self):
+        """Reset the pose estimator odometry values."""
         self._prev_encoder = []  # Will be initialised on first iteration in _estimate_velocity.
         self._odom_x, self._odom_y, self._odom_a = 0, 0, 0
 
@@ -109,7 +118,7 @@ class PlatformPoseEstimator:
 
         return np.array([self._odom_x, self._odom_y, self._odom_a])
 
-    def get_odometry(self, dt: float, encoder_values: List[List[float]], cur_pivots: List[float]) -> np.ndarray:
+    def get_odometry(self, dt: float, encoder_values: List[List[float]], cur_pivots: List[float]) -> Tuple[np.ndarray, np.ndarray]:
         """Get the robot platform's odometry.
 
         Args:
@@ -124,13 +133,38 @@ class PlatformPoseEstimator:
 
 
 class PlatformPoseEstimatorFused:
+    """Estimate the robot platform's pose and velocity based on encoder values, pivot values, and flow sensor data."""
+    def __init__(self):
+        """Initialise the fused pose estimator."""
+        transition_covariance = np.eye(6) * 0.001 ** 2
+        observation_covariance = np.eye(4)
+        observation_covariance *= 0.0001 ** 2
+        initial_state_mean = np.array([0] * 6)
+        initial_state_covariance = np.eye(6) * 0.001
+
+        self._kf = UnscentedKalmanFilter(
+            self.transition_function,
+            self.observation_function,
+            transition_covariance,
+            observation_covariance,
+            initial_state_mean,
+            initial_state_covariance,
+        )
+        self._state_mean = initial_state_mean
+        self._state_covariance = initial_state_covariance
+
+        self._time_last_update = None
+
+
     def transition_function(self, state, noise):
+        """Transition function for the Kalman filter."""
         dt = self._delta_time
         F = np.eye(6)
         F[0:3, 3:6] = np.eye(3) * dt
         return np.dot(F, state) + noise
 
     def observation_function(self, state, noise):
+        """Observation function for the Kalman filter."""
         dt = self._delta_time
         [p_x, p_y, p_a, v_x, v_y, v_a] = state[0:6]
 
@@ -165,26 +199,6 @@ class PlatformPoseEstimatorFused:
 
         return np.array([flow_x1, flow_y1, flow_x2, flow_y2]) + noise
 
-    def __init__(self):
-        transition_covariance = np.eye(6) * 0.001 ** 2
-        observation_covariance = np.eye(4)
-        observation_covariance *= 0.0001 ** 2
-        initial_state_mean = np.array([0] * 6)
-        initial_state_covariance = np.eye(6) * 0.001
-
-        self._kf = UnscentedKalmanFilter(
-            self.transition_function,
-            self.observation_function,
-            transition_covariance,
-            observation_covariance,
-            initial_state_mean,
-            initial_state_covariance,
-        )
-        self._state_mean = initial_state_mean
-        self._state_covariance = initial_state_covariance
-
-        self._time_last_update = None
-
     def get_pose(self, raw_flow: List[float]) -> np.ndarray:
         """Update the robot platform's estimated pose by fusing various sensor data using a Kalman filter.
 
@@ -210,8 +224,15 @@ class PlatformPoseEstimatorFused:
 
 
 class PlatformMonitor:
+    """Monitor the robot platform's state from EtherCAT messages."""
     def __init__(self, master: pysoem.Master, wheel_configs: List[WheelConfig],
                  peripheral_client: PeripheralClient | None):
+        """Initialise the platform monitor.
+
+        Args:
+            master: The EtherCAT master.
+            wheel_configs: The configurations for each drive.
+            peripheral_client: The peripheral client, if available. If not available, sensor readings are affected!"""
         # Configuration.
         self._master = master
         self._wheel_configs = wheel_configs
@@ -255,6 +276,7 @@ class PlatformMonitor:
         return self._num_wheels
 
     def _update_encoders(self):
+        """Update the encoder values for the robot platform."""
         if not self._encoder_initialized:
             for i in range(self._num_wheels):
                 data = self._get_process_data(i)
@@ -287,11 +309,8 @@ class PlatformMonitor:
             self._prev_encoder[i][0] = curr_encoder1
             self._prev_encoder[i][1] = curr_encoder2
 
-    @property
-    def num_wheels(self) -> int:
-        return self._num_wheels
-
     def step(self) -> None:
+        """Update the robot platform's state."""
         # Read data from drives.
         process_data = [self._get_process_data(i) for i in range(self._num_wheels)]
         self._status1 = [pd.status1 for pd in process_data]
@@ -405,7 +424,7 @@ class PlatformMonitor:
         """Returns the total power for all drives."""
         return sum([self._voltage_bus[i] * self._current_in[i] for i in range(self._num_wheels)])
 
-    def get_flow(self) -> float:
+    def get_flow(self) -> np.ndarray:
         """Returns the total accumulated flow ticks for x and y"""
         return self._flow
 

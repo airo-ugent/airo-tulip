@@ -1,9 +1,11 @@
+"""Platform driver for the airo-tulip platform."""
+
 import math
 import time
 from enum import Enum
 from typing import List
-import numpy as np
 
+import numpy as np
 import pysoem
 from airo_tulip.hardware.constants import *
 from airo_tulip.hardware.controllers.velocity_platform_controller import VelocityPlatformController
@@ -15,6 +17,7 @@ from loguru import logger
 
 
 class PlatformDriverType(Enum):
+    """Platform driver type (velocity or compliant modes)."""
     VELOCITY = 1
     COMPLIANT_WEAK = 2
     COMPLIANT_MODERATE = 3
@@ -22,6 +25,7 @@ class PlatformDriverType(Enum):
 
 
 class PlatformDriverState(Enum):
+    """Platform driver state."""
     UNDEFINED = 0x00
     INIT = 0x01
     READY = 0x02
@@ -30,13 +34,22 @@ class PlatformDriverState(Enum):
 
 
 class PlatformDriver:
+    """Platform driver for the airo-tulip platform."""
+
     def __init__(
-        self,
-        master: pysoem.Master,
-        wheel_configs: List[WheelConfig],
-        controller_type: PlatformDriverType,
-        peripheral_client: PeripheralClient | None,
+            self,
+            master: pysoem.Master,
+            wheel_configs: List[WheelConfig],
+            controller_type: PlatformDriverType,
+            peripheral_client: PeripheralClient | None,
     ):
+        """Initialise the platform driver.
+
+        Args:
+            master: The EtherCAT master.
+            wheel_configs: The configurations for each drive.
+            controller_type: The type of controller to use (velocity or compliant mode).
+            peripheral_client: The peripheral client."""
         self._master = master
         self._wheel_configs = wheel_configs
         self._num_wheels = len(wheel_configs)
@@ -60,12 +73,12 @@ class PlatformDriver:
         self._wheel_controllers = [VelocityTorqueController(self._driver_type) for _ in range(self._num_wheels * 2)]
 
     def set_platform_velocity_target(
-        self,
-        vel_x: float,
-        vel_y: float,
-        vel_a: float,
-        timeout: float = 1.0,
-        only_align_drives: bool = False,
+            self,
+            vel_x: float,
+            vel_y: float,
+            vel_a: float,
+            timeout: float = 1.0,
+            only_align_drives: bool = False,
     ) -> None:
         """Set the platform's velocity target.
 
@@ -96,14 +109,13 @@ class PlatformDriver:
         encoder_pivots = [self._process_data[i].encoder_pivot for i in range(self._num_wheels)]
         return self._vpc.are_drives_aligned(encoder_pivots)
 
-    def set_driver_type(self, driver_type):
-        assert isinstance(
-            driver_type, PlatformDriverType
-        ), f"Driver type must be an instance of PlatformDriverType enum, got {type(driver_type)}"
+    def set_driver_type(self, driver_type: PlatformDriverType):
+        """Set the driver type (velocity control or compliant control)."""
         self._driver_type = driver_type
         self._wheel_controllers = [VelocityTorqueController(driver_type) for _ in range(self._num_wheels * 2)]
 
     def step(self) -> bool:
+        """Perform a single step of the platform driver."""
         self._step_count += 1
 
         self._process_data = [self._get_process_data(i) for i in range(self._num_wheels)]
@@ -133,6 +145,7 @@ class PlatformDriver:
         return True
 
     def _step_init(self) -> bool:
+        """Initialise the platform driver."""
         self._do_stop()
 
         ready = True
@@ -151,6 +164,7 @@ class PlatformDriver:
         return True
 
     def _step_ready(self) -> bool:
+        """Step the platform driver from READY to ACTIVE."""
         self._do_stop()
 
         # TODO: check status error
@@ -161,20 +175,24 @@ class PlatformDriver:
         return True
 
     def _step_active(self) -> bool:
+        """Step the platform driver in ACTIVE state."""
         self._do_control()
         return True
 
     def _step_error(self) -> bool:
+        """Step the platform driver in ERROR state."""
         self._do_stop()
         if self._peripheral_client is not None:
             self._peripheral_client.set_leds_error()
         return True
 
     def _has_wheel_status_enabled(self, wheel: int) -> bool:
+        """Check if the wheel is enabled."""
         status1 = self._process_data[wheel].status1
         return (status1 & STAT1_ENABLED1) > 0 and (status1 & STAT1_ENABLED2) > 0
 
     def _has_wheel_status_error(self, wheel: int) -> bool:
+        """Check if the wheel has an error."""
         STATUS1a = 3
         STATUS1b = 63
         STATUS1disabled = 60
@@ -187,6 +205,7 @@ class PlatformDriver:
         return (status1 != STATUS1a and status1 != STATUS1b and status1 != STATUS1disabled) or (status2 != STATUS2)
 
     def _do_stop(self) -> None:
+        """Stop the platform."""
         # zero setpoints for all drives
         data = RxPDO1()
         data.timestamp = self._current_ts + 100 * 1000
@@ -206,6 +225,7 @@ class PlatformDriver:
             self._set_process_data(i, data)
 
     def _do_control(self) -> None:
+        """Control the platform."""
         # calculate setpoints for each drive
         data = RxPDO1()
         data.timestamp = self._current_ts + 100 * 1000
@@ -222,7 +242,7 @@ class PlatformDriver:
         # Update underglow
         [vel_x, vel_y, vel_a] = self._vpc._platform_ramped_vel
         underglow_angle = np.arctan2(vel_y, vel_x)
-        underglow_velocity = np.sqrt(vel_x**2 + vel_y**2)
+        underglow_velocity = np.sqrt(vel_x ** 2 + vel_y ** 2)
         if self._peripheral_client is not None:
             self._peripheral_client.set_leds_active(underglow_angle, underglow_velocity)
 
@@ -272,6 +292,7 @@ class PlatformDriver:
             self._set_process_data(i, data)
 
     def _control_velocity_torque(self, wheel_index, target_vel, current_vel):
+        """Control the torque of a wheel."""
         controller = self._wheel_controllers[wheel_index]
         error_vel = target_vel - current_vel
         torque = controller.control(error_vel)
@@ -279,16 +300,21 @@ class PlatformDriver:
         return torque
 
     def _get_process_data(self, wheel_index: int) -> TxPDO1:
+        """Get the process data for a wheel."""
         ethercat_index = self._wheel_configs[wheel_index].ethercat_number
         return TxPDO1.from_buffer_copy(self._master.slaves[ethercat_index - 1].input)
 
     def _set_process_data(self, wheel_index: int, data: RxPDO1) -> None:
+        """Set the process data for a wheel."""
         ethercat_index = self._wheel_configs[wheel_index].ethercat_number
         self._master.slaves[ethercat_index - 1].output = bytes(data)
 
 
 class VelocityTorqueController:
+    """PDI Controller for torque control."""
+
     def __init__(self, driver_type):
+        """Initialise the controller. Sets values for P, D, and I."""
         if driver_type == PlatformDriverType.COMPLIANT_MODERATE:
             self.P = 0.3
             self.D = 0.002
@@ -313,6 +339,7 @@ class VelocityTorqueController:
         self._sum_error_vel = 0.0
 
     def control(self, error_vel):
+        """Control the torque."""
         if self._prev_time is not None:
             delta_time = time.time() - self._prev_time
             diff_error = (error_vel - self._prev_error_vel) / delta_time

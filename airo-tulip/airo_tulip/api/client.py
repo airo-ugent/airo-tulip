@@ -1,3 +1,5 @@
+"""The KELORobile client is a client that interfaces with the TulipServer (see server.py)."""
+
 from uuid import uuid4
 
 import zmq
@@ -21,6 +23,7 @@ from loguru import logger
 
 
 class KELORobileError(RuntimeError):
+    """Error raised when an error occurs in the KELORobile client."""
     def __init__(self, message):
         super().__init__(message)
 
@@ -52,6 +55,8 @@ class KELORobile:
         logger.info("Connection established!")
 
     def _handshake(self):
+        """Perform a handshake with the server to ensure the connection is established. If the server returns
+        a different UUID, the connection is not properly, or if nothing is returned, the server is not running."""
         handshake_message = HandshakeMessage(str(uuid4()))
         handshake_reply = self._transceive_message(handshake_message)
         assert handshake_reply.uuid == handshake_message.uuid
@@ -72,8 +77,8 @@ class KELORobile:
             vel_a: Linear velocity of platform in angular direction in rad/s.
             timeout: Duration in seconds after which the movement is automatically stopped (default 1.0).
 
-                Returns:
-                    A ResponseMessage object indicating the response status of the request.
+        Returns:
+            A ResponseMessage object indicating the response status of the request.
         """
         msg = SetPlatformVelocityTargetMessage(vel_x, vel_y, vel_a, timeout, False)
         return self._transceive_message(msg)
@@ -138,6 +143,7 @@ class KELORobile:
         return self._transceive_message(msg).velocity
 
     def _transceive_message(self, req: RequestMessage) -> ResponseMessage:
+        """Send a request message to the server and return the response message. Raises a RuntimeError on timeouts."""
         try:
             self._zmq_socket.send_pyobj(req)
             response = self._zmq_socket.recv_pyobj()
@@ -148,6 +154,7 @@ class KELORobile:
             raise RuntimeError("Did not receive a reply in time from the tulip server. Is it running?")
 
     def close(self):
+        """Close the connection to the server."""
         self._zmq_socket.close()
         self._zmq_ctx.term()
 

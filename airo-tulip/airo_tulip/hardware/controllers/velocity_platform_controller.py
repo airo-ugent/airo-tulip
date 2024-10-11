@@ -1,3 +1,5 @@
+"""Control the Robile platform with velocity commands."""
+
 import math
 import time
 from typing import List, Tuple
@@ -14,6 +16,10 @@ class VelocityPlatformController(Controller):
     """Control the Robile platform with velocity commands."""
 
     def __init__(self, wheel_configs: List[WheelConfig]):
+        """Initialise the controller.
+
+        Args:
+            wheel_configs: The configurations for each drive."""
         super().__init__(wheel_configs)
         self._platform_target_vel = np.zeros((3,))
         self._platform_ramped_vel = np.zeros((3,))
