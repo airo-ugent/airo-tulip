@@ -41,6 +41,14 @@ class PeripheralClient:
         y2 = int(tokens[3])
         return x1, y1, x2, y2
 
+    def get_orientation(self):
+        res = self._transceive("BNO")
+        tokens = res.split(",")
+        x = float(tokens[0])
+        y = float(tokens[1])
+        z = float(tokens[2])
+        return x, y, z
+
     def set_leds_idle(self):
         """Set the LEDs to idle mode."""
         res = self._transceive("LED IDLE")
