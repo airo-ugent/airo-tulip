@@ -8,7 +8,8 @@ import pysoem
 from airo_tulip.constants import CASTOR_OFFSET, WHEEL_DISTANCE, WHEEL_RADIUS
 from airo_tulip.ethercat import RxPDO1, TxPDO1
 from airo_tulip.peripheral_client import PeripheralClient
-from airo_tulip.structs import Attitude2DType, WheelConfig
+from airo_tulip.structs import WheelConfig, Attitude2DType
+from airo_typing import Vector3DType
 from pykalman import UnscentedKalmanFilter
 
 
@@ -26,6 +27,9 @@ class PlatformPoseEstimator:
         self._num_drives = num_drives
         self._wheel_configs = wheel_configs
 
+        self.reset()
+
+    def reset(self):
         self._prev_encoder = []  # Will be initialised on first iteration in _estimate_velocity.
         self._odom_x, self._odom_y, self._odom_a = 0, 0, 0
 
@@ -83,7 +87,7 @@ class PlatformPoseEstimator:
             dx = vx * dt
             dy = vy * dt
         else:
-            linear_velocity = math.sqrt(vx**2 + vy**2)
+            linear_velocity = math.sqrt(vx ** 2 + vy ** 2)
             direction = math.atan2(vy, vx)
 
             # Displacement relative to the direction of movement.
@@ -177,7 +181,7 @@ class PlatformPoseEstimatorFused:
 
         T_X = 0.348  # mounting position of the flow sensor on robot
         T_Y = 0.232  # mounting position of the flow sensor on robot
-        R = np.sqrt(T_X**2 + T_Y**2)
+        R = np.sqrt(T_X ** 2 + T_Y ** 2)
         alpha = np.arctan2(T_Y, T_X)
 
         v_x_mobi = v_x * np.cos(p_a) + v_y * np.sin(p_a)
@@ -378,6 +382,10 @@ class PlatformMonitor:
         # return self._fused_pose
         return self._peripheral_pose
 
+    def get_estimated_velocity(self) -> Vector3DType:
+        """Get the robot platform's estimated velocity based on odometry."""
+        return self._odometry_velocity
+
     def get_status1(self, wheel_index: int) -> int:
         """Returns the status1 register value for a specific drive, see `ethercat.py`."""
         return self._status1[wheel_index]
@@ -457,3 +465,7 @@ class PlatformMonitor:
     def _set_process_data(self, wheel_index: int, data: RxPDO1) -> None:
         ethercat_index = self._wheel_configs[wheel_index].ethercat_number
         self._master.slaves[ethercat_index - 1].output = bytes(data)
+
+    def reset_odometry(self):
+        self._odometry = np.zeros((3,))
+        self._pose_estimator.reset()

@@ -12,6 +12,9 @@ from airo_tulip.server.messages import (
     ErrorResponse,
     GetOdometryMessage,
     OdometryResponse,
+    VelocityResponse,
+    GetVelocityMessage,
+    ResetOdometryMessage,
     OkResponse,
     RequestMessage,
     ResponseMessage,
@@ -77,6 +80,7 @@ class TulipServer:
             StopServerMessage.__name__: self._handle_stop_server_request,
             GetOdometryMessage.__name__: self._handle_get_odometry_request,
             AreDrivesAlignedMessage.__name__: self._handle_are_drives_aligned_request,
+            ResetOdometryMessage.__name__: self._handle_reset_odometry_request
         }
 
         # Robot platform.
@@ -129,7 +133,7 @@ class TulipServer:
     def _handle_request(self, request: RequestMessage) -> ResponseMessage:
         # Delegate based on the request class.
         request_class_name = type(request).__name__
-        logger.trace(f"Request type: {request_class_name}.")
+        logger.info (f"Request type: {request_class_name}.")
         return self._request_handlers[request_class_name](request)
 
     def _handle_set_platform_velocity_target_request(
@@ -153,6 +157,10 @@ class TulipServer:
         aligned = self._platform.driver.are_drives_aligned()
         return AreDrivesAlignedResponse(aligned)
 
+    def _handle_reset_odometry_request(self, _request: ResetOdometryMessage) -> ResponseMessage:
+        self._platform.monitor.reset_odometry()
+        return OkResponse()
+
     def _handle_set_driver_type_request(self, request: SetDriverTypeMessage) -> ResponseMessage:
         try:
             self._platform.driver.set_driver_type(request.driver_type)
@@ -169,3 +177,7 @@ class TulipServer:
     def _handle_get_odometry_request(self, _request: GetOdometryMessage) -> ResponseMessage:
         odometry = self._platform.monitor.get_estimated_robot_pose()
         return OdometryResponse(odometry)
+
+    def _handle_get_velocity_request(self, _request: GetVelocityMessage) -> ResponseMessage:
+        velocity = self._platform.monitor.get_estimated_velocity()
+        return VelocityResponse(velocity)

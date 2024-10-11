@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 from airo_tulip.platform_driver import PlatformDriverType
 from airo_tulip.structs import Attitude2DType
+from rerun.components import Vector3DType
 
 
 @dataclass
@@ -39,13 +40,28 @@ class StopServerMessage(RequestMessage):
 
 
 @dataclass
+class GetVelocityMessage(RequestMessage):
+    pass
+
+
+@dataclass
 class GetOdometryMessage(RequestMessage):
+    pass
+
+
+@dataclass
+class ResetOdometryMessage(RequestMessage):
     pass
 
 
 @dataclass
 class OdometryResponse(ResponseMessage):
     odometry: Attitude2DType
+
+
+@dataclass
+class VelocityResponse(ResponseMessage):
+    velocity: Vector3DType
 
 
 @dataclass

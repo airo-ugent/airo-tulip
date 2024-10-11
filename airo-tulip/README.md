@@ -101,14 +101,14 @@ The two tunnels can be set up in one single command:
 ssh -N -L localhost:29999:10.42.0.162:29999 -L localhost:30001:10.42.0.162:30001 -L localhost:30002:10.42.0.162:30002 -L localhost:30003:10.42.0.162:30003 -L localhost:30004:10.42.0.162:30004 -L localhost:63352:10.42.0.162:63352 kelo@10.10.129.20
 ```
 
-### Turning on the robot arm remotely.
+### Turning on the robot arm remotely
 
 See `../utils/start_ur.py` and `../utils/stop_ur.py` to start the robot arm remotely, without needing to connect
 peripherals and/or a monitor.
 
-## Automatically starting the robot on boot
+### Automatically starting the robot on boot
 
-You can set up the KELO to start the robot automatically on boot, by editing the root user's crontab file.
+You can set up the KELO to start the robot arm automatically on boot, by editing the root user's crontab file.
 
 ```commandline
 sudo crontab -e
@@ -124,6 +124,22 @@ Enter the following line(s) at the bottom:
 Copy the `airo-tulip/utils/start_server.sh` and `airo-tulip/utils/start_ur.sh` scripts to the `/home/kelo` directory
 and reboot. The server and UR should start automatically and the UR should release its brakes.
 
+## Connecting to other devices mounted on the KELO
+
+You can mount other devices on the KELO, and patch them to the KELO via Ethernet. Follow the instructions above to set up the KELO as a router, and assign a static IP address to the device you have mounted on the KELO.
+
+The device will be able to access the KELO at IP address `10.42.0.1` and will be accessible through the KELO via SSH tunnels, as explained above for the UR arm.
+
+### Robot-mounted NUC: boot when powered
+
+At AIRO, we mounted a more powerful NUC on the robot for deep learning inference workloads. To automatically boot the NUC whenever the KELO is turned on, connect it to the NUC's battery for power. Enter the NUC's BIOS and set the option to power on after power loss. The NUC should now boot as soon as the KELO robot is turned on.
+
+It is recommended to always cleanly shut down the NUC (and the KELO NUC as well), but this setting will also allow you to restore power to it after (accidentally or on purpose) shutting off the power to the NUC.
+
+### Other peripherals
+
+At AIRO, we use other peripherals, such as optical flow sensors but also LED strips, controlled via a [Teensy](https://www.pjrc.com/teensy/) over USB. See [this folder](https://github.com/airo-ugent/airo-tulip/tree/peripherals/peripherals) for more information.
+
 ## Structure
 
 The `airo-tulip` package consists of the following main Python classes and files:
@@ -132,7 +148,7 @@ The `airo-tulip` package consists of the following main Python classes and files
 - `PlatformMonitor`: module that reads out the sensor data from EtherCAT messages and caches them for later retrieval.
 - `VelocityPlatformController`: controller that calculates the setpoints for each wheel in velocity mode. One can set a target velocity in 2D for the complete platform and this controller will convert that to angular velocities for each of the drives.
 
-Later on, we'll add more types of controllers to also support e.g., torque control and compliant control. These new controller classes will be added to the `airo_tulip.controllers` module.
+The `PlatformDriver` can be set to "compliant mode" with different levels of compliance.
 
 The `RobilePlatform` class instantiates a `PlatformDriver` and a `PlatformMonitor` in its constructor. These objects are available in the `driver` and `monitor` properties of the `RobilePlatform` class respectively. The `VelocityPlatformController` is instantiated by the `PlatformDriver` but not available through properties in the `PlatformDriver`. One can set a target velocity using a wrapper method in the `RobilePlatform` class.
 

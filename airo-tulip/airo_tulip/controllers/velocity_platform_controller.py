@@ -254,6 +254,12 @@ class VelocityPlatformController(Controller):
             The target velocities for the right and left wheel, respectively.
         """
 
+        # Command 0 angular vel when platform has been commanded 0 vel
+        # If this is not done, then the wheels pivot to face front of platform
+        # even when the platform is commanded zero velocity.
+        if self._platform_ramped_vel[0] == 0 and self._platform_ramped_vel[1] == 0 and self._platform_ramped_vel[2] == 0:
+            return 0.0, 0.0
+
         wheel_param = self._wheel_params[drive_index]
 
         # Pivot angle to unity vector
