@@ -4,9 +4,9 @@ from typing import List
 
 import zmq
 import zmq.asyncio
-from airo_tulip.platform_driver import PlatformDriverType
-from airo_tulip.robile_platform import RobilePlatform
-from airo_tulip.server.messages import (
+from airo_tulip.hardware.platform_driver import PlatformDriverType
+from airo_tulip.hardware.robile_platform import RobilePlatform
+from airo_tulip.api.messages import (
     AreDrivesAlignedMessage,
     AreDrivesAlignedResponse,
     ErrorResponse,
@@ -22,7 +22,7 @@ from airo_tulip.server.messages import (
     SetPlatformVelocityTargetMessage,
     StopServerMessage,
 )
-from airo_tulip.structs import WheelConfig
+from airo_tulip.hardware.structs import WheelConfig
 from loguru import logger
 
 

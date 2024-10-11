@@ -1,6 +1,6 @@
 import zmq
-from airo_tulip.platform_driver import PlatformDriverType
-from airo_tulip.server.messages import (
+from airo_tulip.hardware.platform_driver import PlatformDriverType
+from airo_tulip.api.messages import (
     GetOdometryMessage,
     GetVelocityMessage,
     RequestMessage,
@@ -12,7 +12,7 @@ from airo_tulip.server.messages import (
     ErrorResponse,
     ResetOdometryMessage
 )
-from airo_tulip.structs import Attitude2DType
+from airo_tulip.hardware.structs import Attitude2DType
 from airo_typing import Vector3DType
 from loguru import logger
 

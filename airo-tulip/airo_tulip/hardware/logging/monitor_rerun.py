@@ -1,6 +1,6 @@
 import numpy as np
 import rerun as rr
-from airo_tulip.platform_monitor import PlatformMonitor
+from airo_tulip.hardware.platform_monitor import PlatformMonitor
 
 
 class RerunMonitorLogger:

@@ -5,12 +5,12 @@ from typing import List
 import numpy as np
 
 import pysoem
-from airo_tulip.constants import *
-from airo_tulip.controllers.velocity_platform_controller import VelocityPlatformController
-from airo_tulip.ethercat import *
-from airo_tulip.peripheral_client import PeripheralClient
-from airo_tulip.structs import WheelConfig
-from airo_tulip.util import *
+from airo_tulip.hardware.constants import *
+from airo_tulip.hardware.controllers.velocity_platform_controller import VelocityPlatformController
+from airo_tulip.hardware.ethercat import *
+from airo_tulip.hardware.peripheral_client import PeripheralClient
+from airo_tulip.hardware.structs import WheelConfig
+from airo_tulip.hardware.util import *
 from loguru import logger
 
 

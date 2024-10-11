@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
-from airo_tulip.platform_driver import PlatformDriverType
-from airo_tulip.structs import Attitude2DType
+from airo_tulip.hardware.platform_driver import PlatformDriverType
+from airo_tulip.hardware.structs import Attitude2DType
 from rerun.components import Vector3DType
 
 

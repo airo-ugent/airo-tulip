@@ -5,10 +5,10 @@ from typing import List
 
 import numpy as np
 import pysoem
-from airo_tulip.constants import CASTOR_OFFSET, WHEEL_DISTANCE, WHEEL_RADIUS
-from airo_tulip.ethercat import RxPDO1, TxPDO1
-from airo_tulip.peripheral_client import PeripheralClient
-from airo_tulip.structs import WheelConfig, Attitude2DType
+from airo_tulip.hardware.constants import CASTOR_OFFSET, WHEEL_DISTANCE, WHEEL_RADIUS
+from airo_tulip.hardware.ethercat import RxPDO1, TxPDO1
+from airo_tulip.hardware.peripheral_client import PeripheralClient
+from airo_tulip.hardware.structs import WheelConfig, Attitude2DType
 from airo_typing import Vector3DType
 from pykalman import UnscentedKalmanFilter
 
