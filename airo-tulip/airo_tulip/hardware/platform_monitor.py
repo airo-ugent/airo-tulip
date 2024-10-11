@@ -403,9 +403,6 @@ class PlatformMonitor:
         )
 
         # Update peripheral pose estimator
-
-
-        # Update Kalman filter
         if self._flow is not None and self._orientation is not None:
             self._peripheral_pose = self._peripheral_pose_estimator.get_pose(self._flow, self._orientation[0])
         else:
