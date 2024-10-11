@@ -80,7 +80,8 @@ class TulipServer:
             StopServerMessage.__name__: self._handle_stop_server_request,
             GetOdometryMessage.__name__: self._handle_get_odometry_request,
             AreDrivesAlignedMessage.__name__: self._handle_are_drives_aligned_request,
-            ResetOdometryMessage.__name__: self._handle_reset_odometry_request
+            ResetOdometryMessage.__name__: self._handle_reset_odometry_request,
+            GetVelocityMessage.__name__: self._handle_get_velocity_request
         }
 
         # Robot platform.
