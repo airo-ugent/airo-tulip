@@ -22,5 +22,5 @@ Finally, start a gnome shell to enable the gnome desktop environment:
 gnome-shell --replace
 ```
 
-Now you can connect with a VNC server (Ubuntu comes with Remmina pre-installed) to `10.10.129.20:5900`,
-with `10.10.129.20` the KELO's IP address.
+Now you can connect with a VNC server (Ubuntu comes with Remmina pre-installed) to `10.10.129.21:5900`,
+with `10.10.129.21` being the KELO's IP address.

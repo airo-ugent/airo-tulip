@@ -35,14 +35,15 @@ class PlatformDriver:
         master: pysoem.Master,
         wheel_configs: List[WheelConfig],
         controller_type: PlatformDriverType,
-        peripheral_client: PeripheralClient,
+        peripheral_client: PeripheralClient | None,
     ):
         self._master = master
         self._wheel_configs = wheel_configs
         self._num_wheels = len(wheel_configs)
 
         self._peripheral_client = peripheral_client
-        self._peripheral_client.set_leds_idle()
+        if self._peripheral_client is not None:
+            self._peripheral_client.set_leds_idle()
 
         self._state = PlatformDriverState.INIT
         self._current_ts = 0
@@ -165,7 +166,8 @@ class PlatformDriver:
 
     def _step_error(self) -> bool:
         self._do_stop()
-        self._peripheral_client.set_leds_error()
+        if self._peripheral_client is not None:
+            self._peripheral_client.set_leds_error()
         return True
 
     def _has_wheel_status_enabled(self, wheel: int) -> bool:
@@ -221,7 +223,8 @@ class PlatformDriver:
         [vel_x, vel_y, vel_a] = self._vpc._platform_ramped_vel
         underglow_angle = np.arctan2(vel_y, vel_x)
         underglow_velocity = np.sqrt(vel_x**2 + vel_y**2)
-        self._peripheral_client.set_leds_active(underglow_angle, underglow_velocity)
+        if self._peripheral_client is not None:
+            self._peripheral_client.set_leds_active(underglow_angle, underglow_velocity)
 
         raw_velocities = [[pd.velocity_1, pd.velocity_2] for pd in self._process_data]
 

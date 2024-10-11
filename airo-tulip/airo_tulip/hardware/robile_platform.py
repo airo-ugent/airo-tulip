@@ -28,7 +28,10 @@ class RobilePlatform:
         self._ethercat_initialized = False
 
         self._master = pysoem.Master()
-        self._peripheral_client = PeripheralClient("/dev/ttyACM0", 115200)
+        try:
+            self._peripheral_client = PeripheralClient("/dev/ttyACM0", 115200)
+        except RuntimeError as e:
+            logger.error(f"Could not connect to the peripheral client. Cause:\n{e}")
         self._driver = PlatformDriver(self._master, wheel_configs, controller_type, self._peripheral_client)
         self._monitor = PlatformMonitor(self._master, wheel_configs, self._peripheral_client)
 

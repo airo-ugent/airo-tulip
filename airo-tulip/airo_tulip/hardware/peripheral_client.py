@@ -8,7 +8,8 @@ class PeripheralClient:
         # Connect to the peripheral server
         self._ser = serial.Serial(port, baud_rate, timeout=1)
         time.sleep(2)
-        assert self.ping(), "Could not establish connection to peripheral server"
+        if not self.ping():
+            raise RuntimeError("Could not establish connection to peripheral server. It the microcontroller connected?")
 
     def _transceive(self, command):
         # Send command to server

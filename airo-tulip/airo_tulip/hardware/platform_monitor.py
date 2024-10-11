@@ -10,6 +10,7 @@ from airo_tulip.hardware.ethercat import RxPDO1, TxPDO1
 from airo_tulip.hardware.peripheral_client import PeripheralClient
 from airo_tulip.hardware.structs import WheelConfig, Attitude2DType
 from airo_typing import Vector3DType
+from loguru import logger
 from pykalman import UnscentedKalmanFilter
 
 
@@ -209,12 +210,17 @@ class PlatformPoseEstimatorFused:
 
 
 class PlatformMonitor:
-    def __init__(self, master: pysoem.Master, wheel_configs: List[WheelConfig], peripheral_client: PeripheralClient):
+    def __init__(self, master: pysoem.Master, wheel_configs: List[WheelConfig],
+                 peripheral_client: PeripheralClient | None):
         # Configuration.
         self._master = master
         self._wheel_configs = wheel_configs
         self._num_wheels = len(wheel_configs)
         self._peripheral_client = peripheral_client
+
+        if self._peripheral_client is None:
+            logger.warning(
+                "No peripheral client detected! We will not use data from external sensors, but only from the KELO slaves.")
 
         # Monitored values.
         self._status1: List[int]
@@ -302,8 +308,11 @@ class PlatformMonitor:
         self._current_in = [pd.current_in for pd in process_data]
 
         # Read values for peripheral server
-        self._flow = np.array(self._peripheral_client.get_flow(), dtype=np.float64)
-        self._flow /= 13000.0  # conversion from dimensionless to meters
+        if self._peripheral_client is not None:
+            self._flow = np.array(self._peripheral_client.get_flow(), dtype=np.float64)
+            self._flow /= 13000.0  # conversion from dimensionless to meters  # TODO calibrate
+        else:
+            self._flow = None
 
         self._update_encoders()
 
@@ -319,11 +328,13 @@ class PlatformMonitor:
         )
 
         # Update Kalman filter
-        self._fused_pose = self._fused_pose_estimator.get_pose(self._flow)
+        if self._flow is not None:
+            self._fused_pose = self._fused_pose_estimator.get_pose(self._flow)
+        else:
+            self._fused_pose = self._odometry_pose
 
     def get_estimated_robot_pose(self) -> Attitude2DType:
         """Get the robot platform's estimated pose based on fused estimator."""
-        # return self._odometry_pose
         return self._fused_pose
 
     def get_estimated_velocity(self) -> Vector3DType:

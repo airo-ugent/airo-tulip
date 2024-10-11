@@ -11,5 +11,5 @@ sleep 60
 cd /home/kelo || { echo /home/kelo does not exist & exit; }
 cd airo-tulip || { echo airo-tulip directory does not exist  && exit; }
 source env/bin/activate
-cd airo-tulip/scripts || { echo airo-tulip/scripts directory does not exist  && exit; }
-python test_server.py
+cd utils || { echo utils directory does not exist  && exit; }
+python start_server.py
