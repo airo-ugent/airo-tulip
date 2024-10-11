@@ -1,5 +1,7 @@
 #include "WS2812Serial.h"
 #include "Bitcraze_PMW3901.h"
+#include <Adafruit_Sensor.h>
+#include <Adafruit_BNO055.h>
 #include <math.h>
 #include <SPI.h>
 
@@ -10,6 +12,14 @@ byte drawing_memory[NUM_LED*3];         //  3 bytes per LED
 DMAMEM byte display_memory[NUM_LED*12]; // 12 bytes per LED
 
 WS2812Serial leds(NUM_LED, display_memory, drawing_memory, PIN_LED, WS2812_GRB);
+
+#define NUM_LED_BACK 25
+#define PIN_LED_BACK 8
+
+byte drawing_memory_back[NUM_LED_BACK*3];         //  3 bytes per LED
+DMAMEM byte display_memory_back[NUM_LED_BACK*12]; // 12 bytes per LED
+
+WS2812Serial leds_back(NUM_LED_BACK, display_memory_back, drawing_memory_back, PIN_LED_BACK, WS2812_GRB);
 
 #define LED_STATE_IDLE 0
 #define LED_STATE_ACTIVE 1
@@ -23,6 +33,9 @@ float led_active_velocity;
 #define PIN_CS_FLOW2 9
 Bitcraze_PMW3901 flow1(PIN_CS_FLOW1);
 Bitcraze_PMW3901 flow2(PIN_CS_FLOW2);
+
+// Variables for BNO055
+Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28);
 
 int time_last_receive = millis();
 
@@ -43,12 +56,21 @@ void setup() {
   flow1.setLed(true);
   flow2.setLed(true);
 
+  // Setup BNO055
+  if (!bno.begin()) {
+    Serial.println("ERROR_BNO_INIT");
+    while (1) {}
+  }
+  bno.setExtCrystalUse(true);
+
   leds.begin();
+  leds_back.begin();
 }
 
 void loop() {
   check_serial();
   update_underglow();
+  update_back();
 
   delay(1);
 }
@@ -75,6 +97,17 @@ void check_serial() {
       Serial.print(deltaX2);
       Serial.print(",");
       Serial.println(deltaY2);
+
+    } else if (command.equals("BNO")) {
+      // Get orientation
+      sensors_event_t event;
+      bno.getEvent(&event);
+
+      Serial.print(event.orientation.x);
+      Serial.print(",");
+      Serial.print(event.orientation.y);
+      Serial.print(",");
+      Serial.println(event.orientation.z);
 
     } else if (command.startsWith("LED ")) {
       command = command.substring(4);
@@ -134,6 +167,36 @@ void set_all_leds(int color) {
   }
   leds.show();
 }
+
+void update_back() {
+  for (int i=0; i<20; i++) {
+    leds_back.setPixel(i, 0x000000);
+  }
+
+  if (led_state == LED_STATE_ACTIVE) {
+    if (led_active_angle < 6.28f-0.35f && led_active_angle > 3.14f+1.57f) {
+      // Turning right
+      int color = (millis()%1000 < 500) ? 0xaa8800 : 0x000000;
+      for (int i=10; i<20; i++) {
+        leds_back.setPixel(i, color);
+      }
+
+    } else if (led_active_angle > 0.35f && led_active_angle < 1.57f) {
+      // Turning left
+      int color = (millis()%1000 < 500) ? 0xaa8800 : 0x000000;
+      for (int i=0; i<10; i++) {
+        leds_back.setPixel(i, color);
+      }
+    }
+  }
+  leds_back.setPixel(20, 0xff00ff);
+  leds_back.setPixel(21, 0x00ffff);
+  leds_back.setPixel(22, 0x666666);
+  leds_back.setPixel(23, 0x00ff00);
+  leds_back.setPixel(24, 0x00ff00);
+  leds_back.show();
+}
+
 
 int angle_to_led(float angle) {
   angle = fmod(angle, 2*3.1415f);
