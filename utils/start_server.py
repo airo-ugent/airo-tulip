@@ -1,7 +1,5 @@
-import asyncio
-
-from airo_tulip.server.server import TulipServer, RobotConfiguration
-from airo_tulip.structs import WheelConfig
+from airo_tulip.api.server import TulipServer, RobotConfiguration
+from airo_tulip.hardware.structs import WheelConfig
 
 
 def test():

@@ -1,15 +1,18 @@
+"""This module contains the PlatformMonitor class, which is responsible for monitoring the robot platform's state."""
+
 import copy
 import math
 import time
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
 import pysoem
-from airo_tulip.constants import CASTOR_OFFSET, WHEEL_DISTANCE, WHEEL_RADIUS
-from airo_tulip.ethercat import RxPDO1, TxPDO1
-from airo_tulip.peripheral_client import PeripheralClient
-from airo_tulip.structs import WheelConfig, Attitude2DType
+from airo_tulip.hardware.constants import CASTOR_OFFSET, WHEEL_DISTANCE, WHEEL_RADIUS
+from airo_tulip.hardware.ethercat import RxPDO1, TxPDO1
+from airo_tulip.hardware.peripheral_client import PeripheralClient
+from airo_tulip.hardware.structs import WheelConfig, Attitude2DType
 from airo_typing import Vector3DType
+from loguru import logger
 from pykalman import UnscentedKalmanFilter
 
 
@@ -23,13 +26,20 @@ def _norm_angle(a: float) -> float:
 
 
 class PlatformPoseEstimator:
+    """Estimate the robot platform's pose and velocity based on encoder values and pivot values."""
     def __init__(self, num_drives: int, wheel_configs: List[WheelConfig]):
+        """Initialise the pose estimator.
+
+        Args:
+            num_drives: The number of drives.
+            wheel_configs: The configurations for each drive."""
         self._num_drives = num_drives
         self._wheel_configs = wheel_configs
 
         self.reset()
 
     def reset(self):
+        """Reset the pose estimator odometry values."""
         self._prev_encoder = []  # Will be initialised on first iteration in _estimate_velocity.
         self._odom_x, self._odom_y, self._odom_a = 0, 0, 0
 
@@ -108,7 +118,7 @@ class PlatformPoseEstimator:
 
         return np.array([self._odom_x, self._odom_y, self._odom_a])
 
-    def get_odometry(self, dt: float, encoder_values: List[List[float]], cur_pivots: List[float]) -> np.ndarray:
+    def get_odometry(self, dt: float, encoder_values: List[List[float]], cur_pivots: List[float]) -> Tuple[np.ndarray, np.ndarray]:
         """Get the robot platform's odometry.
 
         Args:
@@ -169,13 +179,39 @@ class PlatformPoseEstimatorPeripherals:
 
 
 class PlatformPoseEstimatorFused:
+    """Estimate the robot platform's pose and velocity based on encoder values, pivot values, and flow sensor data."""
+    def __init__(self):
+        """Initialise the fused pose estimator."""
+        transition_covariance = np.eye(6) * 0.001 ** 2
+        observation_covariance = np.eye(5)
+        observation_covariance[0:4, 0:4] *= 0.0001 ** 2
+        observation_covariance[4, 4] *= 0.001 ** 2
+        initial_state_mean = np.array([0] * 6)
+        initial_state_covariance = np.eye(6) * 0.001
+
+        self._kf = UnscentedKalmanFilter(
+            self.transition_function,
+            self.observation_function,
+            transition_covariance,
+            observation_covariance,
+            initial_state_mean,
+            initial_state_covariance,
+        )
+        self._state_mean = initial_state_mean
+        self._state_covariance = initial_state_covariance
+
+        self._time_last_update = None
+
+
     def transition_function(self, state, noise):
+        """Transition function for the Kalman filter."""
         dt = self._delta_time
         F = np.eye(6)
         F[0:3, 3:6] = np.eye(3) * dt
         return np.dot(F, state) + noise
 
     def observation_function(self, state, noise):
+        """Observation function for the Kalman filter."""
         dt = self._delta_time
         [p_x, p_y, p_a, v_x, v_y, v_a] = state[0:6]
 
@@ -204,27 +240,6 @@ class PlatformPoseEstimatorFused:
 
         return np.array([flow_x1, flow_y1, flow_x2, flow_y2, orientation_x]) + noise
 
-    def __init__(self):
-        transition_covariance = np.eye(6) * 0.001**2
-        observation_covariance = np.eye(5)
-        observation_covariance[0:4, 0:4] *= 0.0001**2
-        observation_covariance[4, 4] *= 0.001**2
-        initial_state_mean = np.array([0] * 6)
-        initial_state_covariance = np.eye(6) * 0.001
-
-        self._kf = UnscentedKalmanFilter(
-            self.transition_function,
-            self.observation_function,
-            transition_covariance,
-            observation_covariance,
-            initial_state_mean,
-            initial_state_covariance,
-        )
-        self._state_mean = initial_state_mean
-        self._state_covariance = initial_state_covariance
-
-        self._time_last_update = None
-
     def get_pose(self, raw_flow: List[float], raw_orientation_x: float) -> np.ndarray:
         """Update the robot platform's estimated pose by fusing various sensor data using a Kalman filter.
 
@@ -252,12 +267,24 @@ class PlatformPoseEstimatorFused:
 
 
 class PlatformMonitor:
-    def __init__(self, master: pysoem.Master, wheel_configs: List[WheelConfig], peripheral_client: PeripheralClient):
+    """Monitor the robot platform's state from EtherCAT messages."""
+    def __init__(self, master: pysoem.Master, wheel_configs: List[WheelConfig],
+                 peripheral_client: PeripheralClient | None):
+        """Initialise the platform monitor.
+
+        Args:
+            master: The EtherCAT master.
+            wheel_configs: The configurations for each drive.
+            peripheral_client: The peripheral client, if available. If not available, sensor readings are affected!"""
         # Configuration.
         self._master = master
         self._wheel_configs = wheel_configs
         self._num_wheels = len(wheel_configs)
         self._peripheral_client = peripheral_client
+
+        if self._peripheral_client is None:
+            logger.warning(
+                "No peripheral client detected! We will not use data from external sensors, but only from the KELO slaves.")
 
         # Monitored values.
         self._status1: List[int]
@@ -295,6 +322,7 @@ class PlatformMonitor:
         return self._num_wheels
 
     def _update_encoders(self):
+        """Update the encoder values for the robot platform."""
         if not self._encoder_initialized:
             for i in range(self._num_wheels):
                 data = self._get_process_data(i)
@@ -327,11 +355,8 @@ class PlatformMonitor:
             self._prev_encoder[i][0] = curr_encoder1
             self._prev_encoder[i][1] = curr_encoder2
 
-    @property
-    def num_wheels(self) -> int:
-        return self._num_wheels
-
     def step(self) -> None:
+        """Update the robot platform's state."""
         # Read data from drives.
         process_data = [self._get_process_data(i) for i in range(self._num_wheels)]
         self._status1 = [pd.status1 for pd in process_data]
@@ -348,14 +373,21 @@ class PlatformMonitor:
         self._current_in = [pd.current_in for pd in process_data]
 
         # Read values for peripheral server
-        self._flow = np.array(self._peripheral_client.get_flow(), dtype=np.float64)
-        self._flow /= 12000.0  # conversion from dimensionless to meters
+        if self._peripheral_client is not None:
+            self._flow = np.array(self._peripheral_client.get_flow(), dtype=np.float64)
+            self._flow /= 12000.0  # conversion from dimensionless to meters  # TODO calibrate
+        else:
+            self._flow = None
 
-        self._orientation = np.array(self._peripheral_client.get_orientation(), dtype=np.float64)
-        self._orientation *= np.pi / 180.0  # conversion from degrees to radians
-        if self._orientation_start is None:
-            self._orientation_start = self._orientation.copy()
-        self._orientation -= self._orientation_start
+        if self._peripheral_client is not None:
+            self._orientation = np.array(self._peripheral_client.get_orientation(), dtype=np.float64)
+            self._orientation *= np.pi / 180.0  # conversion from degrees to radians
+            if self._orientation_start is None:
+                self._orientation_start = self._orientation.copy()
+            self._orientation -= self._orientation_start
+        else:
+            self._orientation_start = None
+            self._orientation = None
 
         self._update_encoders()
 
@@ -371,15 +403,13 @@ class PlatformMonitor:
         )
 
         # Update peripheral pose estimator
-        self._peripheral_pose = self._peripheral_pose_estimator.get_pose(self._flow, self._orientation[0])
-
-        # Update Kalman filter
-        self._fused_pose = self._fused_pose_estimator.get_pose(self._flow, self._orientation[0])
+        if self._flow is not None and self._orientation is not None:
+            self._peripheral_pose = self._peripheral_pose_estimator.get_pose(self._flow, self._orientation[0])
+        else:
+            self._peripheral_pose = self._odometry_pose
 
     def get_estimated_robot_pose(self) -> Attitude2DType:
         """Get the robot platform's estimated pose based on fused estimator."""
-        # return self._odometry_pose
-        # return self._fused_pose
         return self._peripheral_pose
 
     def get_estimated_velocity(self) -> Vector3DType:
@@ -450,11 +480,11 @@ class PlatformMonitor:
         """Returns the total power for all drives."""
         return sum([self._voltage_bus[i] * self._current_in[i] for i in range(self._num_wheels)])
 
-    def get_flow(self) -> float:
+    def get_flow(self) -> np.ndarray | None:
         """Returns the total accumulated flow ticks for x and y"""
         return self._flow
 
-    def get_orientation(self) -> float:
+    def get_orientation(self) -> np.ndarray | None:
         """Returns the orientation measured by the BNO055"""
         return self._orientation
 

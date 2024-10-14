@@ -1,6 +1,11 @@
+"""Rerun monitor logger for logging all values to rerun.
+
+Note: This currently causes a memory leak, and it is recommended to not use this until
+https://github.com/airo-ugent/airo-tulip/issues/25 is resolved."""
+
 import numpy as np
 import rerun as rr
-from airo_tulip.platform_monitor import PlatformMonitor
+from airo_tulip.hardware.platform_monitor import PlatformMonitor
 
 
 class RerunMonitorLogger:

@@ -2,208 +2,180 @@
 
 The `airo-tulip` package is a Python port of the KELO Tulip software with some additional functionality.
 You can use it to control the KELO Robile drives of a mobile platform and read out relevant sensor data from it.
-The codebase is also structured a bit differently than the original C++ implementation provided by the manufacturer.
+The structure of the code base is different from that of the original C++ implementation provided by the manufacturer.
 
-In this README, we'll go over the structure of the `airo-tulip` package and discuss some design choice that were made during the implementation.
+In this README, we over the structure of the `airo-tulip` package and discuss some design choices that were made during the implementation.
 
-This folder also contains additional documentation files:
+The `docs` folder contains additional documentation files (in no particular order):
 
+- `kelo_setup.md` on how to set up the KELO hardware and software, a prerequisite to using `airo-tulip`
 - `rerun.md` on how to use Rerun running on the remote KELO CPU brick
 - `virtual_display.md` on how to enable a virtual display for use in a VNC connection without needing to connect a display to the KELO CPU brick
+- `external_devices.md` on how to connect to other devices mounted on the KELO, with the KELO acting as the router
+- `how_it_works.md` on how the code base is structured and why
 
-## Installation
+Even though you don't need to understand or even read *all* of these to use `airo-tulip`,
+we do recommend it to get a holistic overview of how the platform works and
+why `airo-tulip` is implemented the way it is.
 
-To install this package, clone the repository with `git` and use `pip` to install the `airo-tulip/` package.
+## How to use this package
+
+There are two layers to the `airo-tulip` package: the `hardware` module that interfaces with the KELO and other attached hardware,
+and the `api` module that allows (optionally remote) users of the library to interface with this `hardware` over a TCP connection.
+The code in the `hardware` module is supposed to be run on the KELO itself, while the code in the `api` module (more specifically in `api.client`)
+can be run from any device that can access the KELO over Ethernet or Wi-Fi. While it possible to use `airo-tulip` without
+`api`, by using `hardware.platform_driver` directly, this is not recommended, and we only document the usage through the `api` module.
+
+**Note:** when interfacing with the server from a client on a remote machine, make sure that the `airo-tulip` versions
+match on client and server, or else you may observe unexpected behaviour or crashes.
+
+Using this package implies some hardware and software set-up on the KELO mobile platform itself, which is documented
+in [`docs/kelo_setup.md`](docs/kelo_setup.md). If you simply use this library for robotics experiments, this set-up
+will most likely have been performed for you. Still, please read that file thoroughly before continuing.
+If you are the first to set up your custom KELO mobile platform, it is also recommended to read that file to get
+up and running quickly.
+
+### Installation
+
+#### From PyPI
+
+This package is available [on PyPI](https://pypi.org/project/airo-tulip/) and can be installed with one command:
+
+```shell
+pip install airo-tulip
+```
+
+Note that the package requires at least Python 3.9.
+
+For example, using [pyenv](https://github.com/pyenv) to set the local Python version to 3.9:
+
+```shell
+pyenv install 3.9 && pyenv local 3.9
+python3 -m venv env
+source env/bin/activate
+pip install airo-tulip
+```
+
+Or, using conda:
+
+```shell
+conda create -n airo-tulip-env python=3.9
+conda activate airo-tulip-env
+pip install airo-tulip
+```
+
+#### From GitHub
+
+If you wish to install a development version, clone the repository with `git` and use `pip` to install the `airo-tulip/` package
+in editable mode.
 Note that the `main` branch is the active development branch: you may want to check out a certain commit associated with
-a version tag. The package requires at least Python 3.10.
+a version tag.
 
-For example, using [pyenv](https://github.com/pyenv) to set the local Python version to 3.10:
+Using pyenv:
 
 ```shell
 git clone https://github.com/airo-ugent/airo_kelo
 cd airo_kelo
-pyenv install 3.10 && pyenv local 3.10
+pyenv install 3.9 && pyenv local 3.9
 python3 -m venv env
 source env/bin/activate
 pip install -e airo-tulip/
 ```
 
-## Connecting to a UR cobot mounted on the KELO
+Or using conda:
 
-If you want to connect to a UR cobot mounted on the KELO, you need to set up:
-
-- The UR machine
-- An SSH tunnel to the UR machine
-
-### Setting up the UR
-
-The following instructions were copied from [here](https://github.com/airo-ugent/airo-mono/blob/main/airo-robots/airo_robots/manipulators/hardware/universal_robots_setup.md).
-
-Establish an Ethernet connection between the control box and the external computer:
-* Connect a UTP cable from the control box to the external computer.
-* Create a new network profile on the external computer in `Settings > Network > Wired > +`. Give it any name e.g. `UR` and in the IPv4 tab select `Shared to other computers`.
-* On the control box, go to `Settings > System > Network` and select Static Address and set:
-    * IP address: `10.42.0.162`
-    * Subnet mask: `255.255.255.0`
-    * Gateway: `10.42.0.1`
-    * Preferred DNS server: `10.42.0.1`
-
-On macOS, this corresponds to creating a network with IPv4 configured manually at 10.42.0.1 (subnet mask 255.255.0.0) and configure IPv4 automatically.
-
-If you're lucky, the control box will already say "Network is connected".
-If pinging the control box from the external computer works, you're done and can read the next section to Enable remote control mode:
-
-```bash
-ping 10.42.0.162
+```shell
+git clone https://github.com/airo-ugent/airo_kelo
+cd airo_kelo
+conda create -n airo-tulip-env python=3.9
+conda activate airo-tulip-env
+pip install -e airo-tulip/
 ```
 
-If not, you can try to manually bringing up the network profile you created:
+### Running `airo-tulip` on the KELO
 
-```bash
-nmcli connection up UR
-```
+`airo_tulip.api.server` provides a class `TulipServer` which initializes the KELO platform and accepts an incoming
+connection from a `airo_tulip.api.client.KELORobile`. To accept incoming connections from any device on the network,
+listen on the IPv4 address `0.0.0.0`. The `RobotConfiguration` that must be supplied, is based on how the KELO bricks
+are mounted. This information is received from KELO robotics together with your platform and is specific to your use case.
+The EtherCAT device is also specific to your platform set-up.
 
-If pinging still doesn't work, try restarting the robot control box.
-If still not successful, try swapping Ethernet cables, ports or computers.
-
-Now, make sure the robot is in remote control.
-
-### Setting up an SSH tunnel
-
-The UR robot listens on ports 29999, 30001, 30002, 30003 and 30004. To access them on, e.g., your laptop through the KELO NUC,
-you need to set up an SSH tunnel. Assuming that the KELO's IP address is 10.10.129.20:
-
-```commandline
-ssh -N -L localhost:29999:10.42.0.162:29999 -L localhost:30001:10.42.0.162:30001 -L localhost:30002:10.42.0.162:30002 -L localhost:30003:10.42.0.162:30003 -L localhost:30004:10.42.0.162:30004 kelo@10.10.129.20
-```
-
-Now, you can access the UR robot via `localhost` on your laptop:
+To run the server, start it from a Python script:
 
 ```python
-from airo_robots.manipulators.hardware.ur_rtde import URrtde
+from airo_tulip.api.server import TulipServer, RobotConfiguration
+from airo_tulip.hardware.structs import WheelConfig
 
-ur = URrtde("localhost", URrtde.UR3E_CONFIG)
-print(ur.get_tcp_pose())
+def create_wheel_configs():
+    wheel_configs = []
+
+    wc0 = WheelConfig(
+        ethercat_number=3,
+        x=0.233,
+        y=0.1165,
+        a=1.57
+    )
+    wheel_configs.append(wc0)
+
+    wc1 = WheelConfig(
+        ethercat_number=5,
+        x=0.233,
+        y=-0.1165,
+        a=1.57
+    )
+    wheel_configs.append(wc1)
+
+    wc2 = WheelConfig(
+        ethercat_number=7,
+        x=-0.233,
+        y=-0.1165,
+        a=-1.57
+    )
+    wheel_configs.append(wc2)
+
+    wc3 = WheelConfig(
+        ethercat_number=9,
+        x=-0.233,
+        y=0.1165,
+        a=1.57
+    )
+    wheel_configs.append(wc3)
+
+    return wheel_configs
+
+# These values are specific to your platform!
+device = "eno1"
+wheel_configs = create_wheel_configs()
+
+server = TulipServer(RobotConfiguration(device, wheel_configs), "0.0.0.0")
+server.run()
 ```
 
-### Robotiq 2F85
+### Connecting to the `airo-tulip` server
 
-The Robotiq 2F85 gripper communicates on port 63352, so you should also create an SSH tunnel for this.
+Once you have started the server on the KELO, you can connect to it with an `api.client.KELORobile` instance:
 
+```python
+from airo_tulip.api.client import KELORobile
 
-```commandline
-ssh -N -L localhost:63352:10.42.0.162:63352 kelo@10.10.129.20
+kelo_ip = "10.10.129.21"
+client = KELORobile(kelo_ip)
 ```
 
-The two tunnels can be set up in one single command:
+You can then send commands to the KELO platform by calling the methods on the `client` object, e.g.,
 
-```commandline
-ssh -N -L localhost:29999:10.42.0.162:29999 -L localhost:30001:10.42.0.162:30001 -L localhost:30002:10.42.0.162:30002 -L localhost:30003:10.42.0.162:30003 -L localhost:30004:10.42.0.162:30004 -L localhost:63352:10.42.0.162:63352 kelo@10.10.129.20
+```python
+client.set_platform_velocity_target(0.5, 0.0, 0.0, timeout=1.0)
 ```
 
-### Turning on the robot arm remotely
+to drive approximately 0.5 meters, at 0.5 meters per second, along the platform's +X axis.
 
-See `../utils/start_ur.py` and `../utils/stop_ur.py` to start the robot arm remotely, without needing to connect
-peripherals and/or a monitor.
+### Mounted devices
 
-### Automatically starting the robot on boot
-
-You can set up the KELO to start the robot arm automatically on boot, by editing the root user's crontab file.
-
-```commandline
-sudo crontab -e
-```
-
-Enter the following line(s) at the bottom:
-
-```
-@reboot /home/kelo/start_server.sh
-@reboot /home/kelo/start_ur.sh
-```
-
-Copy the `airo-tulip/utils/start_server.sh` and `airo-tulip/utils/start_ur.sh` scripts to the `/home/kelo` directory
-and reboot. The server and UR should start automatically and the UR should release its brakes.
-
-## Connecting to other devices mounted on the KELO
-
-You can mount other devices on the KELO, and patch them to the KELO via Ethernet. Follow the instructions above to set up the KELO as a router, and assign a static IP address to the device you have mounted on the KELO.
-
-The device will be able to access the KELO at IP address `10.42.0.1` and will be accessible through the KELO via SSH tunnels, as explained above for the UR arm.
-
-### Robot-mounted NUC: boot when powered
-
-At AIRO, we mounted a more powerful NUC on the robot for deep learning inference workloads. To automatically boot the NUC whenever the KELO is turned on, connect it to the NUC's battery for power. Enter the NUC's BIOS and set the option to power on after power loss. The NUC should now boot as soon as the KELO robot is turned on.
-
-It is recommended to always cleanly shut down the NUC (and the KELO NUC as well), but this setting will also allow you to restore power to it after (accidentally or on purpose) shutting off the power to the NUC.
-
-### Other peripherals
-
-At AIRO, we use other peripherals, such as optical flow sensors but also LED strips, controlled via a [Teensy](https://www.pjrc.com/teensy/) over USB. See [this folder](https://github.com/airo-ugent/airo-tulip/tree/peripherals/peripherals) for more information.
+Without mounting external devices on the KELO, you can pretty much only drive around (which is cool, but not very useful).
+Refer to [`docs/external_devices.md`](docs/external_devices.md) for information on how to set up and access external devices
+such as a UR cobot with a Robotiq gripper.
 
 ## Structure
 
-The `airo-tulip` package consists of the following main Python classes and files:
-- `RobilePlatform`: the main class for representing a complete KELO Robile system. It initializes the various drives of the robot via EtherCAT and handles the higher-level operations of the system.
-- `PlatformDriver`: driver for transmitting specific setpoints for the wheel to all drives. Controls the state of the drives and startup procedure.
-- `PlatformMonitor`: module that reads out the sensor data from EtherCAT messages and caches them for later retrieval.
-- `VelocityPlatformController`: controller that calculates the setpoints for each wheel in velocity mode. One can set a target velocity in 2D for the complete platform and this controller will convert that to angular velocities for each of the drives.
-
-The `PlatformDriver` can be set to "compliant mode" with different levels of compliance.
-
-The `RobilePlatform` class instantiates a `PlatformDriver` and a `PlatformMonitor` in its constructor. These objects are available in the `driver` and `monitor` properties of the `RobilePlatform` class respectively. The `VelocityPlatformController` is instantiated by the `PlatformDriver` but not available through properties in the `PlatformDriver`. One can set a target velocity using a wrapper method in the `RobilePlatform` class.
-
-### Communication with `airo-tulip`
-
-The `airo-tulip` package has a subpackage called `server`. When working with the KELO Robile platform, you want to run the `TulipServer` on boot, typically,
-so that commands can be sent over the network. The `TulipServer` takes a desired IP address and port, which can be used to connect to it via a client.
-A client example can be found in `test_client.py`.
-
-The server is implemented via [0MQ](https://pyzmq.readthedocs.io/en/latest/), so it does not work over raw TCP sockets, but rather uses a higher level of abstraction.
-The server accepts messages, defined in `airo_tulip.server.messages`, which can be sent using `zmq.Socket.send_pyobj`: these messages are pickled,
-resp. unpickled, and contain the relevant information to drive the KELO Robile system via the `RobilePlatform` interface.
-
-When using `airo-tulip`, we recommend building an abstraction layer over your client, so that users only need to call methods such as
-`robile.set_platform_velocity_target()` and do not need to work with message objects directly.
-
-## Velocity limits
-
-The drives of the KELO Robile are quite strong, so care should be taken when controlling them.
-The `airo-tulip` package incorporates various safety checks to limit the speed and torque of each of the wheels.
-
-For example, one cannot set a platform target velocity higher than 0.5 m/s linear or pi/8 rad/s angular in the wrapper method of the `RobilePlatform` class.
-The acceleration and deceleration of each drive is limited to 0.5 m/s^2 linear and 0.8 m/s^2 angular by attributes of the `PlatformLimits` dataclass that is used in the `VelocityPlatformController`.
-Additionally, the value for each wheel setpoint is once more limited by the `_wheel_set_point_max` attribute in the `PlatformDriver` class.
-And the maximum current that the motors of each drive will supply is limited to 20 amps during acceleration and 1 amp during braking, as specified in each EtherCAT message that is transmitted.
-
-Do not overrule or change these limits unless you really need them and know what you're doing!
-
-## EtherCAT
-
-The KELO Robile makes use of an EtherCAT bus for communication between the various modular bricks.
-As such, the integrated compute brick on which the `airo-tulip` package runs, needs to send and receive EtherCAT messages to and from this shared bus.
-For this, we make use of the `PySOEM` library.
-
-An EtherCAT bus works by daisy-chaining nodes on the bus.
-To communicate over the bus, an EtherCAT telegram is constructed on the master node (the compute brick in the case of a KELO Robile) and transmitted on the bus to the first slave device.
-The first slave device checks if there is any data in the telegram for itself, reads it and optionally write its own data into the telegram.
-It also increases the *working counter* field in the telegram if it read or wrote from or to the telegram.
-Finally, the slave device sends the telegram to the next device in the chain.
-At the end, the telegram is reflected and sent back to the master.
-A neat animation visualizing the workings of an EtherCAT bus can be found [here](https://en.wikipedia.org/wiki/File:EthercatOperatingPrinciple.webm).
-
-The `RobilePlatform` class creates a `pysoem.Master` object that controls the EtherCAT bus.
-After the initialisation process described in `RobilePlatform.init_ethercat()`, each of the drives connected to the EtherCAT bus is represented as a slave device under this master object.
-One can read from each slave device using the `output` buffer and write to it using `input` buffer.
-The contents of these buffers is represented by the `TxPDO1` and `RxPDO1` structs specified in `ethercat.py`.
-The naming of these buffers might be a bit counterintuitive as you need a `TxPDO1` struct and the `output` buffer to read from a slave device, so be cautious!
-We've provided the `_get_process_data()` and `_set_process_data()` functions to easily read and write from the buffers using the `TxPDO1` and `RxPDO1` structs.
-
-Note that you'll find that there are 9 slaves in total: 2 times 4 drives and 1 compute unit.
-Only one of the two slaves for each drive is addressable via input and output buffers, the other doesn't have any.
-
-Drives continuously need to receive EtherCAT telegrams in order for them to stay enabled.
-If too much time passes since the last time they received data, the drives will automatically go into a safe state and stop supplying current to the motors.
-Therefor, the `RobilePlatform.step()` function needs to be called inside the main application update loop, preferably at a frequency of 20 Hz.
-This limitation poses special requirements on the implementation of the driver code, as it is run in a separate thread to ensure that it is called without interruption.
-
-
+For more information on how this code base is structured, and why, please refer to [`docs/how_it_works.md`](docs/how_it_works.md).

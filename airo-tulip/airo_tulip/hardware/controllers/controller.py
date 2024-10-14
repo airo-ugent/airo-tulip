@@ -1,7 +1,9 @@
+"""Controller base class with common functionality for all controllers."""
+
 from typing import List
 
 import numpy as np
-from airo_tulip.structs import WheelParamVelocity, WheelConfig
+from airo_tulip.hardware.structs import WheelParamVelocity, WheelConfig
 
 
 class Controller:

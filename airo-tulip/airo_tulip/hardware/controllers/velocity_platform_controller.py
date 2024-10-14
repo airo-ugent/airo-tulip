@@ -1,12 +1,14 @@
+"""Control the Robile platform with velocity commands."""
+
 import math
 import time
 from typing import List, Tuple
 
 import numpy as np
 import rerun as rr
-from airo_tulip.controllers.controller import Controller
-from airo_tulip.structs import Attitude2DType, PlatformLimits, WheelConfig, WheelParamVelocity
-from airo_tulip.util import clip, clip_angle, get_shortest_angle
+from airo_tulip.hardware.controllers.controller import Controller
+from airo_tulip.hardware.structs import Attitude2DType, PlatformLimits, WheelConfig, WheelParamVelocity
+from airo_tulip.hardware.util import clip, clip_angle, get_shortest_angle
 from airo_typing import Vector2DType
 
 
@@ -14,6 +16,10 @@ class VelocityPlatformController(Controller):
     """Control the Robile platform with velocity commands."""
 
     def __init__(self, wheel_configs: List[WheelConfig]):
+        """Initialise the controller.
+
+        Args:
+            wheel_configs: The configurations for each drive."""
         super().__init__(wheel_configs)
         self._platform_target_vel = np.zeros((3,))
         self._platform_ramped_vel = np.zeros((3,))

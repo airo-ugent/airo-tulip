@@ -1,16 +1,19 @@
+"""The RobilePlatform drives the robot through EtherCAT."""
+
 from typing import List
 
 import pysoem
-from airo_tulip.ethercat import EC_STATE_OPERATIONAL, EC_STATE_SAFE_OP
-from airo_tulip.logging.monitor_rerun import RerunMonitorLogger
-from airo_tulip.peripheral_client import PeripheralClient
-from airo_tulip.platform_driver import PlatformDriver, PlatformDriverType
-from airo_tulip.platform_monitor import PlatformMonitor
-from airo_tulip.structs import WheelConfig
+from airo_tulip.hardware.ethercat import EC_STATE_OPERATIONAL, EC_STATE_SAFE_OP
+from airo_tulip.hardware.logging.monitor_rerun import RerunMonitorLogger
+from airo_tulip.hardware.peripheral_client import PeripheralClient
+from airo_tulip.hardware.platform_driver import PlatformDriver, PlatformDriverType
+from airo_tulip.hardware.platform_monitor import PlatformMonitor
+from airo_tulip.hardware.structs import WheelConfig
 from loguru import logger
 
 
 class RobilePlatform:
+    """The RobilePlatform drives the robot through EtherCAT."""
     def __init__(
         self,
         device: str,
@@ -28,7 +31,10 @@ class RobilePlatform:
         self._ethercat_initialized = False
 
         self._master = pysoem.Master()
-        self._peripheral_client = PeripheralClient("/dev/ttyACM0", 115200)
+        try:
+            self._peripheral_client = PeripheralClient("/dev/ttyACM0", 115200)
+        except RuntimeError as e:
+            logger.error(f"Could not connect to the peripheral client. Cause:\n{e}")
         self._driver = PlatformDriver(self._master, wheel_configs, controller_type, self._peripheral_client)
         self._monitor = PlatformMonitor(self._master, wheel_configs, self._peripheral_client)
 
