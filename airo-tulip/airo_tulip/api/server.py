@@ -21,6 +21,8 @@ from airo_tulip.api.messages import (
     SetDriverTypeMessage,
     SetPlatformVelocityTargetMessage,
     StopServerMessage,
+    HandshakeMessage,
+    HandshakeResponse
 )
 from airo_tulip.hardware.platform_driver import PlatformDriverType
 from airo_tulip.hardware.robile_platform import RobilePlatform
@@ -83,7 +85,8 @@ class TulipServer:
             GetOdometryMessage.__name__: self._handle_get_odometry_request,
             AreDrivesAlignedMessage.__name__: self._handle_are_drives_aligned_request,
             ResetOdometryMessage.__name__: self._handle_reset_odometry_request,
-            GetVelocityMessage.__name__: self._handle_get_velocity_request
+            GetVelocityMessage.__name__: self._handle_get_velocity_request,
+            HandshakeMessage.__name__: self._handle_handshake_request
         }
 
         # Robot platform.
@@ -206,3 +209,8 @@ class TulipServer:
         """Handle a request to get the velocity."""
         velocity = self._platform.monitor.get_estimated_velocity()
         return VelocityResponse(velocity)
+
+    def _handle_handshake_request(self, request: HandshakeMessage) -> ResponseMessage:
+        """Handle a handshake request."""
+        logger.info("Handling handshake request.")
+        return HandshakeResponse(request.uuid)

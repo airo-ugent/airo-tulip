@@ -26,7 +26,7 @@ class HandshakeMessage:
 
 
 @dataclass
-class HandshakeReply:
+class HandshakeResponse:
     """A handshake reply is used to confirm a connection between client and server."""
     uuid: str
 
