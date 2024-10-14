@@ -3,7 +3,7 @@ import time
 
 from airo_tulip.api.client import KELORobile
 
-from hardware.platform_driver import PlatformDriverType
+from airo_tulip.hardware.platform_driver import PlatformDriverType
 
 
 def test():
