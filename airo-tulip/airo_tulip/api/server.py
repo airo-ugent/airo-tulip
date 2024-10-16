@@ -255,7 +255,7 @@ class TulipServer:
 
         Returns:
             A response message."""
-        return PositionControlLoopReachedTargetResponse(self._in_position_control)
+        return PositionControlLoopReachedTargetResponse(not self._in_position_control)
 
     def _handle_set_platform_velocity_target_request(
             self, request: SetPlatformVelocityTargetMessage
