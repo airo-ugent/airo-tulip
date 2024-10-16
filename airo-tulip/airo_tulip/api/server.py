@@ -181,7 +181,7 @@ class TulipServer:
             return ConcurrencyExceptionResponse()
 
         logger.info("Starting position control loop thread.")
-        self._position_control_thread = Thread(target=self._position_control_loop, args=request)
+        self._position_control_thread = Thread(target=self._position_control_loop, args=(request,))
         self._in_position_control = True
         self._position_control_thread.start()
         return OkResponse()

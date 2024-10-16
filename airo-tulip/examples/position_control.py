@@ -10,7 +10,7 @@ def test():
     mobi.move_platform_to_pose(1.0, 0.0, 0.0, 10.0)
 
     try:
-        mobi.set_platform_velocity_target(0.0, 0.0, 0.0, 1.0)
+        mobi.set_platform_velocity_target(0.0, 0.0, 0.0, timeout =1.0)
         print("Expected an exception, but didn't get it...")
     except KELORobileError:
         print("Expected an exception and got it!")  # We want an exception here.
@@ -23,7 +23,7 @@ def test():
     time.sleep(0.5)
     mobi.stop_position_control_loop()
     try:
-        mobi.set_platform_velocity_target(0.2, 0.0, 0.0, 1.0)
+        mobi.set_platform_velocity_target(0.2, 0.0, 0.0, timeout= 1.0)
         print("Didn't get an exception this time, which is good!")
     except KELORobileError:
         print("Got an exception, which is bad...")
