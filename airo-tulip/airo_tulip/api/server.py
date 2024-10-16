@@ -185,6 +185,7 @@ class TulipServer:
         self._position_control_thread = Thread(target=self._position_control_loop, args=(request,))
         self._in_position_control = True
         self._position_control_thread.start()
+        logger.info("Position control loop thread started.")
         return OkResponse()
 
     def _position_control_loop(self, request: MovePlatformToPoseMessage):
