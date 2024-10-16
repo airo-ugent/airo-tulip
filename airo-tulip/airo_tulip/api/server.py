@@ -215,6 +215,14 @@ class TulipServer:
             action_timed_out = time.time_ns() - action_start_time > request.timeout * 1e9
             stop = external_stop_signal or at_target_pose or action_timed_out
 
+            if stop:
+                if external_stop_signal:
+                    logger.info("Position control stopping because of external stop signal")
+                if action_timed_out:
+                    logger.info("Position control stopping because action timed out")
+                if at_target_pose:
+                    logger.info("Position control stopping because target pose reached")
+
         logger.info(
             "Position control loop has approximately reached target position or was requested to stop. Stopping platform completely.")
         self._platform.driver.set_platform_velocity_target(0.0, 0.0, 0.0)
