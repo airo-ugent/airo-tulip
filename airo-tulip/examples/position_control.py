@@ -1,9 +1,7 @@
 import math
 import time
 
-from airo_tulip.api.client import KELORobile
-
-from api.client import KELORobileError
+from airo_tulip.api.client import KELORobile, KELORobileError
 
 
 def test():
