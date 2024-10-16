@@ -26,14 +26,13 @@ from airo_tulip.api.messages import (
     HandshakeResponse,
     MovePlatformToPoseMessage,
     ConcurrencyExceptionResponse,
-    PositionControlLoopReachedTargetMessage
+    PositionControlLoopReachedTargetMessage,
+    StopPositionControlLoopMessage
 )
 from airo_tulip.hardware.platform_driver import PlatformDriverType
 from airo_tulip.hardware.robile_platform import RobilePlatform
 from airo_tulip.hardware.structs import WheelConfig
 from loguru import logger
-
-from api.messages import StopPositionControlLoopMessage
 
 
 class RobotConfiguration:
