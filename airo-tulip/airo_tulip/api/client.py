@@ -19,6 +19,7 @@ from airo_tulip.api.messages import (
     MovePlatformToPoseMessage,
     ConcurrencyExceptionResponse,
     StopPositionControlLoopMessage,
+    PositionControlLoopReachedTargetMessage,
 )
 from airo_tulip.hardware.structs import Attitude2DType
 from airo_typing import Vector3DType
@@ -160,6 +161,14 @@ class KELORobile:
         """Stop the position control loop immediately."""
         msg = StopPositionControlLoopMessage()
         return self._transceive_message(msg)
+
+    def position_control_loop_reached_target(self) -> bool:
+        """Check if the position control loop has reached the target.
+
+        Essentially, this checks if a position control loop is currently running. If no control loop was ever started,
+        this method will therefore also return True."""
+        msg = PositionControlLoopReachedTargetMessage()
+        return self._transceive_message(msg).reached
 
     def _transceive_message(self, req: RequestMessage) -> ResponseMessage:
         """Send a request message to the server and return the response message. Raises a RuntimeError on timeouts."""

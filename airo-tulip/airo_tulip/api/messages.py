@@ -63,6 +63,18 @@ class StopPositionControlLoopMessage(RequestMessage):
 
 
 @dataclass
+class PositionControlLoopReachedTargetMessage(RequestMessage):
+    """A message to check if the position control loop has reached the target."""
+    pass
+
+
+@dataclass
+class PositionControlLoopReachedTargetResponse(ResponseMessage):
+    """A response message containing the status of the position control loop."""
+    reached: bool
+
+
+@dataclass
 class SetDriverTypeMessage(RequestMessage):
     """A message to set the driver type (velocity mode or compliant mode)."""
     driver_type: PlatformDriverType

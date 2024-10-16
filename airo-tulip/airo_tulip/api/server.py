@@ -25,7 +25,8 @@ from airo_tulip.api.messages import (
     HandshakeMessage,
     HandshakeResponse,
     MovePlatformToPoseMessage,
-    ConcurrencyExceptionResponse
+    ConcurrencyExceptionResponse,
+    PositionControlLoopReachedTargetMessage
 )
 from airo_tulip.hardware.platform_driver import PlatformDriverType
 from airo_tulip.hardware.robile_platform import RobilePlatform
@@ -94,6 +95,7 @@ class TulipServer:
             HandshakeMessage.__name__: self._handle_handshake_request,
             MovePlatformToPoseMessage.__name__: self._handle_move_platform_to_pose_request,
             StopPositionControlLoopMessage.__name__: self._handle_stop_position_control_loop_request,
+            PositionControlLoopReachedTargetMessage.__name__: self._handle_position_control_loop_reached_target_request,
         }
 
         # Robot platform.
@@ -236,6 +238,16 @@ class TulipServer:
             logger.warning("Received request to stop position control loop, but was not in control loop at this time.")
         return OkResponse()
 
+    def _handle_position_control_loop_reached_target_request(self, _request: PositionControlLoopReachedTargetMessage) -> ResponseMessage:
+        """Handle a request to check if the position control loop has reached the target.
+
+        Args:
+            request: The request message.
+
+        Returns:
+            A response message."""
+        return PositionControlLoopReachedTargetMessage(self._in_position_control)
+
     def _handle_set_platform_velocity_target_request(
             self, request: SetPlatformVelocityTargetMessage
     ) -> ResponseMessage:
@@ -258,7 +270,6 @@ class TulipServer:
                 request.timeout,
                 request.only_align_drives,
             )
-            logger.info("Request handled successfully.")
             return OkResponse()
         except ValueError as e:
             logger.error(f"Safety limits exceeded: {e}")
