@@ -48,6 +48,21 @@ class SetPlatformVelocityTargetMessage(RequestMessage):
 
 
 @dataclass
+class MovePlatformToPoseMessage(RequestMessage):
+    """A message to move the platform to a specific pose."""
+    x: float
+    y: float
+    a: float
+    timeout: float
+
+
+@dataclass
+class StopPositionControlLoopMessage(RequestMessage):
+    """A message to stop the position control loop immediately."""
+    pass
+
+
+@dataclass
 class SetDriverTypeMessage(RequestMessage):
     """A message to set the driver type (velocity mode or compliant mode)."""
     driver_type: PlatformDriverType
@@ -100,6 +115,14 @@ class ErrorResponse(ResponseMessage):
     """A response message containing an error message."""
     message: str
     cause: str
+
+
+@dataclass
+class ConcurrencyExceptionResponse(ResponseMessage):
+    """A response indicating that a request was made which is invalid in the current robot state, because another
+    thread is controlling the robot. You can expect this response when the robot is executing a position control
+    loop and another request to move the robot is made."""
+    pass
 
 
 @dataclass

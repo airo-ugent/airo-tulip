@@ -4,6 +4,7 @@ import time
 from threading import Event, Thread
 from typing import List
 
+import numpy as np
 import zmq
 import zmq.asyncio
 from airo_tulip.api.messages import (
@@ -22,12 +23,16 @@ from airo_tulip.api.messages import (
     SetPlatformVelocityTargetMessage,
     StopServerMessage,
     HandshakeMessage,
-    HandshakeResponse
+    HandshakeResponse,
+    MovePlatformToPoseMessage,
+    ConcurrencyExceptionResponse
 )
 from airo_tulip.hardware.platform_driver import PlatformDriverType
 from airo_tulip.hardware.robile_platform import RobilePlatform
 from airo_tulip.hardware.structs import WheelConfig
 from loguru import logger
+
+from api.messages import StopPositionControlLoopMessage
 
 
 class RobotConfiguration:
@@ -86,7 +91,9 @@ class TulipServer:
             AreDrivesAlignedMessage.__name__: self._handle_are_drives_aligned_request,
             ResetOdometryMessage.__name__: self._handle_reset_odometry_request,
             GetVelocityMessage.__name__: self._handle_get_velocity_request,
-            HandshakeMessage.__name__: self._handle_handshake_request
+            HandshakeMessage.__name__: self._handle_handshake_request,
+            MovePlatformToPoseMessage.__name__: self._handle_move_platform_to_pose_request,
+            StopPositionControlLoopMessage.__name__: self._handle_stop_position_control_loop_request,
         }
 
         # Robot platform.
@@ -96,6 +103,11 @@ class TulipServer:
         self._platform.init_ethercat()
 
         self._loop_frequency = loop_frequency
+
+        # Position control thread.
+        self._position_control_thread = None  # Will be set to a Thread if position control is active.
+        self._in_position_control = False  # Will be set by the thread.
+        self._stop_position_control_loop = False  # Will be set by the client and read by the thread.
 
     def _request_loop(self):
         """The request loop listens for incoming requests and handles them."""
@@ -152,6 +164,78 @@ class TulipServer:
         logger.info(f"Request type: {request_class_name}.")
         return self._request_handlers[request_class_name](request)
 
+    def _handle_move_platform_to_pose_request(self, request: MovePlatformToPoseMessage) -> ResponseMessage:
+        """Handle a move platform to pose request. This starts a separate thread to perform the closed loop movement.
+        Any requests that could influence this closed loop, such as `set_platform_velocity_target`, will be ignored.
+        This will be signaled to the client with a `ConcurrencyExceptionResponse`.
+
+        Args:
+            request: The request message.
+
+        Returns:
+            A response message."""
+        if self._in_position_control:
+            logger.warning(
+                "Received request to move platform to pose while already in position control. Ignoring request.")
+            return ConcurrencyExceptionResponse()
+
+        logger.info("Starting position control loop thread.")
+        self._position_control_thread = Thread(target=self._position_control_loop, args=request)
+        self._in_position_control = True
+        self._position_control_thread.start()
+        return OkResponse()
+
+    def _position_control_loop(self, request: MovePlatformToPoseMessage):
+        action_start_time = time.time_ns()
+        action_timeout_time = action_start_time + request.timeout * 1e9
+
+        target_pose = np.array([request.x, request.y, request.a])
+
+        stop = False
+        while not stop:
+            current_pose = self._platform.monitor.get_estimated_robot_pose()
+            delta_pose = target_pose - current_pose
+
+            vel_vec_angle = np.arctan2(delta_pose[1], delta_pose[0]) - current_pose[2]
+            vel_vec_norm = min(np.linalg.norm(delta_pose[:2]), 0.5)
+            vel_x = vel_vec_norm * np.cos(vel_vec_angle)
+            vel_y = vel_vec_norm * np.sin(vel_vec_angle)
+
+            delta_angle = np.arctan2(np.sin(delta_pose[2]), np.cos(delta_pose[2]))
+            vel_a = max(min(delta_angle, np.pi / 8), -np.pi / 8)
+
+            command_timeout = (action_timeout_time - time.time_ns()) * 1e-9
+            if command_timeout >= 0.0:
+                self._platform.driver.set_platform_velocity_target(vel_x, vel_y, vel_a, timeout=command_timeout)
+
+            at_target_pose = bool(np.linalg.norm(delta_pose) < 0.01)
+            external_stop_signal = self._stop_position_control_loop or self._should_stop.is_set()
+            action_timed_out = time.time_ns() - action_start_time > request.timeout * 1e9
+            stop = external_stop_signal or at_target_pose or action_timed_out
+
+        logger.info(
+            "Position control loop has approximately reached target position or was requested to stop. Stopping platform completely.")
+        self._platform.driver.set_platform_velocity_target(0.0, 0.0, 0.0)
+
+        self._in_position_control = False
+
+    def _handle_stop_position_control_loop_request(self, _request: StopPositionControlLoopMessage) -> ResponseMessage:
+        """Handle a stop position control loop request. Immediately stopt the position control loop.
+
+        Args:
+            request: The request message.
+
+        Returns:
+            A response message."""
+        if self._in_position_control:
+            logger.info("Stopping position control loop.")
+            self._stop_position_control_loop = True  # Trigger stop for thread.
+            self._position_control_thread.join()  # Wait for thread to figure out it has to stop, and stop.
+            self._stop_position_control_loop = False  # Reset for next request.
+        else:
+            logger.warning("Received request to stop position control loop, but was not in control loop at this time.")
+        return OkResponse()
+
     def _handle_set_platform_velocity_target_request(
             self, request: SetPlatformVelocityTargetMessage
     ) -> ResponseMessage:
@@ -161,10 +245,11 @@ class TulipServer:
             request: The request message.
 
         Returns:
-            A response message.
+            A response message."""
+        if self._in_position_control:
+            logger.warning("Received request to move platform while in position control. Ignoring request.")
+            return ConcurrencyExceptionResponse()
 
-        Raises:
-            An ErrorResponse if the safety limits are exceeded."""
         try:
             self._platform.driver.set_platform_velocity_target(
                 request.vel_x,
@@ -186,11 +271,19 @@ class TulipServer:
 
     def _handle_reset_odometry_request(self, _request: ResetOdometryMessage) -> ResponseMessage:
         """Handle a request to reset the odometry."""
+        if self._in_position_control:
+            logger.warning("Received request to reset platform odometry while in position control. Ignoring request.")
+            return ConcurrencyExceptionResponse()
+
         self._platform.monitor.reset_odometry()
         return OkResponse()
 
     def _handle_set_driver_type_request(self, request: SetDriverTypeMessage) -> ResponseMessage:
         """Handle a request to set the driver type (velocity or compliant mode)."""
+        if self._in_position_control:
+            logger.warning("Received request to set platform driver type while in position control. Ignoring request.")
+            return ConcurrencyExceptionResponse()
+
         self._platform.driver.set_driver_type(request.driver_type)
         return OkResponse()
 

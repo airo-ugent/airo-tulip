@@ -15,7 +15,10 @@ from airo_tulip.api.messages import (
     AreDrivesAlignedMessage,
     ErrorResponse,
     ResetOdometryMessage,
-    HandshakeMessage
+    HandshakeMessage,
+    MovePlatformToPoseMessage,
+    ConcurrencyExceptionResponse,
+    StopPositionControlLoopMessage,
 )
 from airo_tulip.hardware.structs import Attitude2DType
 from airo_typing import Vector3DType
@@ -142,6 +145,22 @@ class KELORobile:
         msg = GetVelocityMessage()
         return self._transceive_message(msg).velocity
 
+    def move_platform_to_pose(self, x: float, y: float, a: float, timeout: float) -> ResponseMessage:
+        """Move the platform to a specific pose.
+        This will block the server until the movement is completed.
+
+        Args:
+            req: The request message.
+
+        Returns:
+            A response message."""
+        return self._transceive_message(MovePlatformToPoseMessage(x, y, a, timeout))
+
+    def stop_position_control_loop(self) -> ResponseMessage:
+        """Stop the position control loop immediately."""
+        msg = StopPositionControlLoopMessage()
+        return self._transceive_message(msg)
+
     def _transceive_message(self, req: RequestMessage) -> ResponseMessage:
         """Send a request message to the server and return the response message. Raises a RuntimeError on timeouts."""
         try:
@@ -149,6 +168,8 @@ class KELORobile:
             response = self._zmq_socket.recv_pyobj()
             if isinstance(response, ErrorResponse):
                 raise KELORobileError(f"Error: {response.message} caused by {response.cause}")
+            elif isinstance(response, ConcurrencyExceptionResponse):
+                raise KELORobileError("Another thread is controlling the robot. Please wait for it to finish.")
             return response
         except zmq.Again:
             raise RuntimeError("Did not receive a reply in time from the tulip server. Is it running?")
