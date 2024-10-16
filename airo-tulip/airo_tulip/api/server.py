@@ -27,7 +27,8 @@ from airo_tulip.api.messages import (
     MovePlatformToPoseMessage,
     ConcurrencyExceptionResponse,
     PositionControlLoopReachedTargetMessage,
-    StopPositionControlLoopMessage
+    StopPositionControlLoopMessage,
+    PositionControlLoopReachedTargetResponse
 )
 from airo_tulip.hardware.platform_driver import PlatformDriverType
 from airo_tulip.hardware.robile_platform import RobilePlatform
@@ -245,7 +246,7 @@ class TulipServer:
 
         Returns:
             A response message."""
-        return PositionControlLoopReachedTargetMessage(self._in_position_control)
+        return PositionControlLoopReachedTargetResponse(self._in_position_control)
 
     def _handle_set_platform_velocity_target_request(
             self, request: SetPlatformVelocityTargetMessage
