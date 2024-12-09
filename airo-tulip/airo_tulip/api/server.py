@@ -50,7 +50,6 @@ class TulipServer(CycloneParticipant):
 
         self._register_publisher(TOPIC_VELOCITY, Velocity)
         self._register_publisher(TOPIC_ODOMETRY, Odometry)
-        self._register_publisher(TOPIC_ARE_DRIVES_ALIGNED, AreDrivesAligned)
         self._register_publisher(TOPIC_VOLTAGE, VoltageBus)
         logger.info("CycloneDDS configuration complete.")
 
@@ -110,11 +109,14 @@ class TulipServer(CycloneParticipant):
     def _handle_set_platform_velocity_target_request(
             self, velocity: Velocity
     ):
-        self._platform.driver.set_platform_velocity_target(
-            velocity.x,
-            velocity.y,
-            velocity.a,
-        )
+        try:
+            self._platform.driver.set_platform_velocity_target(
+                velocity.x,
+                velocity.y,
+                velocity.a,
+            )
+        except ValueError() as e:
+            logger.error(f"Error setting platform velocity target: {e}")
 
     def _handle_reset_odometry_request(self, reset_odometry: ResetOdometry):
         self._platform.monitor.reset_odometry()
