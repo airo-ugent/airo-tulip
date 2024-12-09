@@ -6,13 +6,7 @@ from loguru import logger
 
 def handle_message(data: bytes) -> bytes:
     if data == b'shutdown':
-        logger.info("Received shutdown command. Shutting down...")
-
-        logger.info("Shutting down UR robot...")
-        subprocess.run(["stop_ur"])
-
-        logger.info("Shutting down KELO CPU in 60 seconds...")
-        subprocess.run(["shutdown", "-s"])
+        shutdown()
 
         return b'shutting down'
     elif data == b'ur start':
@@ -34,6 +28,14 @@ def handle_message(data: bytes) -> bytes:
     else:  # TODO: command to get battery status.
         logger.error(f"Unknown command received: {data}")
         return b'error'
+
+
+def shutdown():
+    logger.info("Received shutdown command. Shutting down...")
+    logger.info("Shutting down UR robot...")
+    subprocess.run(["stop_ur"])
+    logger.info("Shutting down KELO CPU in 60 seconds...")
+    subprocess.run(["shutdown", "-s"])
 
 
 def process_result(result: subprocess.CompletedProcess) -> bytes:
