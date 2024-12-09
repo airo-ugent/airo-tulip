@@ -18,4 +18,4 @@ then
     exit
 fi
 
-python start_ur.py --ip 10.42.0.1 --installation robotiq
+python stop_ur.py --ip 10.42.0.1
