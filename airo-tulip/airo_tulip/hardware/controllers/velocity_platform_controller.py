@@ -25,7 +25,6 @@ class VelocityPlatformController(Controller):
         self._platform_ramped_vel = np.zeros((3,))
         self._platform_limits = PlatformLimits()
         self._time_last_ramping: float | None = None
-        self._should_align_drives = True
 
     @staticmethod
     def get_pivot_angle(wheel_param: WheelParamVelocity, pivot_encoder_value: float) -> float:
@@ -106,19 +105,17 @@ class VelocityPlatformController(Controller):
         return np.array([vx - va * y, vy + va * x])
 
     def set_platform_velocity_target(
-        self, vel_x: float, vel_y: float, vel_a: float, only_align_drives: bool
+        self, vel_x: float, vel_y: float, vel_a: float
     ) -> None:
         """Set the target velocity of the platform.
 
         Args:
             vel_x: The linear velocity (m/s) along the x axis.
             vel_y: The linear velocity (m/s) along the y axis.
-            vel_a: The angular velocity (rad/s) around the center of the platform.
-            only_align_drives: If set, does not more the platform but simply aligns the drives."""
+            vel_a: The angular velocity (rad/s) around the center of the platform."""
         self._platform_target_vel[0] = 0.0 if (abs(vel_x) < 0.0000001) else vel_x
         self._platform_target_vel[1] = 0.0 if (abs(vel_y) < 0.0000001) else vel_y
         self._platform_target_vel[2] = 0.0 if (abs(vel_a) < 0.0000001) else vel_a
-        self._only_align_drives = only_align_drives
 
     def set_platform_max_velocity(self, max_vel_linear: float, max_vel_angular: float) -> None:
         """Set the maximum velocity that the platform is allowed to drive at.
@@ -228,24 +225,6 @@ class VelocityPlatformController(Controller):
 
         return pivot_error
 
-    def are_drives_aligned(self, encoder_pivots: List[float], max_pivot_error: float = 0.25) -> bool:
-        """Returns true when all drives are approximately aligned to drive in the correct direction.
-
-        Args:
-            encoder_pivots: Encoder pivot values for all drives.
-            max_pivot_error: If ALL pivot errors are smaller than this angle (radians), the drives are considered aligned.
-
-        Returns:
-            True when all drives are approximately aligned to drive in the correct direction."""
-        for drive_index in range(len(self._wheel_params)):
-            pivot_error = np.abs(self._compute_pivot_error(drive_index, encoder_pivots[drive_index]))
-            rr.log(f"drive_{drive_index}/pivot_error", rr.Scalar(pivot_error))
-            if pivot_error > max_pivot_error:
-                # Reset velocity ramping so that we don't get sudden accelerations once drives are aligned.
-                self._time_last_ramping = None
-                return False
-        return True
-
     def calculate_wheel_target_velocity(
         self, drive_index: int, raw_pivot_angle: float
     ) -> Tuple[float, float]:
@@ -289,18 +268,12 @@ class VelocityPlatformController(Controller):
         # Differential correction speed to minimise pivot_error
         delta_vel = pivot_error * wheel_param.pivot_kp
 
-        # If all drives are not yet aligned, we should not send any forward velocities.
-        # This means that the left and right wheel velocities should be equal, but with opposite sign (l = -r).
-        # In other words, vel_l and vel_r (computed below) should then be 0, such that the target velocities are
-        # -delta_vel and +delta_vel.
-        send_forward_velocities = not self._only_align_drives
-
         # Target velocity of left wheel (dot product with unit pivot vector)
-        vel_l = np.dot(target_vel_vec_l, unit_pivot_vector) if send_forward_velocities else 0.0
+        vel_l = np.dot(target_vel_vec_l, unit_pivot_vector)
         target_vel_l = clip(vel_l - delta_vel, wheel_param.max_linear_velocity, -wheel_param.max_linear_velocity)
 
         # Target velocity of right wheel (dot product with unit pivot vector)
-        vel_r = np.dot(target_vel_vec_r, unit_pivot_vector) if send_forward_velocities else 0.0
+        vel_r = np.dot(target_vel_vec_r, unit_pivot_vector)
         target_vel_r = clip(vel_r + delta_vel, wheel_param.max_linear_velocity, -wheel_param.max_linear_velocity)
 
         rr.log(f"drive_{drive_index}/delta_vel", rr.Scalar(delta_vel))
@@ -350,7 +323,7 @@ if __name__ == "__main__":
     vpc = VelocityPlatformController(wheel_configs)
 
     # Set some target velocity
-    vpc.set_platform_velocity_target(1.0, 0.0, 0.0, True)
+    vpc.set_platform_velocity_target(1.0, 0.0, 0.0)
 
     # Calculate velocities for each wheel
     for j in range(5):
@@ -364,7 +337,7 @@ if __name__ == "__main__":
         input()
 
     # Set zero target velocity
-    vpc.set_platform_velocity_target(0.0, 0.0, 0.0, True)
+    vpc.set_platform_velocity_target(0.0, 0.0, 0.0)
 
     # Calculate velocities for each wheel
     for j in range(5):

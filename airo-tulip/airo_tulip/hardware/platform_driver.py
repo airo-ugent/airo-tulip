@@ -63,8 +63,6 @@ class PlatformDriver:
         self._process_data = []
         self._wheel_enabled = [True] * self._num_wheels
         self._step_count = 0
-        self._timeout = 0
-        self._timeout_message_printed = True
         self._last_step_time = None
 
         self._driver_type = controller_type
@@ -77,8 +75,6 @@ class PlatformDriver:
             vel_x: float,
             vel_y: float,
             vel_a: float,
-            timeout: float = 1.0,
-            only_align_drives: bool = False,
     ) -> None:
         """Set the platform's velocity target.
 
@@ -89,25 +85,14 @@ class PlatformDriver:
         Args:
             vel_x: Velocity along X axis.
             vel_y: Velocity along Y axis.
-            vel_a: Angular velocity.
-            timeout: The platform will stop after this many seconds.
-            only_align_drives: If true, the platform will only align the wheels in the correct orientation without driving into that directino."""
+            vel_a: Angular velocity."""
         if math.sqrt(vel_x ** 2 + vel_y ** 2) > 0.5:
             raise ValueError("Cannot set target linear velocity higher than 0.5 m/s")
         if abs(vel_a) > math.pi / 4:
             raise ValueError("Cannot set target angular velocity higher than pi/4 rad/s")
-        if timeout < 0.0:
-            raise ValueError("Cannot set negative timeout")
 
-        self._vpc.set_platform_velocity_target(vel_x, vel_y, vel_a, only_align_drives)
+        self._vpc.set_platform_velocity_target(vel_x, vel_y, vel_a)
 
-        self._timeout = time.time() + timeout
-        self._timeout_message_printed = False
-
-    def are_drives_aligned(self) -> bool:
-        """Check if the drives are aligned with the last provided velocity command."""
-        encoder_pivots = [self._process_data[i].encoder_pivot for i in range(self._num_wheels)]
-        return self._vpc.are_drives_aligned(encoder_pivots)
 
     def set_driver_type(self, driver_type: PlatformDriverType):
         """Set the driver type (velocity control or compliant control)."""
@@ -125,12 +110,6 @@ class PlatformDriver:
             logger.trace(f"pd {i} sensor_ts {pd.sensor_ts} vel_1 {pd.velocity_1} vel_2 {pd.velocity_2}")
 
         self._current_ts = self._process_data[0].sensor_ts
-
-        if self._timeout < time.time():
-            self._vpc.set_platform_velocity_target(0.0, 0.0, 0.0, only_align_drives=False)
-            if not self._timeout_message_printed:
-                logger.info("platform stopped early due to velocity target timeout")
-                self._timeout_message_printed = True
 
         if self._state == PlatformDriverState.INIT:
             return self._step_init()
