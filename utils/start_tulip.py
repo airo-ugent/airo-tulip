@@ -2,8 +2,7 @@ from airo_tulip.api.server import TulipServer, RobotConfiguration
 from airo_tulip.hardware.structs import WheelConfig
 
 
-def test():
-    # Init stuff
+def start_tulip():
     device = "eno1"
     wheel_configs = create_wheel_configs()
 
@@ -50,4 +49,4 @@ def create_wheel_configs():
 
 
 if __name__ == "__main__":
-    test()
+    start_tulip()

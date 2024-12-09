@@ -12,6 +12,7 @@ fi
 if ! command -v pyenv &> /dev/null
 then
     echo "pyenv could not be found. Please install pyenv and try again."
+    exit
 else
     echo "pyenv is installed."
 fi
@@ -76,9 +77,12 @@ echo "export PATH=\"$(pwd)/bin:\$PATH\""
 read -r -p "Can we add these lines to the .bashrc file for you? (y/N) " RESPONSE
 if [ "$RESPONSE" == "y" ]
 then
+    echo -en '\n' >> /home/kelo/.bashrc
+    echo "# Added by the airo-tulip installation script." >> /home/kelo/.bashrc
     echo "export AIRO_TULIP_PATH=\"$(pwd)\"" >> /home/kelo/.bashrc
     echo "export PATH=\"$(pwd)/bin:\$PATH\"" >> /home/kelo/.bashrc
+    echo -en '\n' >> /home/kelo/.bashrc
 fi
 
-echo "Installation complete! Please restart the shell or run the following commands to complete the installation."
+echo "Installation complete! Please restart the shell or run the following command to complete the installation."
 echo "source /home/kelo/.bashrc"

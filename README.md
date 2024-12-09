@@ -13,12 +13,27 @@ See the respective subdirectories for more information.
 
 ## Installation
 
-You can use `./install.sh` to install the `airo-tulip` package and other commands to a KELO CPU brick running Ubuntu.
+You can run `./install.sh` (as root) to install the `airo-tulip` package and other commands to a KELO CPU brick running Ubuntu.
 This script should be run as the root user and will install airo-tulip to directory from which it is executed.
-Hence, the way to install `airo-tulip` is:
 
-```commandline
+There are some dependencies that need to be installed before you can install `airo-tulip` (normally these should be installed already):
+
+```bash
+sudo apt-get update -y
+sudo apt-get install -y git gcc curl make
+```
+
+There is one other dependency which should be installed manually: `pyenv`.
+As per the [official installation instructions](https://github.com/pyenv/pyenv?tab=readme-ov-file#1-automatic-installer-recommended), you can install `pyenv` by running:
+
+```bash
+curl https://pyenv.run | bash
+```
+
+Then, the way to install `airo-tulip` is:
+
+```bash
 git clone https://github.com/airo-ugent/airo-tulip
 cd airo-tulip
-./install.sh
+sudo ./install.sh
 ```
