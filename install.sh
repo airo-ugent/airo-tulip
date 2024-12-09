@@ -69,6 +69,8 @@ copy_and_make_executable "start_dashboard"
 # See: https://stackoverflow.com/a/9625233/18071096
 (crontab -l 2>/dev/null; echo "@reboot $(pwd)/start_dashboard") | crontab -
 
+cd ..  # Back up out of bin for all following commands
+
 # Prompt the user to add this path to the .bashrc file.
 echo "Add the following lines to the kelo user's .bashrc file to complete the installation."
 echo "You can choose to do this manually, or we can do it for you."
