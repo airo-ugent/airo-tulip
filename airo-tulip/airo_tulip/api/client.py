@@ -13,21 +13,16 @@ from api.messages import Velocity, Odometry, VoltageBus, SetDriverType, ResetOdo
     TOPIC_RESET_ODOMETRY
 
 
-class KELORobileError(RuntimeError):
-    """Error raised when an error occurs in the KELORobile client."""
-
-    def __init__(self, message):
-        super().__init__(message)
-
 
 class KELORobileClient(CycloneParticipant):
     """The KELORobileClient is a wrapper around CycloneDDS communication with the TulipServer."""
 
-    def __init__(self, dds_domain_id: int = 129):
+    def __init__(self, dds_domain_id: int = 129, loop_frequency: float = 20):
         """Initialize the client and connect to the server.
 
         Args:
-            dds_domain_id: The CycloneDDS domain id (default: 129)."""
+            dds_domain_id: The CycloneDDS domain id (default: 129).
+            loop_frequency: The frequency (Hz) with which the client's subscriptions are updated."""
         # CycloneDDS configuration.
         super().__init__(dds_domain_id)
 
@@ -43,17 +38,25 @@ class KELORobileClient(CycloneParticipant):
         self._latest_odometry = None
         self._latest_voltage = None
 
+        self._loop_frequency = loop_frequency
+
         # Start a child thread that subscribes.
         self._stop_running = Event()
-        self._thread_pubsub = Thread(target=self._step, daemon=True)
+        self._thread_pubsub = Thread(target=self._run, daemon=True)
         self._thread_pubsub.start()
         self._thread_pubsub.join()
 
-    def _step(self):
+    def _run(self):
         """Update subscribers."""
-        # This function currently does not sleep, and runs as fast as the CPU will allow. Do we want this to enable response to commands as fast as possible?
         while not self._stop_running.is_set():
+            start_time = time.time()
             self.step()
+            end_time = time.time()
+
+            # Sleep for remainder of the period.
+            sleep_time = 1 / self._loop_frequency - (end_time - start_time)
+            if sleep_time > 0:
+                time.sleep(sleep_time)
 
     def close(self):
         """Close the client."""
