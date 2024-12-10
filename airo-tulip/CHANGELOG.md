@@ -23,7 +23,7 @@ This project uses a [CalVer](https://calver.org/) versioning scheme with monthly
 ### Removed
 
 - `align_drives()` method removed from server and client, because it was not reliable. May be added back in the future.
-- `timeout` parameter removed from velocity commands, because it made robot logic complex.
+- `timeout` parameter changed to `duration` for `set_platform_velocity_target()` method in the server and client.
 
 ## 0.1.0
 
