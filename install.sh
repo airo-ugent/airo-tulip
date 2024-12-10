@@ -65,6 +65,8 @@ copy_and_make_executable "start_tulip"
 copy_and_make_executable "stop_tulip"
 copy_and_make_executable "start_dashboard"
 
+cp "../utils/cyclone_config.xml" "cyclone_config.xml" || { echo "Failed to copy the cyclone_config.xml file. Exiting..."; exit; }
+
 # Make sure the dashboard server is run on boot.
 # See: https://stackoverflow.com/a/9625233/18071096
 (crontab -l 2>/dev/null; echo "@reboot $(pwd)/start_dashboard") | crontab -
@@ -76,6 +78,7 @@ echo "Add the following lines to the kelo user's .bashrc file to complete the in
 echo "You can choose to do this manually, or we can do it for you."
 echo "export AIRO_TULIP_PATH=\"$(pwd)\""
 echo "export PATH=\"$(pwd)/bin:\$PATH\""
+echo "export CYCLONEDDS_URI=\"$(pwd)/bin/cyclone_config.xml\""
 read -r -p "Can we add these lines to the .bashrc file for you? (y/N) " RESPONSE
 if [ "$RESPONSE" == "y" ]
 then
@@ -83,6 +86,7 @@ then
     echo "# Added by the airo-tulip installation script." >> /home/kelo/.bashrc
     echo "export AIRO_TULIP_PATH=\"$(pwd)\"" >> /home/kelo/.bashrc
     echo "export PATH=\"$(pwd)/bin:\$PATH\"" >> /home/kelo/.bashrc
+    echo "export CYCLONEDDS_URI=\"$(pwd)/bin/cyclone_config.xml\"" >> /home/kelo/.bashrc
     echo -en '\n' >> /home/kelo/.bashrc
 fi
 
