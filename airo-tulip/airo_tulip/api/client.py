@@ -10,8 +10,7 @@ from airo_typing import Vector3DType
 from api.cyclone_participant import CycloneParticipant
 from api.messages import Velocity, Odometry, VoltageBus, SetDriverType, ResetOdometry, TOPIC_VELOCITY, \
     TOPIC_ODOMETRY, TOPIC_VOLTAGE, TOPIC_SET_TARGET_VELOCITY, TOPIC_SET_DRIVER_TYPE, \
-    TOPIC_RESET_ODOMETRY
-
+    TOPIC_RESET_ODOMETRY, SetVelocity
 
 
 class KELORobileClient(CycloneParticipant):
@@ -30,7 +29,7 @@ class KELORobileClient(CycloneParticipant):
         self._subscribe(TOPIC_ODOMETRY, Odometry, self._update_odometry)
         self._subscribe(TOPIC_VOLTAGE, VoltageBus, self._update_voltage)
 
-        self._register_publisher(TOPIC_SET_TARGET_VELOCITY, Velocity)
+        self._register_publisher(TOPIC_SET_TARGET_VELOCITY, SetVelocity)
         self._register_publisher(TOPIC_SET_DRIVER_TYPE, SetDriverType)
         self._register_publisher(TOPIC_RESET_ODOMETRY, ResetOdometry)
 
@@ -79,6 +78,7 @@ class KELORobileClient(CycloneParticipant):
             vel_x: float,
             vel_y: float,
             vel_a: float,
+            duration: float,
     ):
         """Set the x, y and angular velocity of the complete mobile platform.
 
@@ -86,8 +86,10 @@ class KELORobileClient(CycloneParticipant):
             vel_x: Linear velocity of platform in x (forward) direction in m/s.
             vel_y: Linear velocity of platform in y (left) direction in m/s.
             vel_a: Linear velocity of platform in angular direction in rad/s.
+            duration: Time to keep the velocity set in seconds. The robot will set zero velocity after this time.
         """
-        msg = Velocity(time.time_ns(), vel_x, vel_y, vel_a)
+        assert duration > 0.0, "Duration must be greater than 0."
+        msg = SetVelocity(time.time_ns(), vel_x, vel_y, vel_a, duration)
         self._publish(TOPIC_SET_TARGET_VELOCITY, msg)
 
     def set_driver_type(self, driver_type: PlatformDriverType):

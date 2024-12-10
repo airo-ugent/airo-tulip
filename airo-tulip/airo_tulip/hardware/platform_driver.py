@@ -65,6 +65,9 @@ class PlatformDriver:
         self._step_count = 0
         self._last_step_time = None
 
+        self._timeout = 0.0
+        self._timeout_message_printed = True
+
         self._driver_type = controller_type
         self._vpc = VelocityPlatformController(self._wheel_configs)
 
@@ -75,6 +78,7 @@ class PlatformDriver:
             vel_x: float,
             vel_y: float,
             vel_a: float,
+            duration: float,
     ) -> None:
         """Set the platform's velocity target.
 
@@ -85,13 +89,19 @@ class PlatformDriver:
         Args:
             vel_x: Velocity along X axis.
             vel_y: Velocity along Y axis.
-            vel_a: Angular velocity."""
+            vel_a: Angular velocity.
+            duration: Duration for which the velocity should be maintained."""
         if math.sqrt(vel_x ** 2 + vel_y ** 2) > 0.5:
             raise ValueError("Cannot set target linear velocity higher than 0.5 m/s")
         if abs(vel_a) > math.pi / 4:
             raise ValueError("Cannot set target angular velocity higher than pi/4 rad/s")
+        if duration < 0.0:
+            raise ValueError("Duration must be greater than 0")
 
         self._vpc.set_platform_velocity_target(vel_x, vel_y, vel_a)
+
+        self._timeout = time.time() + duration
+        self._timeout_message_printed = False
 
 
     def set_driver_type(self, driver_type: PlatformDriverType):
@@ -110,6 +120,12 @@ class PlatformDriver:
             logger.trace(f"pd {i} sensor_ts {pd.sensor_ts} vel_1 {pd.velocity_1} vel_2 {pd.velocity_2}")
 
         self._current_ts = self._process_data[0].sensor_ts
+
+        if self._timeout < time.time():
+            self._vpc.set_platform_velocity_target(0.0, 0.0, 0.0)
+            if not self._timeout_message_printed:
+                logger.info("Platform stopped because the duration of a set velocity target has expired.")
+                self._timeout_message_printed = True
 
         if self._state == PlatformDriverState.INIT:
             return self._step_init()

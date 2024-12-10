@@ -112,7 +112,8 @@ class VelocityPlatformController(Controller):
         Args:
             vel_x: The linear velocity (m/s) along the x axis.
             vel_y: The linear velocity (m/s) along the y axis.
-            vel_a: The angular velocity (rad/s) around the center of the platform."""
+            vel_a: The angular velocity (rad/s) around the center of the platform.
+            duration: The duration for which the target velocity should be maintained."""
         self._platform_target_vel[0] = 0.0 if (abs(vel_x) < 0.0000001) else vel_x
         self._platform_target_vel[1] = 0.0 if (abs(vel_y) < 0.0000001) else vel_y
         self._platform_target_vel[2] = 0.0 if (abs(vel_a) < 0.0000001) else vel_a

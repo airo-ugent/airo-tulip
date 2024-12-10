@@ -12,7 +12,7 @@ from loguru import logger
 from api.cyclone_participant import CycloneParticipant
 from api.messages import Velocity, Odometry, ResetOdometry, VoltageBus, SetDriverType, \
     TOPIC_SET_TARGET_VELOCITY, TOPIC_SET_DRIVER_TYPE, TOPIC_RESET_ODOMETRY, TOPIC_ODOMETRY, TOPIC_VELOCITY, \
-    TOPIC_VOLTAGE
+    TOPIC_VOLTAGE, SetVelocity
 
 
 class RobotConfiguration:
@@ -44,7 +44,7 @@ class TulipServer(CycloneParticipant):
         super().__init__(dds_domain_id)
 
         logger.info("Creating CycloneDDS topics and writers/readers.")
-        self._subscribe(TOPIC_SET_TARGET_VELOCITY, Velocity, self._handle_set_platform_velocity_target_request)
+        self._subscribe(TOPIC_SET_TARGET_VELOCITY, SetVelocity, self._handle_set_platform_velocity_target_request)
         self._subscribe(TOPIC_SET_DRIVER_TYPE, SetDriverType, self._handle_set_driver_type_request)
         self._subscribe(TOPIC_RESET_ODOMETRY, ResetOdometry, self._handle_reset_odometry_request)
 
@@ -106,15 +106,16 @@ class TulipServer(CycloneParticipant):
         thread_ethercat.join()
 
     def _handle_set_platform_velocity_target_request(
-            self, velocity: Velocity
+            self, velocity: SetVelocity
     ):
         try:
             self._platform.driver.set_platform_velocity_target(
                 velocity.x,
                 velocity.y,
                 velocity.a,
+                velocity.duration
             )
-        except ValueError() as e:
+        except ValueError as e:
             logger.error(f"Error setting platform velocity target: {e}")
 
     def _handle_reset_odometry_request(self, reset_odometry: ResetOdometry):

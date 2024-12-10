@@ -23,6 +23,16 @@ class Velocity(IdlStruct, typename="Velocity.Msg"):
 
 
 @dataclass
+class SetVelocity(IdlStruct, typename="SetVelocity.Msg"):
+    """SetVelocity message."""
+    timestamp: int
+    x: float
+    y: float
+    a: float
+    duration: float
+
+
+@dataclass
 class Odometry(IdlStruct, typename="Odometry.Msg"):
     """Odometry message."""
     timestamp: int
