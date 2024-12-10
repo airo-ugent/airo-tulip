@@ -1,4 +1,5 @@
 import socket
+import subprocess
 import threading
 import time
 from typing import Final
@@ -57,7 +58,14 @@ def start_battery_monitor(should_stop_running: threading.Event):
     thread.start()
 
 
+def enable_UR_connection():
+    logger.info("Enabling UR connection...")
+    subprocess.run(["nmcli", "connection", "up", "UR"])
+
+
 def start_server(host: str = '0.0.0.0', port: int = 49790):
+    enable_UR_connection()
+
     should_stop_running = threading.Event()
 
     start_battery_monitor(should_stop_running)

@@ -16,7 +16,7 @@ See the respective subdirectories for more information.
 You can run `./install.sh` (as root) to install the `airo-tulip` package and other commands to a KELO CPU brick running Ubuntu.
 This script should be run as the root user and will install airo-tulip to directory from which it is executed.
 
-There are some dependencies that need to be installed before you can install `airo-tulip` (normally these should be installed already):
+There are some dependencies that need to be installed before you can install `airo-tulip` (typically these should be installed already):
 
 ```bash
 sudo apt-get update -y

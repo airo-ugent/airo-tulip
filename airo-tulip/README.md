@@ -21,7 +21,7 @@ why `airo-tulip` is implemented the way it is.
 ## How to use this package
 
 There are two layers to the `airo-tulip` package: the `hardware` module that interfaces with the KELO and other attached hardware,
-and the `api` module that allows (optionally remote) users of the library to interface with this `hardware` over a TCP connection.
+and the `api` module that allows (optionally remote) users of the library to interface with this `hardware` over with CycloneDDS.
 The code in the `hardware` module is supposed to be run on the KELO itself, while the code in the `api` module (more specifically in `api.client`)
 can be run from any device that can access the KELO over Ethernet or Wi-Fi. While it possible to use `airo-tulip` without
 `api`, by using `hardware.platform_driver` directly, this is not recommended, and we only document the usage through the `api` module.
@@ -36,6 +36,13 @@ If you are the first to set up your custom KELO mobile platform, it is also reco
 up and running quickly.
 
 ### Installation
+
+Installing `airo-tulip` can be done as a Python package from PyPI or from GitHub. However, at IDLab-AIRO, we use the
+package on a mobile robot with a mounted UR cobot and Robotiq gripper, so we have a custom installation script that
+installs the necessary dependencies for the KELO Tulip and AIRO Tulip packages and puts several commands on the path.
+This script is located in the root of the [repository](https://github.com/airo-ugent/airo-tulip) and is called `install.sh`.
+This script should be run as the root user and will install `airo-tulip` to the directory from which it is executed.
+You can still use `airo-tulip` without these dependencies if you have a custom robot, for example without a UR cobot.
 
 #### From PyPI
 
@@ -94,9 +101,9 @@ pip install -e airo-tulip/
 
 ### Running `airo-tulip` on the KELO
 
-`airo_tulip.api.server` provides a class `TulipServer` which initializes the KELO platform and accepts an incoming
-connection from a `airo_tulip.api.client.KELORobile`. To accept incoming connections from any device on the network,
-listen on the IPv4 address `0.0.0.0`. The `RobotConfiguration` that must be supplied, is based on how the KELO bricks
+`airo_tulip.api.server` provides a class `TulipServer` which initializes the KELO platform. It subscribes to topics
+that can be sent from clients (`airo_tulip.api.client.KELORobile`) to control the KELO robile platform and publishes information about the platform, such as
+velocity, odometry, and battery status. The `RobotConfiguration` that must be supplied to the server, is based on how the KELO bricks
 are mounted. This information is received from KELO robotics together with your platform and is specific to your use case.
 The EtherCAT device is also specific to your platform set-up.
 
@@ -147,7 +154,7 @@ def create_wheel_configs():
 device = "eno1"
 wheel_configs = create_wheel_configs()
 
-server = TulipServer(RobotConfiguration(device, wheel_configs), "0.0.0.0")
+server = TulipServer(RobotConfiguration(device, wheel_configs))
 server.run()
 ```
 
@@ -156,19 +163,18 @@ server.run()
 Once you have started the server on the KELO, you can connect to it with an `api.client.KELORobile` instance:
 
 ```python
-from airo_tulip.api.client import KELORobile
+from airo_tulip.api.client import KELORobileClient
 
-kelo_ip = "10.10.129.21"
-client = KELORobile(kelo_ip)
+client = KELORobileClient()
 ```
 
 You can then send commands to the KELO platform by calling the methods on the `client` object, e.g.,
 
 ```python
-client.set_platform_velocity_target(0.5, 0.0, 0.0, timeout=1.0)
+client.set_platform_velocity_target(0.5, 0.0, 0.0)
 ```
 
-to drive approximately 0.5 meters, at 0.5 meters per second, along the platform's +X axis.
+to drive at 0.5 meters per second along the platform's +X axis.
 
 ### Mounted devices
 
