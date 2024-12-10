@@ -74,8 +74,7 @@ class TulipServer(CycloneParticipant):
             self._publish(TOPIC_VELOCITY, Velocity(cur_time, *self._platform.monitor.get_estimated_velocity()))
 
             # Step subscribers, handling incoming messages, if any.
-            for subscriber in self._cyclone_subscribers:
-                subscriber.step()
+            self.step()
 
     def _ethercat_loop(self):
         """The EtherCAT loop runs at a fixed frequency and steps the platform."""

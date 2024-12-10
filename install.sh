@@ -90,5 +90,9 @@ then
     echo -en '\n' >> /home/kelo/.bashrc
 fi
 
-echo "Installation complete! Please restart the shell or run the following command to complete the installation."
-echo "source /home/kelo/.bashrc"
+echo "Installation complete! Reboot the machine to complete the installation, or manually start the dashboard server this once."
+read -r -p "Do you want to reboot now? (y/N) " RESPONSE
+if [ "$RESPONSE" == "y" ]
+then
+    reboot now
+fi
