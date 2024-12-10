@@ -82,12 +82,14 @@ echo "export CYCLONEDDS_URI=\"$(pwd)/bin/cyclone_config.xml\""
 read -r -p "Can we add these lines to the .bashrc file for you? (y/N) " RESPONSE
 if [ "$RESPONSE" == "y" ]
 then
-    echo -en '\n' >> /home/kelo/.bashrc
-    echo "# Added by the airo-tulip installation script." >> /home/kelo/.bashrc
-    echo "export AIRO_TULIP_PATH=\"$(pwd)\"" >> /home/kelo/.bashrc
-    echo "export PATH=\"$(pwd)/bin:\$PATH\"" >> /home/kelo/.bashrc
-    echo "export CYCLONEDDS_URI=\"$(pwd)/bin/cyclone_config.xml\"" >> /home/kelo/.bashrc
-    echo -en '\n' >> /home/kelo/.bashrc
+  {
+    echo -en '\n'
+    echo "# Added by the airo-tulip installation script."
+    echo "export AIRO_TULIP_PATH=\"$(pwd)\""
+    echo "export PATH=\"$(pwd)/bin:\$PATH\""
+    echo "export CYCLONEDDS_URI=\"$(pwd)/bin/cyclone_config.xml\""
+    echo -en '\n'
+  } >> /home/kelo/.bashrc
 fi
 
 echo "Installation complete! Reboot the machine to complete the installation, or manually start the dashboard server this once."
