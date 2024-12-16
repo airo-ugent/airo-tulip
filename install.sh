@@ -22,9 +22,9 @@ then
 fi
 
 # Install the Python virtual environment.
-echo "Installing a Python 3.9 virtual environment to $(pwd)/env."
-pyenv install 3.9 || { echo "Failed to install Python 3.9. Exiting..."; exit; }
-pyenv local 3.9 || { echo "Failed to set the local Python version to 3.9. Exiting..."; exit; }
+echo "Installing a Python 3.10 virtual environment to $(pwd)/env."
+pyenv install 3.10 || { echo "Failed to install Python 3.10. Exiting..."; exit; }
+pyenv local 3.10 || { echo "Failed to set the local Python version to 3.10. Exiting..."; exit; }
 python -m venv env || { echo "Failed to create the Python virtual environment. Exiting..."; exit; }
 source env/bin/activate || { echo "Failed to activate the Python virtual environment. Exiting..."; exit; }
 
