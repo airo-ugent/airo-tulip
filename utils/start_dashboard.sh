@@ -18,4 +18,6 @@ then
     exit
 fi
 
+cd bin || { echo "Failed to change to the bin directory. Exiting..."; exit; }
+
 python start_dashboard.py &

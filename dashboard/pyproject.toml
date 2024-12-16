@@ -24,4 +24,4 @@ Homepage = "https://github.com/airo-ugent/airo-tulip"
 Issues = "https://github.com/airo-ugent/airo-tulip/issues"
 
 [tools.setuptools]
-packages = ["tulip_dashboard"]
+packages = ["airo_tulip_dashboard"]

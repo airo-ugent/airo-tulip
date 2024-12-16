@@ -1,12 +1,7 @@
 #!/usr/bin/env bash
 
-# Install the airo-tulip package and other commands. This script must be run as the root user.
-# This script will install the package to the current directory and create a Python 3.9 virtual environment.
-
-if [ "$EUID" -ne 0 ]
-  then echo "This script must be run as the root user."
-  exit
-fi
+# Install the airo-tulip package and other commands.
+# This script will install the package to the current directory and create a Python 3.10 virtual environment.
 
 # Check if the `pyenv` command is available.
 if ! command -v pyenv &> /dev/null
@@ -27,9 +22,9 @@ then
 fi
 
 # Install the Python virtual environment.
-echo "Installing a Python 3.9 virtual environment to $(pwd)/env."
-pyenv install 3.9 || { echo "Failed to install Python 3.9. Exiting..."; exit; }
-pyenv local 3.9 || { echo "Failed to set the local Python version to 3.9. Exiting..."; exit; }
+echo "Installing a Python 3.10 virtual environment to $(pwd)/env."
+pyenv install 3.10 || { echo "Failed to install Python 3.10. Exiting..."; exit; }
+pyenv local 3.10 || { echo "Failed to set the local Python version to 3.10. Exiting..."; exit; }
 python -m venv env || { echo "Failed to create the Python virtual environment. Exiting..."; exit; }
 source env/bin/activate || { echo "Failed to activate the Python virtual environment. Exiting..."; exit; }
 
@@ -46,7 +41,7 @@ fi
 echo "Installing the airo-tulip package."
 pip install airo-tulip || { echo "Failed to install the airo-tulip package. Exiting..."; exit; }
 echo "Installing the dashboard server package."
-pip install -e dashboard || { echo "Failed to install the dashboard package. Exiting..."; exit; }
+pip install -e dashboard/ || { echo "Failed to install the dashboard package. Exiting..."; exit; }
 
 # Create a folder for our commands and copy them there.
 mkdir -p bin || { echo "Failed to create the bin directory. Exiting..."; exit; }
@@ -62,29 +57,38 @@ copy_and_make_executable() {
 copy_and_make_executable "start_ur"
 copy_and_make_executable "stop_ur"
 copy_and_make_executable "start_tulip"
-copy_and_make_executable "stop_tulip"
+# copy_and_make_executable "stop_tulip"
 copy_and_make_executable "start_dashboard"
+
+cp "../utils/cyclone_config.xml" "cyclone_config.xml" || { echo "Failed to copy the cyclone_config.xml file. Exiting..."; exit; }
 
 # Make sure the dashboard server is run on boot.
 # See: https://stackoverflow.com/a/9625233/18071096
-(crontab -l 2>/dev/null; echo "@reboot $(pwd)/start_dashboard") | crontab -
+sudo bash -c '(crontab -l 2>/dev/null; echo "@reboot . /home/kelo/.kelorc ; $(pwd)/start_dashboard") | crontab -'
 
 cd ..  # Back up out of bin for all following commands
 
 # Prompt the user to add this path to the .bashrc file.
-echo "Add the following lines to the kelo user's .bashrc file to complete the installation."
+echo "Add the following lines to the /home/kelo/.kelorc file, and source it from /home/kelo/.bashrc to complete the installation."
 echo "You can choose to do this manually, or we can do it for you."
 echo "export AIRO_TULIP_PATH=\"$(pwd)\""
 echo "export PATH=\"$(pwd)/bin:\$PATH\""
-read -r -p "Can we add these lines to the .bashrc file for you? (y/N) " RESPONSE
+echo "export CYCLONEDDS_URI=\"$(pwd)/bin/cyclone_config.xml\""
+read -r -p "Can we add these lines to the .kelorc file for you and update .bashrc? (y/N) " RESPONSE
 if [ "$RESPONSE" == "y" ]
 then
-    echo -en '\n' >> /home/kelo/.bashrc
-    echo "# Added by the airo-tulip installation script." >> /home/kelo/.bashrc
-    echo "export AIRO_TULIP_PATH=\"$(pwd)\"" >> /home/kelo/.bashrc
-    echo "export PATH=\"$(pwd)/bin:\$PATH\"" >> /home/kelo/.bashrc
-    echo -en '\n' >> /home/kelo/.bashrc
+  {
+    echo -en '\n'
+    echo "export AIRO_TULIP_PATH=\"$(pwd)\""
+    echo "export PATH=\"$(pwd)/bin:\$PATH\""
+    echo "export CYCLONEDDS_URI=\"$(pwd)/bin/cyclone_config.xml\""
+  } > /home/kelo/.kelorc
+  echo -e '\n# Added by the airo-tulip installation script.\nsource /home/kelo/.kelorc\n' >> /home/kelo/.bashrc
 fi
 
-echo "Installation complete! Please restart the shell or run the following command to complete the installation."
-echo "source /home/kelo/.bashrc"
+echo "Installation complete! Reboot the machine to complete the installation, or manually start the dashboard server this once."
+read -r -p "Do you want to reboot now? (y/N) " RESPONSE
+if [ "$RESPONSE" == "y" ]
+then
+    reboot now
+fi
