@@ -35,7 +35,7 @@ def shutdown():
     logger.info("Shutting down UR robot...")
     subprocess.run(["stop_ur"])
     logger.info("Shutting down KELO CPU in 60 seconds...")
-    subprocess.run(["shutdown", "-s"])
+    subprocess.run(["shutdown"])
 
 
 def process_result(result: subprocess.CompletedProcess) -> bytes:
