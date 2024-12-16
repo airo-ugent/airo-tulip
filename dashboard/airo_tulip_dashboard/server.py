@@ -1,14 +1,9 @@
 import socket
 import subprocess
 import threading
-import time
-from typing import Final
 
 from airo_tulip_dashboard.handlers import handle_message, shutdown
-from cyclonedds.sub import DataReader
 from loguru import logger
-
-MIN_ALLOWED_VOLTAGE_BUS: Final[float] = 26.0
 
 
 def handle_client(conn: socket, addr: str, should_stop_running: threading.Event):
@@ -27,24 +22,6 @@ def handle_client(conn: socket, addr: str, should_stop_running: threading.Event)
     else:
         logger.info(f"Remote client {addr} closed the connection.")
     conn.close()
-
-
-def monitor_battery(reader: DataReader, frequency: int, should_stop_running: threading.Event):
-    while not should_stop_running.is_set():
-        start_time = time.time()
-
-        messages = reader.take()
-        for message in messages:
-            voltage = message.voltage_bus
-            if voltage < MIN_ALLOWED_VOLTAGE_BUS:
-                logger.warning(f"Low battery voltage: {voltage} V. Will shut down KELO.")
-                should_stop_running.set()
-
-        end_time = time.time()
-        # Sleep for remainder of the period.
-        sleep_time = 1 / frequency - (end_time - start_time)
-        if sleep_time > 0:
-            time.sleep(sleep_time)
 
 
 def enable_UR_connection():
