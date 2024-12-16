@@ -16,10 +16,12 @@ MIN_ALLOWED_VOLTAGE_BUS: Final[float] = 26.5
 
 def handle_client(conn: socket, addr: str, should_stop_running: threading.Event):
     while not should_stop_running:
+        logger.info(f"Waiting for data from {addr}...")
         data = conn.recv(1024)
+        logger.info(f"Received data from {addr}: {data}")
         if not data:
             break
-        logger.info(f"Received data from {addr}: {data}, {len(data)}")
+        logger.info(f"Received non-empty data from {addr}: {data}, {len(data)}")
         handle_message(data)
     if should_stop_running.is_set():
         logger.info(f"Shutting down connection to {addr} due to low battery voltage.")
@@ -30,7 +32,7 @@ def handle_client(conn: socket, addr: str, should_stop_running: threading.Event)
 
 
 def monitor_battery(reader: DataReader, frequency: int, should_stop_running: threading.Event):
-    while should_stop_running:
+    while not should_stop_running.is_set():
         start_time = time.time()
 
         messages = reader.take()
