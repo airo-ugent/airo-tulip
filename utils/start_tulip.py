@@ -6,7 +6,7 @@ def start_tulip():
     device = "eno1"
     wheel_configs = create_wheel_configs()
 
-    server = TulipServer(RobotConfiguration(device, wheel_configs), "0.0.0.0")
+    server = TulipServer(RobotConfiguration(device, wheel_configs))
     server.run()
 
 
