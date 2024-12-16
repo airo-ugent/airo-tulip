@@ -74,11 +74,15 @@ def start_server(host: str = '0.0.0.0', port: int = 49790):
         s.bind((host, port))
         s.listen()
         logger.info(f"Listening on port {port}...")
-        while not should_stop_running.is_set():
-            conn, addr = s.accept()
-            logger.info(f"Accepting incoming connection from {addr}...")
-            client_thread = threading.Thread(target=handle_client, args=(conn, addr, should_stop_running))
-            client_thread.start()
+        try:
+            while not should_stop_running.is_set():
+                conn, addr = s.accept()
+                logger.info(f"Accepting incoming connection from {addr}...")
+                client_thread = threading.Thread(target=handle_client, args=(conn, addr, should_stop_running))
+                client_thread.start()
+        except KeyboardInterrupt:
+            logger.info("Caught KeyboardInterrupt. Closing socket...")
+            s.close()
 
 
 if __name__ == '__main__':
