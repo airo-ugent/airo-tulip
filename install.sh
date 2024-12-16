@@ -1,15 +1,20 @@
 #!/usr/bin/env bash
 
-# Install the airo-tulip package and other commands.
+# Install the airo-tulip package and other commands. This script must be run as the root user.
 # This script will install the package to the current directory and create a Python 3.9 virtual environment.
 
-# Check if the `conda` command is available.
-if ! command -v conda &> /dev/null
+if [ "$EUID" -ne 0 ]
+  then echo "This script must be run as the root user."
+  exit
+fi
+
+# Check if the `pyenv` command is available.
+if ! command -v pyenv &> /dev/null
 then
-    echo "conda could not be found. Please install anaconda/miniconda and try again."
+    echo "pyenv could not be found. Please install pyenv and try again."
     exit
 else
-    echo "conda is installed."
+    echo "pyenv is installed."
 fi
 
 # Check if the user wants to install to the current directory.
@@ -21,21 +26,19 @@ then
     exit
 fi
 
-# Create a new conda environment for the installation.
-echo "Creating a conda environment. Enter a name for the new environment."
-read -r -p "Environment name: " ENV_NAME
-conda create --name "$ENV_NAME" python=3.9 || { echo "Failed to create the conda environment. Exiting..."; exit; }
-echo "Conda environment created."
-conda activate "$ENV_NAME" || { echo "Failed to activate the conda environment. Exiting..."; exit; }
+# Install the Python virtual environment.
+echo "Installing a Python 3.9 virtual environment to $(pwd)/env."
+pyenv install 3.9 || { echo "Failed to install Python 3.9. Exiting..."; exit; }
+pyenv local 3.9 || { echo "Failed to set the local Python version to 3.9. Exiting..."; exit; }
+python -m venv env || { echo "Failed to create the Python virtual environment. Exiting..."; exit; }
+source env/bin/activate || { echo "Failed to activate the Python virtual environment. Exiting..."; exit; }
 
 # Check if everything above succeeded and we will use the correct Python executable.
 python_executable=$(which python)
 echo "Python executable: $python_executable"
-# Check if the user wants to continue with the current Python executable.
-read -r -p "Do you want to continue with this Python executable? (y/N) " RESPONSE
-if [ "$RESPONSE" != "y" ]
+if [ "$python_executable" != "$(pwd)/env/bin/python" ]
 then
-    echo "Exiting..."
+    echo "The Python executable is not the one in the virtual environment. Exiting..."
     exit
 fi
 
@@ -43,7 +46,7 @@ fi
 echo "Installing the airo-tulip package."
 pip install airo-tulip || { echo "Failed to install the airo-tulip package. Exiting..."; exit; }
 echo "Installing the dashboard server package."
-pip install -e dashboard/ || { echo "Failed to install the dashboard package. Exiting..."; exit; }
+pip install -e dashboard || { echo "Failed to install the dashboard package. Exiting..."; exit; }
 
 # Create a folder for our commands and copy them there.
 mkdir -p bin || { echo "Failed to create the bin directory. Exiting..."; exit; }
@@ -59,15 +62,14 @@ copy_and_make_executable() {
 copy_and_make_executable "start_ur"
 copy_and_make_executable "stop_ur"
 copy_and_make_executable "start_tulip"
-# copy_and_make_executable "stop_tulip"
+copy_and_make_executable "stop_tulip"
 copy_and_make_executable "start_dashboard"
 
 cp "../utils/cyclone_config.xml" "cyclone_config.xml" || { echo "Failed to copy the cyclone_config.xml file. Exiting..."; exit; }
 
 # Make sure the dashboard server is run on boot.
 # See: https://stackoverflow.com/a/9625233/18071096
-# TODO: does this need to be run as root?
-sudo bash -c '(crontab -l 2>/dev/null; echo "@reboot $(pwd)/start_dashboard") | crontab -'
+(crontab -l 2>/dev/null; echo "@reboot $(pwd)/start_dashboard") | crontab -
 
 cd ..  # Back up out of bin for all following commands
 
