@@ -15,7 +15,7 @@ MIN_ALLOWED_VOLTAGE_BUS: Final[float] = 26.5
 
 
 def handle_client(conn: socket, addr: str, should_stop_running: threading.Event):
-    while not should_stop_running:
+    while not should_stop_running.is_set():
         logger.info(f"Waiting for data from {addr}...")
         data = conn.recv(1024)
         logger.info(f"Received data from {addr}: {data}")
