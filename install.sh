@@ -1,12 +1,7 @@
 #!/usr/bin/env bash
 
-# Install the airo-tulip package and other commands. This script must be run as the root user.
+# Install the airo-tulip package and other commands.
 # This script will install the package to the current directory and create a Python 3.9 virtual environment.
-
-if [ "$EUID" -ne 0 ]
-  then echo "This script must be run as the root user."
-  exit
-fi
 
 # Check if the `pyenv` command is available.
 if ! command -v pyenv &> /dev/null
@@ -46,7 +41,7 @@ fi
 echo "Installing the airo-tulip package."
 pip install airo-tulip || { echo "Failed to install the airo-tulip package. Exiting..."; exit; }
 echo "Installing the dashboard server package."
-pip install -e dashboard || { echo "Failed to install the dashboard package. Exiting..."; exit; }
+pip install -e dashboard/ || { echo "Failed to install the dashboard package. Exiting..."; exit; }
 
 # Create a folder for our commands and copy them there.
 mkdir -p bin || { echo "Failed to create the bin directory. Exiting..."; exit; }
@@ -62,14 +57,14 @@ copy_and_make_executable() {
 copy_and_make_executable "start_ur"
 copy_and_make_executable "stop_ur"
 copy_and_make_executable "start_tulip"
-copy_and_make_executable "stop_tulip"
+# copy_and_make_executable "stop_tulip"
 copy_and_make_executable "start_dashboard"
 
 cp "../utils/cyclone_config.xml" "cyclone_config.xml" || { echo "Failed to copy the cyclone_config.xml file. Exiting..."; exit; }
 
 # Make sure the dashboard server is run on boot.
 # See: https://stackoverflow.com/a/9625233/18071096
-(crontab -l 2>/dev/null; echo "@reboot $(pwd)/start_dashboard") | crontab -
+sudo bash -c '(crontab -l 2>/dev/null; echo "@reboot $(pwd)/start_dashboard") | crontab -'
 
 cd ..  # Back up out of bin for all following commands
 
