@@ -7,8 +7,8 @@ from airo_tulip.hardware.platform_driver import PlatformDriverType
 from airo_tulip.hardware.structs import Attitude2DType
 from airo_typing import Vector3DType
 
-from api.cyclone_participant import CycloneParticipant
-from api.messages import Velocity, Odometry, VoltageBus, SetDriverType, ResetOdometry, TOPIC_VELOCITY, \
+from airo_tulip.api.cyclone_participant import CycloneParticipant
+from airo_tulip.api.messages import Velocity, Odometry, VoltageBus, SetDriverType, ResetOdometry, TOPIC_VELOCITY, \
     TOPIC_ODOMETRY, TOPIC_VOLTAGE, TOPIC_SET_TARGET_VELOCITY, TOPIC_SET_DRIVER_TYPE, \
     TOPIC_RESET_ODOMETRY, SetVelocity
 

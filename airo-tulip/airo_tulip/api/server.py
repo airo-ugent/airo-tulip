@@ -9,8 +9,8 @@ from airo_tulip.hardware.robile_platform import RobilePlatform
 from airo_tulip.hardware.structs import WheelConfig
 from loguru import logger
 
-from api.cyclone_participant import CycloneParticipant
-from api.messages import Velocity, Odometry, ResetOdometry, VoltageBus, SetDriverType, \
+from airo_tulip.api.cyclone_participant import CycloneParticipant
+from airo_tulip.api.messages import Velocity, Odometry, ResetOdometry, VoltageBus, SetDriverType, \
     TOPIC_SET_TARGET_VELOCITY, TOPIC_SET_DRIVER_TYPE, TOPIC_RESET_ODOMETRY, TOPIC_ODOMETRY, TOPIC_VELOCITY, \
     TOPIC_VOLTAGE, SetVelocity
 
