@@ -11,7 +11,7 @@ from cyclonedds.sub import DataReader
 from cyclonedds.topic import Topic
 from loguru import logger
 
-MIN_ALLOWED_VOLTAGE_BUS: Final[float] = 26.5
+MIN_ALLOWED_VOLTAGE_BUS: Final[float] = 26.0
 
 
 def handle_client(conn: socket, addr: str, should_stop_running: threading.Event):
@@ -22,7 +22,8 @@ def handle_client(conn: socket, addr: str, should_stop_running: threading.Event)
         if not data:
             break
         logger.info(f"Received non-empty data from {addr}: {data}, {len(data)}")
-        handle_message(data)
+        response = handle_message(data)
+        conn.sendall(response)
     if should_stop_running.is_set():
         logger.info(f"Shutting down connection to {addr} due to low battery voltage.")
         shutdown()

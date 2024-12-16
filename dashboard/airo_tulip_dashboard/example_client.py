@@ -15,7 +15,8 @@ def client_loop(host: str = 'localhost', port: int = 49790):
             if len(message) >= 1024:
                 print("Message too long. Please enter a message with less than 1024 characters.")
                 continue
-            response = s.sendall(message.encode())
+            s.sendall(message.encode())
+            response = s.recv(1024)
             print("Sent message to server.")
             print(f"Response: {response}")
 
