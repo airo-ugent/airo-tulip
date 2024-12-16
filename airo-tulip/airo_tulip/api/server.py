@@ -13,6 +13,7 @@ from airo_tulip.api.cyclone_participant import CycloneParticipant
 from airo_tulip.api.messages import Velocity, Odometry, ResetOdometry, VoltageBus, SetDriverType, \
     TOPIC_SET_TARGET_VELOCITY, TOPIC_SET_DRIVER_TYPE, TOPIC_RESET_ODOMETRY, TOPIC_ODOMETRY, TOPIC_VELOCITY, \
     TOPIC_VOLTAGE, SetVelocity
+from prompt_toolkit.styles import Attrs
 
 
 class RobotConfiguration:
@@ -120,6 +121,8 @@ class TulipServer(CycloneParticipant):
                 velocity.duration
             )
         except ValueError as e:
+            logger.error(f"Error setting platform velocity target: {e}")
+        except AttributeError as e:
             logger.error(f"Error setting platform velocity target: {e}")
 
     def _handle_reset_odometry_request(self, reset_odometry: ResetOdometry):

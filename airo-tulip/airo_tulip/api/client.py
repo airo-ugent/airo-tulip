@@ -43,7 +43,6 @@ class KELORobileClient(CycloneParticipant):
         self._stop_running = Event()
         self._thread_pubsub = Thread(target=self._run, daemon=True)
         self._thread_pubsub.start()
-        self._thread_pubsub.join()
 
     def _run(self):
         """Update subscribers."""
