@@ -16,8 +16,10 @@ def handle_client(conn: socket, addr: str, should_stop_running: threading.Event)
         logger.info(f"Received non-empty data from {addr}: {data}, {len(data)}")
         response = handle_message(data)
         conn.sendall(response)
+        if response == b'kill':
+            should_stop_running.set()
     if should_stop_running.is_set():
-        logger.info(f"Shutting down connection to {addr} due to low battery voltage.")
+        logger.info(f"Shutting down connection to {addr}.")
         shutdown()
     else:
         logger.info(f"Remote client {addr} closed the connection.")

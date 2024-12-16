@@ -24,6 +24,9 @@ def handle_message(data: bytes) -> bytes:
         logger.info("Stopping tulip server...")
         result = subprocess.run(["stop_tulip"])
         return process_result(result)
+    elif data == b'kill':
+        logger.info('Killing dashboard server... You can restart it with: sudo -E env "PATH=$PATH" start_dashboard')
+        return b'kill'
     else:
         logger.error(f"Unknown command received: {data}")
         return b'error'
