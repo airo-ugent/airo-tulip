@@ -64,27 +64,26 @@ cp "../utils/cyclone_config.xml" "cyclone_config.xml" || { echo "Failed to copy 
 
 # Make sure the dashboard server is run on boot.
 # See: https://stackoverflow.com/a/9625233/18071096
-sudo bash -c '(crontab -l 2>/dev/null; echo "@reboot $(pwd)/start_dashboard") | crontab -'
+sudo bash -c '(crontab -l 2>/dev/null; echo "@reboot . /home/kelo/.kelorc ; $(pwd)/start_dashboard") | crontab -'
 
 cd ..  # Back up out of bin for all following commands
 
 # Prompt the user to add this path to the .bashrc file.
-echo "Add the following lines to the kelo user's .bashrc file to complete the installation."
+echo "Add the following lines to the /home/kelo/.kelorc file, and source it from /home/kelo/.bashrc to complete the installation."
 echo "You can choose to do this manually, or we can do it for you."
 echo "export AIRO_TULIP_PATH=\"$(pwd)\""
 echo "export PATH=\"$(pwd)/bin:\$PATH\""
 echo "export CYCLONEDDS_URI=\"$(pwd)/bin/cyclone_config.xml\""
-read -r -p "Can we add these lines to the .bashrc file for you? (y/N) " RESPONSE
+read -r -p "Can we add these lines to the .kelorc file for you and update .bashrc? (y/N) " RESPONSE
 if [ "$RESPONSE" == "y" ]
 then
   {
     echo -en '\n'
-    echo "# Added by the airo-tulip installation script."
     echo "export AIRO_TULIP_PATH=\"$(pwd)\""
     echo "export PATH=\"$(pwd)/bin:\$PATH\""
     echo "export CYCLONEDDS_URI=\"$(pwd)/bin/cyclone_config.xml\""
-    echo -en '\n'
-  } >> /home/kelo/.bashrc
+  } > /home/kelo/.kelorc
+  echo -e '\n# Added by the airo-tulip installation script.\nsource /home/kelo/.kelorc\n' >> /home/kelo/.bashrc
 fi
 
 echo "Installation complete! Reboot the machine to complete the installation, or manually start the dashboard server this once."
