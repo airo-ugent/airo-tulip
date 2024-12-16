@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Install the airo-tulip package and other commands.
-# This script will install the package to the current directory and create a Python 3.9 virtual environment.
+# This script will install the package to the current directory and create a Python 3.10 virtual environment.
 
 # Check if the `pyenv` command is available.
 if ! command -v pyenv &> /dev/null
