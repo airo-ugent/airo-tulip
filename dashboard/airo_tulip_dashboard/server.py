@@ -4,11 +4,8 @@ import threading
 import time
 from typing import Final
 
-from airo_tulip.api.messages import TOPIC_VOLTAGE, VoltageBus
 from airo_tulip_dashboard.handlers import handle_message, shutdown
-from cyclonedds.domain import DomainParticipant
 from cyclonedds.sub import DataReader
-from cyclonedds.topic import Topic
 from loguru import logger
 
 MIN_ALLOWED_VOLTAGE_BUS: Final[float] = 26.0
@@ -50,17 +47,6 @@ def monitor_battery(reader: DataReader, frequency: int, should_stop_running: thr
             time.sleep(sleep_time)
 
 
-def start_battery_monitor(should_stop_running: threading.Event):
-    cyclone_participant = DomainParticipant(domain_id=129)
-    topic = Topic(cyclone_participant, TOPIC_VOLTAGE, VoltageBus)
-    reader = DataReader(cyclone_participant, topic)
-
-    frequency = 1  # Hz.
-
-    thread = threading.Thread(target=monitor_battery, args=(reader, frequency, should_stop_running))
-    thread.start()
-
-
 def enable_UR_connection():
     logger.info("Enabling UR connection...")
     subprocess.run(["nmcli", "connection", "up", "UR"])
@@ -70,8 +56,6 @@ def start_server(host: str = '0.0.0.0', port: int = 49790):
     enable_UR_connection()
 
     should_stop_running = threading.Event()
-
-    start_battery_monitor(should_stop_running)
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
