@@ -37,7 +37,7 @@ def monitor_battery(reader: DataReader, frequency: int, should_stop_running: thr
 
         messages = reader.take()
         for message in messages:
-            voltage = message.voltage
+            voltage = message.voltage_bus
             if voltage < MIN_ALLOWED_VOLTAGE_BUS:
                 logger.warning(f"Low battery voltage: {voltage} V. Will shut down KELO.")
                 should_stop_running.set()

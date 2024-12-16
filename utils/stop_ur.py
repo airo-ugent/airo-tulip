@@ -1,5 +1,8 @@
 """Stop the UR robot arm remotely, without needing to connect a monitor and peripherals to the control box."""
 import argparse
+import socket
+import sys
+
 
 class Dashboard:
     def __init__(self, ip):

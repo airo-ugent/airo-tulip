@@ -276,6 +276,8 @@ class PlatformMonitor:
             master: The EtherCAT master.
             wheel_configs: The configurations for each drive.
             peripheral_client: The peripheral client, if available. If not available, sensor readings are affected!"""
+        self._made_first_step = False  # Set after step() is called once.
+
         # Configuration.
         self._master = master
         self._wheel_configs = wheel_configs
@@ -407,6 +409,11 @@ class PlatformMonitor:
             self._peripheral_pose = self._peripheral_pose_estimator.get_pose(self._flow, self._orientation[0])
         else:
             self._peripheral_pose = self._odometry_pose
+
+        self._made_first_step = True
+
+    def made_first_step(self) -> bool:
+        return self._made_first_step
 
     def get_estimated_robot_pose(self) -> Attitude2DType:
         """Get the robot platform's estimated pose based on fused estimator."""

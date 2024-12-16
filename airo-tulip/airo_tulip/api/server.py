@@ -69,6 +69,10 @@ class TulipServer(CycloneParticipant):
         while not self._should_stop.is_set():
             # Publish data.
             cur_time = time.time_ns()
+            if not self._platform.monitor.made_first_step():
+                logger.debug("EtherCAT loop is not ready yet. Retrying in 1 second...")
+                time.sleep(1.0)
+                continue
             self._publish(TOPIC_ODOMETRY, Odometry(cur_time, *self._platform.monitor.get_estimated_robot_pose()))
             self._publish(TOPIC_VOLTAGE, VoltageBus(cur_time, self._platform.monitor.get_voltage_bus_max()))
             self._publish(TOPIC_VELOCITY, Velocity(cur_time, *self._platform.monitor.get_estimated_velocity()))
