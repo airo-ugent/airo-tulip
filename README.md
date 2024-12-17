@@ -35,5 +35,10 @@ Then, the way to install `airo-tulip` is:
 ```bash
 git clone https://github.com/airo-ugent/airo-tulip
 cd airo-tulip
-sudo ./install.sh
+./install.sh
 ```
+
+## Usage
+
+After the installation, a dashboard server will automatically be started when the KELO CPU brick boots, listening on port 49790.
+The server operates over TCP, and an example client can be found in `dashboard/airo_tulip_dashboard/example_client.py`.
