@@ -7,6 +7,7 @@ from loguru import logger
 
 
 def handle_client(conn: socket, addr: str, should_stop_running: threading.Event):
+    tulip_pid = None
     while not should_stop_running.is_set():
         logger.info(f"Waiting for data from {addr}...")
         data = conn.recv(1024)
@@ -14,7 +15,21 @@ def handle_client(conn: socket, addr: str, should_stop_running: threading.Event)
         if not data:
             break
         logger.info(f"Received non-empty data from {addr}: {data}, {len(data)}")
+
+        # Tulip stop requires the PID of the tulip server.
+        if data == b'tulip stop':
+            if tulip_pid is None:
+                logger.error("Received 'tulip stop' command, but we never started tulip.")
+                conn.sendall(b'error')
+                continue
+            data = data + b' ' + str(tulip_pid).encode()
+
         response = handle_message(data)
+
+        # When tulip starts, we store the PID so we can later interrupt the tulip server.
+        if data == b'tulip start':
+            tulip_pid = int(response)  # Store the PID so we can later interrupt the tulip server.
+
         conn.sendall(response)
         if response == b'kill':
             should_stop_running.set()

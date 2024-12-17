@@ -1,3 +1,5 @@
+import os
+import signal
 import subprocess
 
 from loguru import logger
@@ -18,12 +20,13 @@ def handle_message(data: bytes) -> bytes:
         return process_result(result)
     elif data == b'tulip start':
         logger.info("Starting tulip server...")
-        result = subprocess.run(["start_tulip"])
-        return process_result(result)
-    elif data == b'tulip stop':
+        process = subprocess.Popen(["start_tulip"], shell=True)
+        return bytes(process.pid)
+    elif data.startswith(b'tulip stop'):
+        pid = int(data.split(b' ')[-1])
         logger.info("Stopping tulip server...")
-        result = subprocess.run(["stop_tulip"])
-        return process_result(result)
+        os.kill(pid, signal.SIGTERM)
+        return b'success'
     elif data == b'kill':
         logger.info('Killing dashboard server... You can restart it with: sudo -E env "PATH=$PATH" start_dashboard')
         return b'kill'
