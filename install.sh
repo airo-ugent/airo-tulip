@@ -39,6 +39,8 @@ fi
 
 # We can now install airo-tulip.
 echo "Installing the airo-tulip package."
+# Can't have direct dependencies with PyPI. Install airo-typing from the GitHub repository here.
+pip install git+https://github.com/airo-ugent/airo-mono@main#subdirectory=airo-typing || { echo "Failed to install the airo-typing package. Exiting..."; exit; }
 pip install airo-tulip || { echo "Failed to install the airo-tulip package. Exiting..."; exit; }
 echo "Installing the dashboard server package."
 pip install -e dashboard/ || { echo "Failed to install the dashboard package. Exiting..."; exit; }
@@ -57,7 +59,6 @@ copy_and_make_executable() {
 copy_and_make_executable "start_ur"
 copy_and_make_executable "stop_ur"
 copy_and_make_executable "start_tulip"
-# copy_and_make_executable "stop_tulip"
 copy_and_make_executable "start_dashboard"
 
 # Make sure the dashboard server is run on boot.
