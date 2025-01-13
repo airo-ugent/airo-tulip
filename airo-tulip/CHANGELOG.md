@@ -21,8 +21,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Breaking changes
 
 ### Added
-- Dashboard server for easier remote interaction with the KELO CPU brick.
-- Installation script `install.sh` for airo-tulip and the dashboard server, which also updates the KELO CPU brick crontab file for `root`.
 
 ### Changed
 - Relaxed NumPy version requirement to `<0.2` in `pyproject.toml` of airo-tulip.
