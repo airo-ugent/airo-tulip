@@ -49,6 +49,7 @@ Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28);
 
 // time since last message received
 uint time_last_receive = millis();
+uint time_since_boot_receive = millis();
 
 void setup() {
   Serial.begin(115200);
@@ -131,6 +132,7 @@ void check_serial() {
         led_active_angle = command.substring(0, command.indexOf(" ")).toFloat();
         led_active_velocity = command.substring(command.indexOf(" ")+1).toFloat();
       } else if (command.equals("BOOT")) {
+        time_since_boot_receive = millis();
         led_state = LED_STATE_BOOT;
       } else if (command.equals("ERROR")) {
         led_state = LED_STATE_ERROR;
@@ -171,7 +173,7 @@ void update_underglow() {
     case LED_STATE_BOOT:
       // Circle animation. All LEDs start black, and gradually fill up over time.
       // The number of lit leds is determined by the time since boot.
-      num_lit_leds = NUM_LED * (millis() / 1000) / BOOT_ANIMATION_DURATION;
+      num_lit_leds = NUM_LED * ((millis() - time_since_boot_receive) / 1000) / BOOT_ANIMATION_DURATION;
       for (int i = 0; i < num_lit_leds; i++) {
         leds.setPixel(i, 0x0000ff);
       }
