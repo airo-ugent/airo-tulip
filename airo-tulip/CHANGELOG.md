@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Breaking changes
 
 ### Added
+- Status LEDs on the back of AIRO's mobile platform can now be set by the client.
 
 ### Changed
 
