@@ -24,10 +24,20 @@ def main():
     with serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=1) as ser:
         time.sleep(2)  # Wait for the connection to establish
 
-        while True:
-            res = transceive(ser, "FLOW")
-            print(res)
-            time.sleep(0.1)
+        res = transceive(ser, "PING")
+        print(res)
+
+        res = transceive(ser, "LED BOOT")
+        print(res)
+
+        time.sleep(1)
+
+        res = transceive(ser, "BNO")
+        print(res)
+
+        time.sleep(0.1)
+        res = transceive(ser, "FLOW")
+        print(res)
 
 
 if __name__ == "__main__":
