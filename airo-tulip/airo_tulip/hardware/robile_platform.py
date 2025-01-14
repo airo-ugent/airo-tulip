@@ -11,6 +11,8 @@ from airo_tulip.hardware.platform_monitor import PlatformMonitor
 from airo_tulip.hardware.structs import WheelConfig
 from loguru import logger
 
+from hardware.peripheral_client import StatusLed
+
 
 class RobilePlatform:
     """The RobilePlatform drives the robot through EtherCAT."""
@@ -42,6 +44,8 @@ class RobilePlatform:
         if self._enable_rerun:
             self._rerun_monitor_logger = RerunMonitorLogger()
 
+        self._peripheral_client.set_status_led(StatusLed.POWER, True)
+
     @property
     def driver(self) -> PlatformDriver:
         return self._driver
@@ -59,6 +63,8 @@ class RobilePlatform:
         if not self._ethercat_initialized:
             self._master.open(self._device)
             self._ethercat_initialized = True
+
+            self._peripheral_client.set_status_led(StatusLed.WHEELS_ENABLED, True)
 
         # Configure slaves
         wkc = self._master.config_init()
@@ -78,6 +84,10 @@ class RobilePlatform:
         found_state = self._master.state_check(requested_state)
         if found_state != requested_state:
             logger.warning("Not all EtherCAT slaves reached a safe operational state.")
+
+            self._peripheral_client.set_status_led(StatusLed.WHEELS_ENABLED, False)
+            self._peripheral_client.set_status_led(StatusLed.WARNING, False)
+
             # TODO: check and report which slave was the culprit.
             return False
 
@@ -95,10 +105,15 @@ class RobilePlatform:
             logger.info("All EtherCAT slaves reached a safe operational state.")
         else:
             logger.warning("Not all EtherCAT slaves reached a safe operational state.")
+            self._peripheral_client.set_status_led(StatusLed.WHEELS_ENABLED, False)
+            self._peripheral_client.set_status_led(StatusLed.WARNING, False)
             return False
 
         for slave in self._master.slaves:
             logger.debug(f"name {slave.name} Obits {len(slave.output)} Ibits {len(slave.input)} state {slave.state}")
+
+        self._peripheral_client.set_status_led(StatusLed.WHEELS_ENABLED, True)
+        self._peripheral_client.set_status_led(StatusLed.WARNING, True)
 
         return True
 
@@ -110,5 +125,10 @@ class RobilePlatform:
         self._monitor.step()
         if self._enable_rerun:
             self._rerun_monitor_logger.step(self._monitor)
+        self._set_battery_status_led()
         self._driver.step()
         self._master.send_processdata()
+
+    def _set_battery_status_led(self):
+        voltage_bus_max = self._monitor.get_voltage_bus_max
+        self._peripheral_client.set_status_led(StatusLed.BATTERY, voltage_bus_max >= 26)

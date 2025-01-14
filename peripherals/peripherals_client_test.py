@@ -39,8 +39,21 @@ def main():
         res = transceive(ser, "FLOW")
         print(res)
 
-        res = transceive(ser, "LED DISCO")
+        res = transceive(ser, "LED STATUS 0 1")
         print(res)
+
+        res = transceive(ser, "LED STATUS 1 0")
+        print(res)
+
+        res = transceive(ser, "LED STATUS 2 1")
+        print(res)
+
+        res = transceive(ser, "LED STATUS 3 0")
+        print(res)
+
+        res = transceive(ser, "LED STATUS 4 1")
+        print(res)
+
 
 
 if __name__ == "__main__":

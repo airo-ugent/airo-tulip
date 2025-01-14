@@ -37,6 +37,7 @@ Bitcraze_PMW3901 flow2(PIN_CS_FLOW2);
 #define COLOR_BLACK 0x000000
 #define COLOR_WHITE 0xffffff
 #define COLOR_RED 0xff0000
+#define COLOR_GREEN 0x00ff00
 #define COLOR_YELLOW 0xaa8800
 
 #define BOOT_ANIMATION_DURATION 8
@@ -44,6 +45,12 @@ Bitcraze_PMW3901 flow2(PIN_CS_FLOW2);
 char led_state = LED_STATE_IDLE;
 float led_active_angle;
 float led_active_velocity;
+
+int status_led_power = COLOR_WHITE;
+int status_led_battery = COLOR_WHITE;
+int status_led_warning = COLOR_WHITE;
+int status_led_arm = COLOR_WHITE;
+int status_led_wheels = COLOR_WHITE;
 
 // Variables for BNO055
 Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28);
@@ -137,6 +144,25 @@ void check_serial() {
         led_state = LED_STATE_BOOT;
       } else if (command.equals("DISCO")) {
         led_state = LED_STATE_DISCO;
+      } else if (command.startsWith("STATUS ")) {
+        int led_status_index;
+        int led_status_state;
+
+        command = command.substring(7);
+        led_status_index = command.substring(0, command.indexOf(" ")).toInt();
+        led_status_state = command.substring(command.indexOf(" ")+1).toInt();
+
+        if (led_status_index == 0) {
+            status_led_power = led_status_state == 0 ? COLOR_RED : COLOR_GREEN;
+            } else if (led_status_index == 1) {
+            status_led_battery = led_status_state == 0 ? COLOR_RED : COLOR_GREEN;
+            } else if (led_status_index == 2) {
+            status_led_warning = led_status_state == 0 ? COLOR_RED : COLOR_GREEN;
+            } else if (led_status_index == 3) {
+            status_led_arm = led_status_state == 0 ? COLOR_RED : COLOR_GREEN;
+            } else if (led_status_index == 4) {
+            status_led_wheels = led_status_state == 0 ? COLOR_RED : COLOR_GREEN;
+        }
       } else if (command.equals("ERROR")) {
         led_state = LED_STATE_ERROR;
       }
@@ -224,11 +250,11 @@ void update_back() {
   }
 
   // Status leds
-  leds_back.setPixel(20, 0xff00ff); // right
-  leds_back.setPixel(21, 0x00ffff);
-  leds_back.setPixel(22, 0x666666);
-  leds_back.setPixel(23, 0x00ff00);
-  leds_back.setPixel(24, 0x00ff00); // left
+  leds_back.setPixel(20, status_led_wheels); // right
+  leds_back.setPixel(21, status_led_arm);
+  leds_back.setPixel(22, status_led_warning);
+  leds_back.setPixel(23, status_led_battery);
+  leds_back.setPixel(24, status_led_power); // left
   leds_back.show();
 }
 

@@ -1,9 +1,16 @@
 """Client to interface with peripherals connected to the Teensy microcontroller."""
 
 import time
+from enum import Enum
 
 import serial
 
+class StatusLed(Enum):
+    POWER = 0
+    BATTERY = 1
+    WARNING = 2
+    ARM = 3
+    WHEELS_ENABLED = 4
 
 class PeripheralClient:
     """Client to interface with peripherals connected to the Teensy microcontroller."""
@@ -68,4 +75,9 @@ class PeripheralClient:
     def set_leds_error(self):
         """Set the LEDs to error mode."""
         res = self._transceive("LED ERROR")
+        return res == "OK"
+
+    def set_status_led(self, led: StatusLed, state: bool):
+        """Set the status of a specific LED."""
+        res = self._transceive(f"LED STATUS {led.value} {int(state)}")
         return res == "OK"
