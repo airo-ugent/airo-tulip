@@ -30,6 +30,7 @@ Bitcraze_PMW3901 flow2(PIN_CS_FLOW2);
 #define LED_STATE_ACTIVE 1
 #define LED_STATE_BOOT 2
 #define LED_STATE_ERROR 3
+#define LED_STATE_DISCO 4
 
 #define COLOR_PURPLE 0x400040
 #define COLOR_GRAY 0x222222
@@ -134,6 +135,8 @@ void check_serial() {
       } else if (command.equals("BOOT")) {
         time_since_boot_receive = millis();
         led_state = LED_STATE_BOOT;
+      } else if (command.equals("DISCO")) {
+        led_state = LED_STATE_DISCO;
       } else if (command.equals("ERROR")) {
         led_state = LED_STATE_ERROR;
       }
@@ -188,6 +191,9 @@ void update_underglow() {
       }
 
       break;
+    case LED_STATE_DISCO:
+      led_disco_mode();
+      break;
     case LED_STATE_ERROR:
       color = (millis()%500 < 200) ? COLOR_RED : COLOR_BLACK;
       set_all_leds(color);
@@ -224,6 +230,35 @@ void update_back() {
   leds_back.setPixel(23, 0x00ff00);
   leds_back.setPixel(24, 0x00ff00); // left
   leds_back.show();
+}
+
+void led_disco_mode() {
+    // Easter egg. Disco mode!
+
+    // Back panel direction indicators.
+      int color = (millis()%1000 < 500) ? COLOR_YELLOW : COLOR_BLACK;
+      for (int i=10; i<20; i++) {
+        leds_back.setPixel(i, color);
+      }
+      for (int i=0; i<10; i++) {
+        leds_back.setPixel(i, color);
+      }
+      leds_back.show();
+
+    // Underglow leds.
+    // Only update every 200ms.
+    if (millis() % 200 != 0) {
+      return;
+    }
+
+    color = 0;
+    for (int i=0; i<NUM_LED; i++) {
+      color = random(0xffffff);
+      leds.setPixel(i, color);
+    }
+    leds.show();
+
+
 }
 
 void set_all_leds(int color) {
