@@ -13,6 +13,7 @@ from airo_tulip.hardware.ethercat import *
 from airo_tulip.hardware.peripheral_client import PeripheralClient
 from airo_tulip.hardware.structs import WheelConfig
 from airo_tulip.hardware.util import *
+from airo_tulip.hardware.peripheral_client import StatusLed
 from loguru import logger
 
 
@@ -71,6 +72,10 @@ class PlatformDriver:
         self._vpc = VelocityPlatformController(self._wheel_configs)
 
         self._wheel_controllers = [VelocityTorqueController(self._driver_type) for _ in range(self._num_wheels * 2)]
+
+    def set_status_led(self, index: int, status: int):
+        if self._peripheral_client is not None:
+            self._peripheral_client.set_status_led(StatusLed(index), bool(status))
 
     def set_platform_velocity_target(
             self,

@@ -15,15 +15,18 @@ from airo_tulip.api.messages import (
     AreDrivesAlignedMessage,
     ErrorResponse,
     ResetOdometryMessage,
-    HandshakeMessage
+    HandshakeMessage,
+    SetStatusLedMessage
 )
 from airo_tulip.hardware.structs import Attitude2DType
 from airo_typing import Vector3DType
 from loguru import logger
+from airo_tulip.hardware.peripheral_client import StatusLed
 
 
 class KELORobileError(RuntimeError):
     """Error raised when an error occurs in the KELORobile client."""
+
     def __init__(self, message):
         super().__init__(message)
 
@@ -141,6 +144,15 @@ class KELORobile:
         """Get the robot platform's velocity."""
         msg = GetVelocityMessage()
         return self._transceive_message(msg).velocity
+
+    def set_status_led(self, led_index: StatusLed, status: bool) -> None:
+        """Set the status of a status LED.
+
+        Args:
+            led_index: The index of the LED to set.
+            status: The status to set the LED to (True for Green, False for Red)."""
+        msg = SetStatusLedMessage(led_index.value, int(status))
+        self._transceive_message(msg)
 
     def _transceive_message(self, req: RequestMessage) -> ResponseMessage:
         """Send a request message to the server and return the response message. Raises a RuntimeError on timeouts."""
