@@ -258,8 +258,13 @@ void update_back() {
     leds_back.show();
 }
 
+#define NUM_DISCO_COLORS 6
+const int disco_colors[NUM_DISCO_COLORS] = {
+    0x0200E8, 0x9B00FF, 0xFF00B9, 0xFFF800, 0x18FF00, 0xFB0000
+};
 void led_disco_mode() {
     // Easter egg. Disco mode!
+    int color_index = 0;
 
     // Back panel direction indicators.
     int color = (millis() % 1000 < 500) ? COLOR_YELLOW : COLOR_BLACK;
@@ -279,7 +284,8 @@ void led_disco_mode() {
 
     color = 0;
     for (int i = 0; i < NUM_LED; i++) {
-        color = random(0xffffff);
+        color_index = random(NUM_DISCO_COLORS);
+        color = disco_colors[color_index];
         leds.setPixel(i, color);
     }
     leds.show();
