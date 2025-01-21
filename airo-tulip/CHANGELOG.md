@@ -9,13 +9,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Breaking changes
 
 ### Added
-- Status LEDs on the back of AIRO's mobile platform can now be set by the client.
 
 ### Changed
 
 ### Fixed
 
 ### Removed
+
+## 0.2.2
+
+### Added
+- Status LEDs on the back of AIRO's mobile platform can now be set by the client.
+
+### Changed
+- Relaxed NumPy version requirement to any version in `pyproject.toml` of airo-tulip.
 
 ## 0.2.1
 
