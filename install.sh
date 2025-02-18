@@ -53,7 +53,7 @@ copy_and_make_executable() {
     local script_name=$1
     cp "../utils/${script_name}.sh" "${script_name}" || { echo "Failed to copy the ${script_name} command. Exiting..."; exit; }
     cp "../utils/${script_name}.py" "${script_name}.py" || { echo "Failed to copy the ${script_name} python script. Exiting..."; exit; }
-    chmod +x "${script_name}" || { echo "Failed to make the ${script_name} command executable. Exiting..."; exit; }
+    sudo chmod +x "${script_name}" || { echo "Failed to make the ${script_name} command executable. Exiting..."; exit; }
 }
 
 copy_and_make_executable "start_ur"
@@ -88,5 +88,5 @@ echo "Installation complete! Reboot the machine to complete the installation, or
 read -r -p "Do you want to reboot now? (y/N) " RESPONSE
 if [ "$RESPONSE" == "y" ]
 then
-    reboot now
+    sudo reboot now
 fi
