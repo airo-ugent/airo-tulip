@@ -39,6 +39,20 @@ You need to select it manually **and** through the GUI, for which you need to cr
 Any attempts to automatically select this connection profile with the connection manager appear to fail, and using the
 GUI is the recommended approach until we find the cause of this issue.
 
+Alternatively, if you wish to avoid running over VNC, you can also connect over ssh with X forwarding:
+
+```shell
+ssh -XC kelo
+```
+
+and then run
+
+```shell
+sudo -sE gnome-control-center
+```
+
+on the KELO.
+
 ## Connecting external sensors and LEDs
 
 You may want to connect external sensors and/or LEDs to your platform. We've done this at IDLab-AIRO!
