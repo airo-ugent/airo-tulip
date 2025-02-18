@@ -63,7 +63,8 @@ copy_and_make_executable "start_dashboard"
 
 # Make sure the dashboard server is run on boot.
 # See: https://stackoverflow.com/a/9625233/18071096
-sudo bash -c '(crontab -l 2>/dev/null; echo "@reboot . /home/kelo/.kelorc ; $(pwd)/start_dashboard") | crontab -'
+mkdir -p /home/kelo/.local/share/tulip || { echo "Failed to create the tulip log directory. Exiting..."; exit; }
+sudo bash -c '(crontab -l 2>/dev/null; echo "@reboot . /home/kelo/.kelorc ; $(pwd)/start_dashboard > ~/.local/share/tulip/dashboard_logs.txt 2>&1") | crontab -'
 
 cd ..  # Back up out of bin for all following commands
 

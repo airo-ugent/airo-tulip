@@ -22,4 +22,4 @@ def client_loop(host: str = 'localhost', port: int = 49790):
 
 
 if __name__ == '__main__':
-    client_loop()
+    client_loop("10.10.129.21")
