@@ -16,6 +16,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Removed
 
+## 0.2.3
+
+### Fixed
+- Added a timeout for the peripheral client of 2 seconds: if it fails to connect, the robile platform will not hang indefinitely.
+
 ## 0.2.2
 
 ### Added

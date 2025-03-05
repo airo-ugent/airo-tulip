@@ -27,11 +27,16 @@ class PeripheralClient:
         self._ser.write((command + "\n").encode("utf-8"))
 
         # Read response from server
+        start_time = time.time()
         while True:
             if self._ser.in_waiting > 0:
                 response = self._ser.readline().decode("utf-8").strip()
                 if response:
                     return response
+            else:
+                if time.time() - start_time > 2.0:
+                    return "__ERROR__"
+                time.sleep(0.01)
 
     def ping(self):
         """Check if the server is reachable."""
