@@ -34,7 +34,7 @@ class RobilePlatform:
         self._master = pysoem.Master()
         try:
             self._peripheral_client = PeripheralClient("/dev/ttyACM0", 115200)
-        except RuntimeError as e:
+        except Exception as e:
             logger.error(f"Could not connect to the peripheral client. Cause:\n{e}")
             self._peripheral_client = None
         self._driver = PlatformDriver(self._master, wheel_configs, controller_type, self._peripheral_client)
@@ -44,7 +44,8 @@ class RobilePlatform:
         if self._enable_rerun:
             self._rerun_monitor_logger = RerunMonitorLogger()
 
-        self._peripheral_client.set_status_led(StatusLed.POWER, True)
+        if self._peripheral_client is not None:
+            self._peripheral_client.set_status_led(StatusLed.POWER, True)
 
     @property
     def driver(self) -> PlatformDriver:
@@ -64,7 +65,8 @@ class RobilePlatform:
             self._master.open(self._device)
             self._ethercat_initialized = True
 
-            self._peripheral_client.set_status_led(StatusLed.WHEELS_ENABLED, True)
+            if self._peripheral_client is not None:
+                self._peripheral_client.set_status_led(StatusLed.WHEELS_ENABLED, True)
 
         # Configure slaves
         wkc = self._master.config_init()
@@ -85,8 +87,9 @@ class RobilePlatform:
         if found_state != requested_state:
             logger.warning("Not all EtherCAT slaves reached a safe operational state.")
 
-            self._peripheral_client.set_status_led(StatusLed.WHEELS_ENABLED, False)
-            self._peripheral_client.set_status_led(StatusLed.WARNING, False)
+            if self._peripheral_client is not None:
+                self._peripheral_client.set_status_led(StatusLed.WHEELS_ENABLED, False)
+                self._peripheral_client.set_status_led(StatusLed.WARNING, False)
 
             # TODO: check and report which slave was the culprit.
             return False
@@ -105,15 +108,17 @@ class RobilePlatform:
             logger.info("All EtherCAT slaves reached a safe operational state.")
         else:
             logger.warning("Not all EtherCAT slaves reached a safe operational state.")
-            self._peripheral_client.set_status_led(StatusLed.WHEELS_ENABLED, False)
-            self._peripheral_client.set_status_led(StatusLed.WARNING, False)
+            if self._peripheral_client is not None:
+                self._peripheral_client.set_status_led(StatusLed.WHEELS_ENABLED, False)
+                self._peripheral_client.set_status_led(StatusLed.WARNING, False)
             return False
 
         for slave in self._master.slaves:
             logger.debug(f"name {slave.name} Obits {len(slave.output)} Ibits {len(slave.input)} state {slave.state}")
 
-        self._peripheral_client.set_status_led(StatusLed.WHEELS_ENABLED, True)
-        self._peripheral_client.set_status_led(StatusLed.WARNING, True)
+        if self._peripheral_client is not None:
+            self._peripheral_client.set_status_led(StatusLed.WHEELS_ENABLED, True)
+            self._peripheral_client.set_status_led(StatusLed.WARNING, True)
 
         return True
 
@@ -131,4 +136,5 @@ class RobilePlatform:
 
     def _set_battery_status_led(self):
         voltage_bus_max = self._monitor.get_voltage_bus_max
-        self._peripheral_client.set_status_led(StatusLed.BATTERY, voltage_bus_max >= 26)
+        if self._peripheral_client is not None:
+            self._peripheral_client.set_status_led(StatusLed.BATTERY, voltage_bus_max >= 26)
