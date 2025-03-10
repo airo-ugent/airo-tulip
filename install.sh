@@ -41,7 +41,7 @@ fi
 echo "Installing the airo-tulip package."
 # Can't have direct dependencies with PyPI. Install airo-typing from the GitHub repository here.
 pip install git+https://github.com/airo-ugent/airo-mono@main#subdirectory=airo-typing || { echo "Failed to install the airo-typing package. Exiting..."; exit; }
-pip install airo-tulip || { echo "Failed to install the airo-tulip package. Exiting..."; exit; }
+pip install -e airo-tulip/ || { echo "Failed to install the airo-tulip package. Exiting..."; exit; }
 echo "Installing the dashboard server package."
 pip install -e dashboard/ || { echo "Failed to install the dashboard package. Exiting..."; exit; }
 
@@ -64,7 +64,15 @@ copy_and_make_executable "start_dashboard"
 # Make sure the dashboard server is run on boot.
 # See: https://stackoverflow.com/a/9625233/18071096
 mkdir -p /home/kelo/.local/share/tulip || { echo "Failed to create the tulip log directory. Exiting..."; exit; }
-sudo bash -c '(crontab -l 2>/dev/null; echo "@reboot . /home/kelo/.kelorc ; $(pwd)/start_dashboard > ~/.local/share/tulip/dashboard_logs.txt 2>&1") | crontab -'
+echo "We will now update the root crontab to start the dashboard server on boot."
+echo "The current crontab entries are:"
+sudo crontab -l
+# Check if the user wants to update the crontab.
+read -r -p "Do you want to add the dashboard server to the crontab? (y/N) " RESPONSE
+if [ "$RESPONSE" == "y" ]
+then
+    sudo bash -c '(crontab -l 2>/dev/null; echo "@reboot . /home/kelo/.kelorc ; $(pwd)/start_dashboard > ~/.local/share/tulip/dashboard_logs.txt 2>&1") | crontab -'
+fi
 
 cd ..  # Back up out of bin for all following commands
 
