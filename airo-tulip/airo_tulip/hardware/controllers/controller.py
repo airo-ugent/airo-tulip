@@ -3,7 +3,7 @@
 from typing import List
 
 import numpy as np
-from airo_tulip.hardware.structs import WheelParamVelocity, WheelConfig
+from airo_tulip.hardware.structs import WheelConfig, WheelParamVelocity
 
 
 class Controller:

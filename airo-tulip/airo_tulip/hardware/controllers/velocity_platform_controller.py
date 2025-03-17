@@ -105,9 +105,7 @@ class VelocityPlatformController(Controller):
         x, y = position
         return np.array([vx - va * y, vy + va * x])
 
-    def set_platform_velocity_target(
-        self, vel_x: float, vel_y: float, vel_a: float, only_align_drives: bool
-    ) -> None:
+    def set_platform_velocity_target(self, vel_x: float, vel_y: float, vel_a: float, only_align_drives: bool) -> None:
         """Set the target velocity of the platform.
 
         Args:
@@ -246,9 +244,7 @@ class VelocityPlatformController(Controller):
                 return False
         return True
 
-    def calculate_wheel_target_velocity(
-        self, drive_index: int, raw_pivot_angle: float
-    ) -> Tuple[float, float]:
+    def calculate_wheel_target_velocity(self, drive_index: int, raw_pivot_angle: float) -> Tuple[float, float]:
         """
         Calculate the wheel velocity setpoints based on the set target velocity.
 
@@ -263,7 +259,11 @@ class VelocityPlatformController(Controller):
         # Command 0 angular vel when platform has been commanded 0 vel
         # If this is not done, then the wheels pivot to face front of platform
         # even when the platform is commanded zero velocity.
-        if self._platform_ramped_vel[0] == 0 and self._platform_ramped_vel[1] == 0 and self._platform_ramped_vel[2] == 0:
+        if (
+            self._platform_ramped_vel[0] == 0
+            and self._platform_ramped_vel[1] == 0
+            and self._platform_ramped_vel[2] == 0
+        ):
             return 0.0, 0.0
 
         wheel_param = self._wheel_params[drive_index]

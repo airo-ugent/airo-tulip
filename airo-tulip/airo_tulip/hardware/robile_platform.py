@@ -5,8 +5,7 @@ from typing import List
 import pysoem
 from airo_tulip.hardware.ethercat import EC_STATE_OPERATIONAL, EC_STATE_SAFE_OP
 from airo_tulip.hardware.logging.monitor_rerun import RerunMonitorLogger
-from airo_tulip.hardware.peripheral_client import PeripheralClient
-from airo_tulip.hardware.peripheral_client import StatusLed
+from airo_tulip.hardware.peripheral_client import PeripheralClient, StatusLed
 from airo_tulip.hardware.platform_driver import PlatformDriver, PlatformDriverType
 from airo_tulip.hardware.platform_monitor import PlatformMonitor
 from airo_tulip.hardware.structs import WheelConfig
@@ -15,6 +14,7 @@ from loguru import logger
 
 class RobilePlatform:
     """The RobilePlatform drives the robot through EtherCAT."""
+
     def __init__(
         self,
         device: str,

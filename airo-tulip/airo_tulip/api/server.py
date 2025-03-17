@@ -11,19 +11,19 @@ from airo_tulip.api.messages import (
     AreDrivesAlignedResponse,
     ErrorResponse,
     GetOdometryMessage,
-    OdometryResponse,
-    VelocityResponse,
     GetVelocityMessage,
-    ResetOdometryMessage,
+    HandshakeMessage,
+    HandshakeResponse,
+    OdometryResponse,
     OkResponse,
     RequestMessage,
+    ResetOdometryMessage,
     ResponseMessage,
     SetDriverTypeMessage,
     SetPlatformVelocityTargetMessage,
+    SetStatusLedMessage,
     StopServerMessage,
-    HandshakeMessage,
-    HandshakeResponse,
-    SetStatusLedMessage
+    VelocityResponse,
 )
 from airo_tulip.hardware.platform_driver import PlatformDriverType
 from airo_tulip.hardware.robile_platform import RobilePlatform
@@ -53,11 +53,11 @@ class TulipServer:
     message pattern (https://learning-0mq-with-pyzmq.readthedocs.io/en/latest/pyzmq/patterns/client_server.html)."""
 
     def __init__(
-            self,
-            robot_configuration: RobotConfiguration,
-            robot_ip: str,
-            robot_port: int = 49789,
-            loop_frequency: float = 20,
+        self,
+        robot_configuration: RobotConfiguration,
+        robot_ip: str,
+        robot_port: int = 49789,
+        loop_frequency: float = 20,
     ):
         """Initialize the server.
 
@@ -155,7 +155,7 @@ class TulipServer:
         return self._request_handlers[request_class_name](request)
 
     def _handle_set_platform_velocity_target_request(
-            self, request: SetPlatformVelocityTargetMessage
+        self, request: SetPlatformVelocityTargetMessage
     ) -> ResponseMessage:
         """Handle a set platform velocity target request.
 

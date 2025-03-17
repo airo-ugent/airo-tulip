@@ -16,14 +16,14 @@ class Dashboard:
         self.sock.connect((self.ip, self.port))
         # Receive initial "Connected" Header
         reply = self.sock.recv(1096)
-        return reply != b''
+        return reply != b""
 
     def send_and_receive(self, command):
         try:
-            self.sock.sendall((command + '\n').encode())
+            self.sock.sendall((command + "\n").encode())
             return self.get_reply()
         except (ConnectionResetError, ConnectionAbortedError):
-            print('The connection was lost to the robot. Please connect and try running again.')
+            print("The connection was lost to the robot. Please connect and try running again.")
             self.close()
             sys.exit()
 
@@ -32,7 +32,7 @@ class Dashboard:
         read one line from the socket
         :return: text until new line
         """
-        collected = b''
+        collected = b""
         while True:
             part = self.sock.recv(1)
             if part != b"\n":
@@ -43,6 +43,7 @@ class Dashboard:
 
     def close(self):
         self.sock.close()
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -58,10 +59,11 @@ if __name__ == "__main__":
         print("Failed to connect.")
         exit(1)
     # Check to see if robot is in remote mode.
-    remote_check = dash.send_and_receive('is in remote control')
-    if 'false' in remote_check:
+    remote_check = dash.send_and_receive("is in remote control")
+    if "false" in remote_check:
         print(
-            "Robot is in local mode. Some commands may not function.\nYou will need to reboot the robot or manually enabled remote control.")
+            "Robot is in local mode. Some commands may not function.\nYou will need to reboot the robot or manually enabled remote control."
+        )
         exit(1)
     else:
         print("Robot is in remote mode. Will continue")

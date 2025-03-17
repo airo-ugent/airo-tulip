@@ -4,7 +4,7 @@ There is not much you can do with the KELO platform without external devices mou
 We recommend using the KELO's CPU brick as a router, and connecting external devices over Ethernet to it.
 All devices are then accessible from the KELO with a static IP address.
 
-You must first set up the KELO's network for this. Please refer to [`kelo_setup.md`](./kelo_setup.md) before continuing. 
+You must first set up the KELO's network for this. Please refer to [`kelo_setup.md`](./kelo_setup.md) before continuing.
 
 ## Connecting to a UR cobot mounted on the KELO
 

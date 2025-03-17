@@ -5,6 +5,7 @@ from enum import Enum
 
 import serial
 
+
 class StatusLed(Enum):
     POWER = 0
     BATTERY = 1
@@ -12,14 +13,18 @@ class StatusLed(Enum):
     ARM = 3
     WHEELS_ENABLED = 4
 
+
 class PeripheralClient:
     """Client to interface with peripherals connected to the Teensy microcontroller."""
+
     def __init__(self, port, baud_rate):
         """Initialize the client and connect to the server."""
         self._ser = serial.Serial(port, baud_rate, timeout=1)
         time.sleep(2)
         if not self.ping():
-            raise RuntimeError("Could not establish connection to peripheral server. It the microcontroller connected?")
+            raise RuntimeError(
+                "Could not establish connection to peripheral server. It the microcontroller connected?"
+            )
 
     def _transceive(self, command):
         """Send a command to the server and return the response."""

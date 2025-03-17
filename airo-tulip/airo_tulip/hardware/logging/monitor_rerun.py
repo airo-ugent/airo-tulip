@@ -16,7 +16,7 @@ class RerunMonitorLogger:
             rerun_application_id: Application ID for rerun.
             rerun_max_memory_gb: Maximum amount of memory rerun is allowed to consume."""
         rr.init(rerun_application_id, spawn=False)
-        rr.serve(open_browser=False, server_memory_limit=f'{rerun_max_memory_gb}GB')
+        rr.serve(open_browser=False, server_memory_limit=f"{rerun_max_memory_gb}GB")
 
     def step(self, monitor: PlatformMonitor):
         """Log all values to rerun."""
@@ -63,6 +63,9 @@ class RerunMonitorLogger:
             rr.log(f"drive_{drive_index}/power", rr.Scalar(power))
 
             rr.log(f"platform/odometry/position", rr.Points2D([odometry[0], odometry[1]]))
-            rr.log(f"platform/odometry/direction", rr.Arrows2D(origins=[odometry[0], odometry[1]],
-                                                               vectors=[0.1 * np.cos(odometry[2]),
-                                                                        0.1 * np.sin(odometry[2])]))
+            rr.log(
+                f"platform/odometry/direction",
+                rr.Arrows2D(
+                    origins=[odometry[0], odometry[1]], vectors=[0.1 * np.cos(odometry[2]), 0.1 * np.sin(odometry[2])]
+                ),
+            )

@@ -3,25 +3,25 @@
 from uuid import uuid4
 
 import zmq
-from airo_tulip.hardware.platform_driver import PlatformDriverType
 from airo_tulip.api.messages import (
-    GetOdometryMessage,
-    GetVelocityMessage,
-    RequestMessage,
-    ResponseMessage,
-    SetPlatformVelocityTargetMessage,
-    StopServerMessage,
-    SetDriverTypeMessage,
     AreDrivesAlignedMessage,
     ErrorResponse,
-    ResetOdometryMessage,
+    GetOdometryMessage,
+    GetVelocityMessage,
     HandshakeMessage,
-    SetStatusLedMessage
+    RequestMessage,
+    ResetOdometryMessage,
+    ResponseMessage,
+    SetDriverTypeMessage,
+    SetPlatformVelocityTargetMessage,
+    SetStatusLedMessage,
+    StopServerMessage,
 )
+from airo_tulip.hardware.peripheral_client import StatusLed
+from airo_tulip.hardware.platform_driver import PlatformDriverType
 from airo_tulip.hardware.structs import Attitude2DType
 from airo_typing import Vector3DType
 from loguru import logger
-from airo_tulip.hardware.peripheral_client import StatusLed
 
 
 class KELORobileError(RuntimeError):
@@ -65,12 +65,12 @@ class KELORobile:
         assert handshake_reply.uuid == handshake_message.uuid
 
     def set_platform_velocity_target(
-            self,
-            vel_x: float,
-            vel_y: float,
-            vel_a: float,
-            *,
-            timeout: float = 1.0,
+        self,
+        vel_x: float,
+        vel_y: float,
+        vel_a: float,
+        *,
+        timeout: float = 1.0,
     ) -> ResponseMessage:
         """Set the x, y and angular velocity of the complete mobile platform.
 

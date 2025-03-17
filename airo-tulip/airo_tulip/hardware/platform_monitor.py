@@ -10,7 +10,7 @@ import pysoem
 from airo_tulip.hardware.constants import CASTOR_OFFSET, WHEEL_DISTANCE, WHEEL_RADIUS
 from airo_tulip.hardware.ethercat import RxPDO1, TxPDO1
 from airo_tulip.hardware.peripheral_client import PeripheralClient
-from airo_tulip.hardware.structs import WheelConfig, Attitude2DType
+from airo_tulip.hardware.structs import Attitude2DType, WheelConfig
 from airo_typing import Vector3DType
 from loguru import logger
 from pykalman import UnscentedKalmanFilter
@@ -27,6 +27,7 @@ def _norm_angle(a: float) -> float:
 
 class PlatformPoseEstimator:
     """Estimate the robot platform's pose and velocity based on encoder values and pivot values."""
+
     def __init__(self, num_drives: int, wheel_configs: List[WheelConfig]):
         """Initialise the pose estimator.
 
@@ -97,7 +98,7 @@ class PlatformPoseEstimator:
             dx = vx * dt
             dy = vy * dt
         else:
-            linear_velocity = math.sqrt(vx ** 2 + vy ** 2)
+            linear_velocity = math.sqrt(vx**2 + vy**2)
             direction = math.atan2(vy, vx)
 
             # Displacement relative to the direction of movement.
@@ -118,7 +119,9 @@ class PlatformPoseEstimator:
 
         return np.array([self._odom_x, self._odom_y, self._odom_a])
 
-    def get_odometry(self, dt: float, encoder_values: List[List[float]], cur_pivots: List[float]) -> Tuple[np.ndarray, np.ndarray]:
+    def get_odometry(
+        self, dt: float, encoder_values: List[List[float]], cur_pivots: List[float]
+    ) -> Tuple[np.ndarray, np.ndarray]:
         """Get the robot platform's odometry.
 
         Args:
@@ -180,12 +183,13 @@ class PlatformPoseEstimatorPeripherals:
 
 class PlatformPoseEstimatorFused:
     """Estimate the robot platform's pose and velocity based on encoder values, pivot values, and flow sensor data."""
+
     def __init__(self):
         """Initialise the fused pose estimator."""
-        transition_covariance = np.eye(6) * 0.001 ** 2
+        transition_covariance = np.eye(6) * 0.001**2
         observation_covariance = np.eye(5)
-        observation_covariance[0:4, 0:4] *= 0.0001 ** 2
-        observation_covariance[4, 4] *= 0.001 ** 2
+        observation_covariance[0:4, 0:4] *= 0.0001**2
+        observation_covariance[4, 4] *= 0.001**2
         initial_state_mean = np.array([0] * 6)
         initial_state_covariance = np.eye(6) * 0.001
 
@@ -202,7 +206,6 @@ class PlatformPoseEstimatorFused:
 
         self._time_last_update = None
 
-
     def transition_function(self, state, noise):
         """Transition function for the Kalman filter."""
         dt = self._delta_time
@@ -217,7 +220,7 @@ class PlatformPoseEstimatorFused:
 
         T_X = 0.348  # mounting position of the flow sensor on robot
         T_Y = 0.232  # mounting position of the flow sensor on robot
-        R = np.sqrt(T_X ** 2 + T_Y ** 2)
+        R = np.sqrt(T_X**2 + T_Y**2)
         alpha = np.arctan2(T_Y, T_X)
 
         v_x_mobi = v_x * np.cos(p_a) + v_y * np.sin(p_a)
@@ -268,8 +271,10 @@ class PlatformPoseEstimatorFused:
 
 class PlatformMonitor:
     """Monitor the robot platform's state from EtherCAT messages."""
-    def __init__(self, master: pysoem.Master, wheel_configs: List[WheelConfig],
-                 peripheral_client: PeripheralClient | None):
+
+    def __init__(
+        self, master: pysoem.Master, wheel_configs: List[WheelConfig], peripheral_client: PeripheralClient | None
+    ):
         """Initialise the platform monitor.
 
         Args:
@@ -284,7 +289,8 @@ class PlatformMonitor:
 
         if self._peripheral_client is None:
             logger.warning(
-                "No peripheral client detected! We will not use data from external sensors, but only from the KELO slaves.")
+                "No peripheral client detected! We will not use data from external sensors, but only from the KELO slaves."
+            )
 
         # Monitored values.
         self._status1: List[int]

@@ -17,21 +17,21 @@ def handle_client(conn: socket, addr: str, should_stop_running: threading.Event)
         logger.info(f"Received non-empty data from {addr}: {data}, {len(data)}")
 
         # Tulip stop requires the PID of the tulip server.
-        if data == b'tulip stop':
+        if data == b"tulip stop":
             if tulip_pid is None:
                 logger.error("Received 'tulip stop' command, but we never started tulip.")
-                conn.sendall(b'error')
+                conn.sendall(b"error")
                 continue
-            data = data + b' ' + str(tulip_pid).encode()
+            data = data + b" " + str(tulip_pid).encode()
 
         response = handle_message(data)
 
         # When tulip starts, we store the PID so we can later interrupt the tulip server.
-        if data == b'tulip start':
+        if data == b"tulip start":
             tulip_pid = int(response)  # Store the PID so we can later interrupt the tulip server.
 
         conn.sendall(response)
-        if response == b'kill':
+        if response == b"kill":
             should_stop_running.set()
     if should_stop_running.is_set():
         logger.info(f"Shutting down connection to {addr}.")
@@ -46,7 +46,7 @@ def enable_UR_connection():
     subprocess.run(["nmcli", "connection", "up", "UR"])
 
 
-def start_server(host: str = '0.0.0.0', port: int = 49790):
+def start_server(host: str = "0.0.0.0", port: int = 49790):
     enable_UR_connection()
 
     should_stop_running = threading.Event()
@@ -63,5 +63,5 @@ def start_server(host: str = '0.0.0.0', port: int = 49790):
             client_thread.start()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     start_server()

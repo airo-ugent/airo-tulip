@@ -2,7 +2,6 @@ import math
 import time
 
 from airo_tulip.api.client import KELORobile
-
 from airo_tulip.hardware.platform_driver import PlatformDriverType
 
 

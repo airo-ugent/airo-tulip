@@ -2,7 +2,8 @@
 
 import socket
 
-def client_loop(host: str = 'localhost', port: int = 49790):
+
+def client_loop(host: str = "localhost", port: int = 49790):
     # Open a TCP socket and connect to the server.
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect((host, port))
@@ -10,7 +11,7 @@ def client_loop(host: str = 'localhost', port: int = 49790):
         # Read input from stdin and send it to the server.
         while True:
             message = input("Enter a message: ")
-            if message == 'exit':
+            if message == "exit":
                 break
             if len(message) >= 1024:
                 print("Message too long. Please enter a message with less than 1024 characters.")
@@ -21,5 +22,5 @@ def client_loop(host: str = 'localhost', port: int = 49790):
             print(f"Response: {response}")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     client_loop("10.10.129.21")

@@ -10,15 +10,15 @@ import pysoem
 from airo_tulip.hardware.constants import *
 from airo_tulip.hardware.controllers.velocity_platform_controller import VelocityPlatformController
 from airo_tulip.hardware.ethercat import *
-from airo_tulip.hardware.peripheral_client import PeripheralClient
+from airo_tulip.hardware.peripheral_client import PeripheralClient, StatusLed
 from airo_tulip.hardware.structs import WheelConfig
 from airo_tulip.hardware.util import *
-from airo_tulip.hardware.peripheral_client import StatusLed
 from loguru import logger
 
 
 class PlatformDriverType(Enum):
     """Platform driver type (velocity or compliant modes)."""
+
     VELOCITY = 1
     COMPLIANT_WEAK = 2
     COMPLIANT_MODERATE = 3
@@ -27,6 +27,7 @@ class PlatformDriverType(Enum):
 
 class PlatformDriverState(Enum):
     """Platform driver state."""
+
     UNDEFINED = 0x00
     INIT = 0x01
     READY = 0x02
@@ -38,11 +39,11 @@ class PlatformDriver:
     """Platform driver for the airo-tulip platform."""
 
     def __init__(
-            self,
-            master: pysoem.Master,
-            wheel_configs: List[WheelConfig],
-            controller_type: PlatformDriverType,
-            peripheral_client: PeripheralClient | None,
+        self,
+        master: pysoem.Master,
+        wheel_configs: List[WheelConfig],
+        controller_type: PlatformDriverType,
+        peripheral_client: PeripheralClient | None,
     ):
         """Initialise the platform driver.
 
@@ -78,12 +79,12 @@ class PlatformDriver:
             self._peripheral_client.set_status_led(StatusLed(index), bool(status))
 
     def set_platform_velocity_target(
-            self,
-            vel_x: float,
-            vel_y: float,
-            vel_a: float,
-            timeout: float = 1.0,
-            only_align_drives: bool = False,
+        self,
+        vel_x: float,
+        vel_y: float,
+        vel_a: float,
+        timeout: float = 1.0,
+        only_align_drives: bool = False,
     ) -> None:
         """Set the platform's velocity target.
 
@@ -97,7 +98,7 @@ class PlatformDriver:
             vel_a: Angular velocity.
             timeout: The platform will stop after this many seconds.
             only_align_drives: If true, the platform will only align the wheels in the correct orientation without driving into that directino."""
-        if math.sqrt(vel_x ** 2 + vel_y ** 2) > 0.5:
+        if math.sqrt(vel_x**2 + vel_y**2) > 0.5:
             raise ValueError("Cannot set target linear velocity higher than 0.5 m/s")
         if abs(vel_a) > math.pi / 4:
             raise ValueError("Cannot set target angular velocity higher than pi/4 rad/s")
@@ -247,7 +248,7 @@ class PlatformDriver:
         # Update underglow
         [vel_x, vel_y, vel_a] = self._vpc._platform_ramped_vel
         underglow_angle = np.arctan2(vel_y, vel_x)
-        underglow_velocity = np.sqrt(vel_x ** 2 + vel_y ** 2)
+        underglow_velocity = np.sqrt(vel_x**2 + vel_y**2)
         if self._peripheral_client is not None:
             self._peripheral_client.set_leds_active(underglow_angle, underglow_velocity)
 
