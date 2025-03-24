@@ -61,18 +61,28 @@ copy_and_make_executable "stop_ur"
 copy_and_make_executable "start_tulip"
 copy_and_make_executable "start_dashboard"
 
-# Make sure the dashboard server is run on boot.
-# See: https://stackoverflow.com/a/9625233/18071096
-mkdir -p /home/kelo/.local/share/tulip || { echo "Failed to create the tulip log directory. Exiting..."; exit; }
-echo "We will now update the root crontab to start the dashboard server on boot."
-echo "The current crontab entries are:"
-sudo crontab -l
-# Check if the user wants to update the crontab.
-read -r -p "Do you want to add the dashboard server to the crontab? (y/N) " RESPONSE
-if [ "$RESPONSE" == "y" ]
-then
-    sudo bash -c '(crontab -l 2>/dev/null; echo "@reboot . /home/kelo/.kelorc ; $(pwd)/start_dashboard > ~/.local/share/tulip/dashboard_logs.txt 2>&1") | crontab -'
-fi
+# Make sure the dashboard server is run on boot by creating a systemd service.
+echo "Creating systemd service file at /etc/systemd/system/tulip-dashboard.service."
+cat << EOF | sudo tee /etc/systemd/system/tulip-dashboard.service
+[Unit]
+Description=AIRO-tulip dashboard server
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=1
+User=kelo
+ExecStart=bash -c ". /home/kelo/.kelorc ; $(pwd)/start_dashboard"
+
+[Install]
+WantedBy=multi-user.target
+EOF
+echo "Starting service."
+sudo systemctl start tulip-dashboard
+echo "Enabling service (start on boot)."
+sudo systemctl enable tulip-dashboard
 
 cd ..  # Back up out of bin for all following commands
 
