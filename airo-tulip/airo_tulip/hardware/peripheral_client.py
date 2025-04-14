@@ -66,7 +66,7 @@ class PeripheralClient:
         z = float(tokens[2])
         return x, y, z
 
-    def set_let_boot(self):
+    def set_leds_boot(self):
         """Set the LEDs to boot mode."""
         res = self._transceive("LED BOOT")
         return res == "OK"
