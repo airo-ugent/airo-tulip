@@ -63,7 +63,6 @@ void setup() {
     Serial.begin(115200);
 
     // Setup SPI port
-    /*
     SPI.begin();
     pinMode(PIN_CS_FLOW1, OUTPUT);
     pinMode(PIN_CS_FLOW2, OUTPUT);
@@ -80,7 +79,6 @@ void setup() {
         while (1) {}
     }
     flow2.setLed(true);
-    */
 
     // Setup BNO055
     if (!bno.begin()) {
@@ -90,16 +88,14 @@ void setup() {
     bno.setExtCrystalUse(true);
     bno.setMode(OPERATION_MODE_COMPASS);
 
-	/*
     leds.begin();
     leds_back.begin();
-    */
 }
 
 void loop() {
     check_serial();
-    //update_underglow();
-    //update_back();
+    update_underglow();
+    update_back();
 
     delay(1);
 }
