@@ -86,6 +86,7 @@ void setup() {
         while (1) {}
     }
     bno.setExtCrystalUse(true);
+    bno.setMode(OPERATION_MODE_COMPASS);
 
     leds.begin();
     leds_back.begin();
@@ -130,6 +131,16 @@ void check_serial() {
             Serial.print(event.orientation.y);
             Serial.print(",");
             Serial.println(event.orientation.z);
+        } else if (command.equals("BNO MAG")) {
+            // Get magnetometer
+            sensors_event_t event;
+            bno.getEvent(&event, Adafruit_BNO055::VECTOR_MAGNETOMETER);
+
+            Serial.print(event.magnetic.x);
+            Serial.print(",");
+            Serial.print(event.magnetic.y);
+            Serial.print(",");
+            Serial.println(event.magnetic.z);
         } else if (command.startsWith("LED ")) {
             command = command.substring(4);
             if (command.equals("IDLE")) {

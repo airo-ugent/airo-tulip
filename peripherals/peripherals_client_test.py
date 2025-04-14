@@ -1,5 +1,5 @@
 import time
-
+import math
 import serial
 
 # Configure the serial port and baud rate
@@ -27,32 +27,41 @@ def main():
         res = transceive(ser, "PING")
         print(res)
 
-        res = transceive(ser, "LED BOOT")
-        print(res)
+        #res = transceive(ser, "LED BOOT")
+        #print(res)
 
         time.sleep(1)
 
-        res = transceive(ser, "BNO")
-        print(res)
+        while True:
+            res = transceive(ser, "BNO")
+            print(res)
 
-        time.sleep(0.1)
-        res = transceive(ser, "FLOW")
-        print(res)
+            #tokens = res.split(",")
+            #mx = float(tokens[0])
+            #my = float(tokens[1])
+            #heading = (90 - math.atan2(my, mx) * 180 / math.pi) % 360
+            #print(heading)
 
-        res = transceive(ser, "LED STATUS 0 1")
-        print(res)
+            time.sleep(0.1)
 
-        res = transceive(ser, "LED STATUS 1 0")
-        print(res)
+        #time.sleep(0.1)
+        #res = transceive(ser, "FLOW")
+        #print(res)
 
-        res = transceive(ser, "LED STATUS 2 1")
-        print(res)
+        #res = transceive(ser, "LED STATUS 0 1")
+        #print(res)
 
-        res = transceive(ser, "LED STATUS 3 0")
-        print(res)
+        #res = transceive(ser, "LED STATUS 1 0")
+        #print(res)
 
-        res = transceive(ser, "LED STATUS 4 1")
-        print(res)
+        #res = transceive(ser, "LED STATUS 2 1")
+        #print(res)
+
+        #res = transceive(ser, "LED STATUS 3 0")
+        #print(res)
+
+        #res = transceive(ser, "LED STATUS 4 1")
+        #print(res)
 
 
 if __name__ == "__main__":

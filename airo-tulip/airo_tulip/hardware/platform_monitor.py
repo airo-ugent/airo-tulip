@@ -161,11 +161,10 @@ class PlatformPoseEstimatorPeripherals:
 
         return v_x, v_y, v_a
 
-    def _update_pose(self, delta_t: float, v_x, v_y, v_a):
-        p_a = self._pose[2]
+    def _update_pose(self, delta_t: float, v_x, v_y, p_a):
         self._pose[0] += (v_x * np.cos(p_a) - v_y * np.sin(p_a)) * delta_t
         self._pose[1] += (v_x * np.sin(p_a) + v_y * np.cos(p_a)) * delta_t
-        self._pose[2] += v_a * delta_t
+        self._pose[2] = p_a
 
     def get_pose(self, raw_flow: List[float], raw_orientation_x: float) -> np.ndarray:
         if self._time_last_update is None:
@@ -176,7 +175,7 @@ class PlatformPoseEstimatorPeripherals:
         self._time_last_update = time.time()
 
         v_x, v_y, v_a = self._calculate_velocities(delta_time, raw_flow)
-        self._update_pose(delta_time, v_x, v_y, v_a)
+        self._update_pose(delta_time, v_x, v_y, raw_orientation_x)
 
         return self._pose
 
