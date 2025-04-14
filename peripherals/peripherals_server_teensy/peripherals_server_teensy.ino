@@ -63,6 +63,7 @@ void setup() {
     Serial.begin(115200);
 
     // Setup SPI port
+    /*
     SPI.begin();
     pinMode(PIN_CS_FLOW1, OUTPUT);
     pinMode(PIN_CS_FLOW2, OUTPUT);
@@ -79,6 +80,7 @@ void setup() {
         while (1) {}
     }
     flow2.setLed(true);
+    */
 
     // Setup BNO055
     if (!bno.begin()) {
@@ -86,15 +88,18 @@ void setup() {
         while (1) {}
     }
     bno.setExtCrystalUse(true);
+    bno.setMode(OPERATION_MODE_COMPASS);
 
+	/*
     leds.begin();
     leds_back.begin();
+    */
 }
 
 void loop() {
     check_serial();
-    update_underglow();
-    update_back();
+    //update_underglow();
+    //update_back();
 
     delay(1);
 }
@@ -130,6 +135,16 @@ void check_serial() {
             Serial.print(event.orientation.y);
             Serial.print(",");
             Serial.println(event.orientation.z);
+        } else if (command.equals("BNO MAG")) {
+            // Get magnetometer
+            sensors_event_t event;
+            bno.getEvent(&event, Adafruit_BNO055::VECTOR_MAGNETOMETER);
+
+            Serial.print(event.magnetic.x);
+            Serial.print(",");
+            Serial.print(event.magnetic.y);
+            Serial.print(",");
+            Serial.println(event.magnetic.z);
         } else if (command.startsWith("LED ")) {
             command = command.substring(4);
             if (command.equals("IDLE")) {
