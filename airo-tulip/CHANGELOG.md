@@ -16,6 +16,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ### Removed
 
+## 0.3.0
+
+### Breaking changes
+- We now use a compass for orientation computations.
+
 ## 0.2.4
 
 ### Fixed
