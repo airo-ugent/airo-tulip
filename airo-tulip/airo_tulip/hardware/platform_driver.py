@@ -58,7 +58,7 @@ class PlatformDriver:
 
         self._peripheral_client = peripheral_client
         if self._peripheral_client is not None:
-            self._peripheral_client.set_leds_boot()
+            self._peripheral_client.set_let_boot()
 
         self._state = PlatformDriverState.INIT
         self._current_ts = 0

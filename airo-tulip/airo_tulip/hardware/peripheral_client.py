@@ -23,7 +23,7 @@ class PeripheralClient:
         time.sleep(2)
         if not self.ping():
             raise RuntimeError(
-                "Could not establish connection to peripheral server. It the microcontroller connected?"
+                "Could not establish connection to peripheral server. Is the microcontroller connected?"
             )
 
     def _transceive(self, command):
