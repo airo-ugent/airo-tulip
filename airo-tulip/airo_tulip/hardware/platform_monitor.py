@@ -175,7 +175,7 @@ class PlatformPoseEstimatorPeripherals:
         self._time_last_update = time.time()
 
         v_x, v_y, v_a = self._calculate_velocities(delta_time, raw_flow)
-        self._update_pose(delta_time, v_x, v_y, raw_orientation_x)
+        self._update_pose(delta_time, v_x, v_y, -raw_orientation_x)
 
         return self._pose
 
@@ -380,7 +380,7 @@ class PlatformMonitor:
         # Read values for peripheral server
         if self._peripheral_client is not None:
             self._flow = np.array(self._peripheral_client.get_flow(), dtype=np.float64)
-            self._flow /= 12000.0  # conversion from dimensionless to meters  # TODO calibrate
+            self._flow /= 12750.0  # conversion from dimensionless to meters  # TODO calibrate
         else:
             self._flow = None
 
