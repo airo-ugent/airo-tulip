@@ -380,7 +380,7 @@ class PlatformMonitor:
         # Read values for peripheral server
         if self._peripheral_client is not None:
             self._flow = np.array(self._peripheral_client.get_flow(), dtype=np.float64)
-            self._flow *= 5. / 3000.0  # conversion from dimensionless to meters  # TODO calibrate
+            self._flow /= 12000.0  # conversion from dimensionless to meters  # TODO calibrate
         else:
             self._flow = None
 
