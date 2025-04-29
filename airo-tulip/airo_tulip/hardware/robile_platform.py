@@ -135,6 +135,6 @@ class RobilePlatform:
         self._master.send_processdata()
 
     def _set_battery_status_led(self):
-        voltage_bus_max = self._monitor.get_voltage_bus_max
+        voltage_bus_max = self._monitor.get_voltage_bus_max()
         if self._peripheral_client is not None:
             self._peripheral_client.set_status_led(StatusLed.BATTERY, voltage_bus_max >= 26)
