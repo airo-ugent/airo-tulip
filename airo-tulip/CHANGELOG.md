@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Breaking changes
 
 ### Added
+- Added a check to the handshake to ensure that client and server are running the same version of `airo-tulip`.
 
 ### Changed
 

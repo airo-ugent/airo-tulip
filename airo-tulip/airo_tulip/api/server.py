@@ -214,8 +214,10 @@ class TulipServer:
 
     def _handle_handshake_request(self, request: HandshakeMessage) -> ResponseMessage:
         """Handle a handshake request."""
+        from importlib.metadata import version
+
         logger.info("Handling handshake request.")
-        return HandshakeResponse(request.uuid)
+        return HandshakeResponse(request.uuid, version("airo-tulip"))
 
     def _handle_set_status_led_request(self, request: SetStatusLedMessage) -> ResponseMessage:
         """Handle a request to set the status of a status LED."""
