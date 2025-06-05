@@ -5,7 +5,6 @@ import time
 from typing import List, Tuple
 
 import numpy as np
-import rerun as rr
 from airo_tulip.hardware.controllers.controller import Controller
 from airo_tulip.hardware.structs import Attitude2DType, PlatformLimits, WheelConfig, WheelParamVelocity
 from airo_tulip.hardware.util import clip, clip_angle, get_shortest_angle
@@ -237,7 +236,6 @@ class VelocityPlatformController(Controller):
             True when all drives are approximately aligned to drive in the correct direction."""
         for drive_index in range(len(self._wheel_params)):
             pivot_error = np.abs(self._compute_pivot_error(drive_index, encoder_pivots[drive_index]))
-            rr.log(f"drive_{drive_index}/pivot_error", rr.Scalar(pivot_error))
             if pivot_error > max_pivot_error:
                 # Reset velocity ramping so that we don't get sudden accelerations once drives are aligned.
                 self._time_last_ramping = None
@@ -302,10 +300,6 @@ class VelocityPlatformController(Controller):
         # Target velocity of right wheel (dot product with unit pivot vector)
         vel_r = np.dot(target_vel_vec_r, unit_pivot_vector) if send_forward_velocities else 0.0
         target_vel_r = clip(vel_r + delta_vel, wheel_param.max_linear_velocity, -wheel_param.max_linear_velocity)
-
-        rr.log(f"drive_{drive_index}/delta_vel", rr.Scalar(delta_vel))
-        rr.log(f"drive_{drive_index}/lin_vel_l", rr.Scalar(target_vel_l))
-        rr.log(f"drive_{drive_index}/lin_vel_r", rr.Scalar(target_vel_r))
 
         # Convert from linear to angular velocity
         target_ang_vel_l = target_vel_l * wheel_param.linear_to_angular_velocity

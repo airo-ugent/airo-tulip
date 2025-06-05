@@ -5,12 +5,10 @@ import time
 from enum import Enum
 from typing import List
 
-import numpy as np
 import pysoem
 from airo_tulip.hardware.constants import *
 from airo_tulip.hardware.controllers.velocity_platform_controller import VelocityPlatformController
 from airo_tulip.hardware.ethercat import *
-from airo_tulip.hardware.peripheral_client import PeripheralClient, StatusLed
 from airo_tulip.hardware.structs import WheelConfig
 from airo_tulip.hardware.util import *
 from loguru import logger
@@ -43,22 +41,16 @@ class PlatformDriver:
         master: pysoem.Master,
         wheel_configs: List[WheelConfig],
         controller_type: PlatformDriverType,
-        peripheral_client: PeripheralClient | None,
     ):
         """Initialise the platform driver.
 
         Args:
             master: The EtherCAT master.
             wheel_configs: The configurations for each drive.
-            controller_type: The type of controller to use (velocity or compliant mode).
-            peripheral_client: The peripheral client."""
+            controller_type: The type of controller to use (velocity or compliant mode)."""
         self._master = master
         self._wheel_configs = wheel_configs
         self._num_wheels = len(wheel_configs)
-
-        self._peripheral_client = peripheral_client
-        if self._peripheral_client is not None:
-            self._peripheral_client.set_leds_boot()
 
         self._state = PlatformDriverState.INIT
         self._current_ts = 0
@@ -73,10 +65,6 @@ class PlatformDriver:
         self._vpc = VelocityPlatformController(self._wheel_configs)
 
         self._wheel_controllers = [VelocityTorqueController(self._driver_type) for _ in range(self._num_wheels * 2)]
-
-    def set_status_led(self, index: int, status: int):
-        if self._peripheral_client is not None:
-            self._peripheral_client.set_status_led(StatusLed(index), bool(status))
 
     def set_platform_velocity_target(
         self,
@@ -188,8 +176,6 @@ class PlatformDriver:
     def _step_error(self) -> bool:
         """Step the platform driver in ERROR state."""
         self._do_stop()
-        if self._peripheral_client is not None:
-            self._peripheral_client.set_leds_error()
         return True
 
     def _has_wheel_status_enabled(self, wheel: int) -> bool:
@@ -244,13 +230,6 @@ class PlatformDriver:
 
         # Update desired platform velocity if velocity control
         self._vpc.calculate_platform_ramped_velocities()
-
-        # Update underglow
-        [vel_x, vel_y, vel_a] = self._vpc._platform_ramped_vel
-        underglow_angle = np.arctan2(vel_y, vel_x)
-        underglow_velocity = np.sqrt(vel_x**2 + vel_y**2)
-        if self._peripheral_client is not None:
-            self._peripheral_client.set_leds_active(underglow_angle, underglow_velocity)
 
         raw_velocities = [[pd.velocity_1, pd.velocity_2] for pd in self._process_data]
 
