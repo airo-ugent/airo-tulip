@@ -105,7 +105,3 @@ The device will be able to access the KELO at IP address `10.42.0.1` and will be
 At AIRO, we mounted a more powerful NUC on the robot for deep learning inference workloads. To automatically boot the NUC whenever the KELO is turned on, connect it to the NUC's battery for power. Enter the NUC's BIOS and set the option to power on after power loss. The NUC should now boot as soon as the KELO robot is turned on.
 
 It is recommended to always cleanly shut down the NUC (and the KELO NUC as well), but this setting will also allow you to restore power to it after (accidentally or on purpose) shutting off the power to the NUC.
-
-### Other peripherals
-
-At AIRO, we use other peripherals, such as optical flow sensors but also LED strips, controlled via a [Teensy](https://www.pjrc.com/teensy/) over USB. See [this folder](https://github.com/airo-ugent/airo-tulip/tree/peripherals/peripherals) for more information.

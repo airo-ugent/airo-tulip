@@ -176,6 +176,9 @@ Without mounting external devices on the KELO, you can pretty much only drive ar
 Refer to [`docs/external_devices.md`](docs/external_devices.md) for information on how to set up and access external devices
 such as a UR cobot with a Robotiq gripper.
 
+### Odometry
+The default odometry is based on the drive encoders and is not always robust. We recommend using additional sensors such as a compass or flow sensor to improve the odometry.
+
 ## Structure
 
 For more information on how this code base is structured, and why, please refer to [`docs/how_it_works.md`](docs/how_it_works.md).
