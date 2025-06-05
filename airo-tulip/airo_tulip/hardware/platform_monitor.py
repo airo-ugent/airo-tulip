@@ -160,9 +160,6 @@ class PlatformMonitor:
         self._gyro: List[List[float]]
         self._pressure: List[float]
         self._current_in: List[float]
-        self._flow: List[float]
-        self._orientation: List[float]
-        self._orientation_start: List[float] = None
 
         # Odometry.
         self._prev_encoder = [[0.0, 0.0] for _ in range(self._num_wheels)]
