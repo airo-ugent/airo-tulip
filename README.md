@@ -22,11 +22,11 @@ sudo apt-get update -y
 sudo apt-get install -y git gcc curl make
 ```
 
-There is one other dependency which should be installed manually: `pyenv`.
-As per the [official installation instructions](https://github.com/pyenv/pyenv?tab=readme-ov-file#1-automatic-installer-recommended), you can install `pyenv` by running:
+There is one other dependency which should be installed manually: `uv`.
+As per the [official installation instructions](https://github.com/astral-sh/uv), you can install `uv` by running:
 
 ```bash
-curl https://pyenv.run | bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
 Then, the way to install `airo-tulip` is:
