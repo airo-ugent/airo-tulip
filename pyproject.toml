@@ -1,0 +1,15 @@
+[project]
+name = "airo-tulip-main"
+version = "0.1.0"
+description = "This package contains airo-tulip and the dashboard service."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "airo-tulip",
+    "airo-tulip-dashboard",
+    "airo-typing>=2025.4.0",
+]
+
+[tool.uv.sources]
+airo-tulip = { path = "airo-tulip" }
+airo-tulip-dashboard = { path = "dashboard" }

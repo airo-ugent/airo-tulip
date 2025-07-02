@@ -25,7 +25,7 @@ dependencies = [
   "pyzmq==26.0.3",
   "pykalman==0.9.7",
   "pyserial==3.5",
-  "airo-typing"
+  "airo-typing>=2025.4.0"
 ]
 
 [project.urls]

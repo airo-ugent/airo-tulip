@@ -57,10 +57,12 @@ class KELORobile:
 
     def _handshake(self):
         """Perform a handshake with the server to ensure the connection is established. If the server returns
-        a different UUID, the connection is not properly, or if nothing is returned, the server is not running."""
+        a different UUID, the connection is not proper, or if nothing is returned, the server is not running."""
+        from importlib.metadata import version
+
         handshake_message = HandshakeMessage(str(uuid4()))
         handshake_reply = self._transceive_message(handshake_message)
-        assert handshake_reply.uuid == handshake_message.uuid
+        assert handshake_reply.uuid == handshake_message.uuid and version("airo-tulip") == handshake_reply.lib_version
 
     def set_platform_velocity_target(
         self,
