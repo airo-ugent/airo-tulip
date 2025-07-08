@@ -31,14 +31,6 @@ and connecting to it.
 
 Please see the instructions in [`virtual_display.md`](./virtual_display.md) on how to do this.
 
-### At IDLab-AIRO
-
-There is a known issue with the platform we use at IDLab-AIRO where the `KELO` connection profile is not selected automatically on boot.
-You need to select it manually **and** through the GUI, for which you need to create this virtual display.
-
-Any attempts to automatically select this connection profile with the connection manager appear to fail, and using the
-GUI is the recommended approach until we find the cause of this issue.
-
 Alternatively, if you wish to avoid running over VNC, you can also connect over ssh with X forwarding:
 
 ```shell
@@ -52,11 +44,3 @@ sudo -sE gnome-control-center
 ```
 
 on the KELO.
-
-## Connecting external sensors and LEDs
-
-You may want to connect external sensors and/or LEDs to your platform. We've done this at IDLab-AIRO!
-We mount a Teensy microcontroller on the robot, which can address the LEDs and read out optical flow sensors.
-As soon as the Teensy microcontroller is powered on, it can be instructed from the KELO NUC over a USB serial interface.
-
-See the `peripherals` folder in the root directory of this repository for more information.

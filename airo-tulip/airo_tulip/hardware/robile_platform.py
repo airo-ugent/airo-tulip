@@ -4,8 +4,6 @@ from typing import List
 
 import pysoem
 from airo_tulip.hardware.ethercat import EC_STATE_OPERATIONAL, EC_STATE_SAFE_OP
-from airo_tulip.hardware.logging.monitor_rerun import RerunMonitorLogger
-from airo_tulip.hardware.peripheral_client import PeripheralClient, StatusLed
 from airo_tulip.hardware.platform_driver import PlatformDriver, PlatformDriverType
 from airo_tulip.hardware.platform_monitor import PlatformMonitor
 from airo_tulip.hardware.structs import WheelConfig
@@ -20,7 +18,6 @@ class RobilePlatform:
         device: str,
         wheel_configs: List[WheelConfig],
         controller_type: PlatformDriverType,
-        enable_rerun: bool = False,
     ):
         """Initialize the RobilePlatform.
 
@@ -32,20 +29,8 @@ class RobilePlatform:
         self._ethercat_initialized = False
 
         self._master = pysoem.Master()
-        try:
-            self._peripheral_client = PeripheralClient("/dev/ttyACM0", 115200)
-        except Exception as e:
-            logger.error(f"Could not connect to the peripheral client. Cause:\n{e}")
-            self._peripheral_client = None
-        self._driver = PlatformDriver(self._master, wheel_configs, controller_type, self._peripheral_client)
-        self._monitor = PlatformMonitor(self._master, wheel_configs, self._peripheral_client)
-
-        self._enable_rerun = enable_rerun
-        if self._enable_rerun:
-            self._rerun_monitor_logger = RerunMonitorLogger()
-
-        if self._peripheral_client is not None:
-            self._peripheral_client.set_status_led(StatusLed.POWER, True)
+        self._driver = PlatformDriver(self._master, wheel_configs, controller_type)
+        self._monitor = PlatformMonitor(self._master, wheel_configs)
 
     @property
     def driver(self) -> PlatformDriver:
@@ -64,9 +49,6 @@ class RobilePlatform:
         if not self._ethercat_initialized:
             self._master.open(self._device)
             self._ethercat_initialized = True
-
-            if self._peripheral_client is not None:
-                self._peripheral_client.set_status_led(StatusLed.WHEELS_ENABLED, True)
 
         # Configure slaves
         wkc = self._master.config_init()
@@ -87,10 +69,6 @@ class RobilePlatform:
         if found_state != requested_state:
             logger.warning("Not all EtherCAT slaves reached a safe operational state.")
 
-            if self._peripheral_client is not None:
-                self._peripheral_client.set_status_led(StatusLed.WHEELS_ENABLED, False)
-                self._peripheral_client.set_status_led(StatusLed.WARNING, False)
-
             # TODO: check and report which slave was the culprit.
             return False
 
@@ -108,17 +86,10 @@ class RobilePlatform:
             logger.info("All EtherCAT slaves reached a safe operational state.")
         else:
             logger.warning("Not all EtherCAT slaves reached a safe operational state.")
-            if self._peripheral_client is not None:
-                self._peripheral_client.set_status_led(StatusLed.WHEELS_ENABLED, False)
-                self._peripheral_client.set_status_led(StatusLed.WARNING, False)
             return False
 
         for slave in self._master.slaves:
             logger.debug(f"name {slave.name} Obits {len(slave.output)} Ibits {len(slave.input)} state {slave.state}")
-
-        if self._peripheral_client is not None:
-            self._peripheral_client.set_status_led(StatusLed.WHEELS_ENABLED, True)
-            self._peripheral_client.set_status_led(StatusLed.WARNING, True)
 
         return True
 
@@ -128,13 +99,5 @@ class RobilePlatform:
         """
         self._master.receive_processdata()
         self._monitor.step()
-        if self._enable_rerun:
-            self._rerun_monitor_logger.step(self._monitor)
-        self._set_battery_status_led()
         self._driver.step()
         self._master.send_processdata()
-
-    def _set_battery_status_led(self):
-        voltage_bus_max = self._monitor.get_voltage_bus_max()
-        if self._peripheral_client is not None:
-            self._peripheral_client.set_status_led(StatusLed.BATTERY, voltage_bus_max >= 26)

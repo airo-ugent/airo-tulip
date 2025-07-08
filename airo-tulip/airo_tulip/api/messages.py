@@ -76,14 +76,6 @@ class ResetOdometryMessage(RequestMessage):
 
 
 @dataclass
-class SetStatusLedMessage(RequestMessage):
-    """A message to set the status of a status LED."""
-
-    led_index: int
-    status: int
-
-
-@dataclass
 class OdometryResponse(ResponseMessage):
     """A response message containing the odometry of the robot."""
 

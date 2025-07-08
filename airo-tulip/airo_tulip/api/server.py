@@ -21,7 +21,6 @@ from airo_tulip.api.messages import (
     ResponseMessage,
     SetDriverTypeMessage,
     SetPlatformVelocityTargetMessage,
-    SetStatusLedMessage,
     StopServerMessage,
     VelocityResponse,
 )
@@ -88,7 +87,6 @@ class TulipServer:
             ResetOdometryMessage.__name__: self._handle_reset_odometry_request,
             GetVelocityMessage.__name__: self._handle_get_velocity_request,
             HandshakeMessage.__name__: self._handle_handshake_request,
-            SetStatusLedMessage.__name__: self._handle_set_status_led_request,
         }
 
         # Robot platform.
@@ -218,8 +216,3 @@ class TulipServer:
 
         logger.info("Handling handshake request.")
         return HandshakeResponse(request.uuid, version("airo-tulip"))
-
-    def _handle_set_status_led_request(self, request: SetStatusLedMessage) -> ResponseMessage:
-        """Handle a request to set the status of a status LED."""
-        self._platform.driver.set_status_led(request.led_index, request.status)
-        return OkResponse()
