@@ -3,10 +3,11 @@
 from typing import List
 
 import pysoem
-from airo_tulip.hardware.ethercat import EC_STATE_OPERATIONAL, EC_STATE_SAFE_OP
-from airo_tulip.hardware.platform_driver import PlatformDriver, PlatformDriverType
-from airo_tulip.hardware.platform_monitor import PlatformMonitor
-from airo_tulip.hardware.structs import WheelConfig
+from airo_tulip.api.types import PlatformDriverType
+from airo_tulip_hal.hardware.ethercat import EC_STATE_OPERATIONAL, EC_STATE_SAFE_OP
+from airo_tulip_hal.hardware.platform_driver import PlatformDriver
+from airo_tulip_hal.hardware.platform_monitor import PlatformMonitor
+from airo_tulip_hal.hardware.structs import WheelConfig
 from loguru import logger
 
 
@@ -93,11 +94,15 @@ class RobilePlatform:
 
         return True
 
-    def step(self):
+    def step(self) -> bool:
         """
         Main processing loop of the EtherCAT master, must be called frequently.
+
+        Returns `True` while the platform is operating normally, `False` if the driver has
+        encountered a condition that requires the platform to stop (e.g. wheels not becoming ready).
         """
         self._master.receive_processdata()
         self._monitor.step()
-        self._driver.step()
+        ok = self._driver.step()
         self._master.send_processdata()
+        return ok

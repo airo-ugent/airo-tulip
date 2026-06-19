@@ -7,19 +7,12 @@ from typing import List, Tuple
 
 import numpy as np
 import pysoem
-from airo_tulip.hardware.constants import CASTOR_OFFSET, WHEEL_DISTANCE, WHEEL_RADIUS
-from airo_tulip.hardware.ethercat import RxPDO1, TxPDO1
-from airo_tulip.hardware.structs import Attitude2DType, WheelConfig
+from airo_tulip.api.types import Attitude2DType
+from airo_tulip_hal.hardware.constants import CASTOR_OFFSET, WHEEL_DISTANCE, WHEEL_RADIUS
+from airo_tulip_hal.hardware.ethercat import TxPDO1
+from airo_tulip_hal.hardware.structs import WheelConfig
+from airo_tulip_hal.hardware.util import clip_angle
 from airo_typing import Vector3DType
-
-
-def _norm_angle(a: float) -> float:
-    """Normalize an angle to be between -PI and PI radians."""
-    while a < -math.pi:
-        a += math.tau
-    while a > math.pi:
-        a -= math.tau
-    return a
 
 
 class PlatformPoseEstimator:
@@ -55,6 +48,10 @@ class PlatformPoseEstimator:
         if len(self._prev_encoder) == 0:
             self._prev_encoder = copy.deepcopy(encoder_values)
 
+        # Avoid division by zero if no (measurable) time has elapsed since the last iteration.
+        if dt <= 0:
+            return np.zeros((3,))
+
         vx, vy, va = 0, 0, 0
 
         atan_angle = CASTOR_OFFSET / WHEEL_DISTANCE
@@ -65,7 +62,7 @@ class PlatformPoseEstimator:
             wl = (cur_enc[0] - prev_enc[0]) / dt
             wr = -(cur_enc[1] - prev_enc[1]) / dt  # Negation: inverted frame.
             self._prev_encoder[drive_index] = copy.deepcopy(cur_enc)
-            theta = _norm_angle(cur_pivots[drive_index] - self._wheel_configs[drive_index].a)
+            theta = clip_angle(cur_pivots[drive_index] - self._wheel_configs[drive_index].a)
 
             vx -= WHEEL_RADIUS * (wl + wr) * np.cos(theta)
             vy -= WHEEL_RADIUS * (wl + wr) * np.sin(theta)
@@ -112,7 +109,7 @@ class PlatformPoseEstimator:
         # Displacement relative to odometry frame.
         self._odom_x += dx * np.cos(self._odom_a) - dy * np.sin(self._odom_a)
         self._odom_y += dx * np.sin(self._odom_a) + dy * np.cos(self._odom_a)
-        self._odom_a = _norm_angle(self._odom_a + va * dt)
+        self._odom_a = clip_angle(self._odom_a + va * dt)
 
         return np.array([self._odom_x, self._odom_y, self._odom_a])
 
@@ -317,10 +314,8 @@ class PlatformMonitor:
         ethercat_index = self._wheel_configs[wheel_index].ethercat_number
         return TxPDO1.from_buffer_copy(self._master.slaves[ethercat_index - 1].input)
 
-    def _set_process_data(self, wheel_index: int, data: RxPDO1) -> None:
-        ethercat_index = self._wheel_configs[wheel_index].ethercat_number
-        self._master.slaves[ethercat_index - 1].output = bytes(data)
-
     def reset_odometry(self):
-        self._odometry = np.zeros((3,))
+        """Reset the platform's estimated pose and velocity to zero."""
+        self._odometry_pose = np.zeros((3,))
+        self._odometry_velocity = np.zeros((3,))
         self._pose_estimator.reset()

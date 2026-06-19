@@ -3,7 +3,7 @@
 This repository contains:
 
 - The KELO robotics C++ implementation of the KELO Robile platform driver, called KELO Tulip (`./kelo_tulip`)
-- A Python reimplementation with altered and additional functionality by IDLab-AIRO (UGent-imec) for integration in Python projects without a ROS dependency (`./airo-tulip`)
+- A Python reimplementation with altered and additional functionality by IDLab-AIRO (UGent-imec) for integration in Python projects without a ROS dependency, split into a lightweight client/contract package (`./airo-tulip`) and a hardware abstraction layer that runs on the KELO CPU brick (`./airo-tulip-hal`)
 - A folder `./dashboard` which contains the implementation of a dashboard server that should run on the KELO CPU brick boot, that allows remote control of the KELO's peripherals such as the UR arm.
 - A folder `./utils` with utility scripts
 - A script `./install.sh` which installs the necessary dependencies for the KELO Tulip and AIRO Tulip packages and puts several commands on the path

@@ -1,6 +1,12 @@
 # How it works
 
-The `airo-tulip` package consists of the following main Python classes and files:
+> **Package split:** the hardware abstraction layer described below (the `hardware` module and the
+> `TulipServer`) lives in the `airo-tulip-hal` package (`airo_tulip_hal.hardware.*`, `airo_tulip_hal.server`),
+> which runs on the KELO CPU brick. The lightweight `airo-tulip` package contains the client
+> (`airo_tulip.api.client`) and the shared API contract (`airo_tulip.api.messages`, `airo_tulip.api.types`).
+> The import paths below use the `airo_tulip_hal.*` namespace for hardware/server code.
+
+The hardware abstraction layer consists of the following main Python classes and files:
 - `RobilePlatform`: the main class for representing a complete KELO Robile system. It initializes the various drives of the robot via EtherCAT and handles the higher-level operations of the system.
 - `PlatformDriver`: driver for transmitting specific setpoints for the wheel to all drives. Controls the state of the drives and startup procedure.
 - `PlatformMonitor`: module that reads out the sensor data from EtherCAT messages and caches them for later retrieval.

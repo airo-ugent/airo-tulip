@@ -2,10 +2,10 @@ import math
 import time
 
 from airo_tulip.api.client import KELORobile
-from airo_tulip.hardware.platform_driver import PlatformDriverType
+from airo_tulip.api.types import PlatformDriverType
 
 
-def test():
+def main():
     mobi = KELORobile("localhost", 49789)
 
     mobi.set_driver_type(PlatformDriverType.COMPLIANT_WEAK)
@@ -42,4 +42,4 @@ def test():
 
 
 if __name__ == "__main__":
-    test()
+    main()

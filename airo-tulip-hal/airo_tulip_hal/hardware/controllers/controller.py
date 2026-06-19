@@ -3,7 +3,12 @@
 from typing import List
 
 import numpy as np
-from airo_tulip.hardware.structs import WheelConfig, WheelParamVelocity
+from airo_tulip_hal.hardware.constants import (
+    CONTROLLER_CASTER_OFFSET,
+    CONTROLLER_WHEEL_DIAMETER,
+    CONTROLLER_WHEEL_DISTANCE,
+)
+from airo_tulip_hal.hardware.structs import WheelConfig, WheelParamVelocity
 
 
 class Controller:
@@ -14,9 +19,9 @@ class Controller:
 
         Args:
             wheel_configs: The configurations for each drive."""
-        self._wheel_diameter = 0.105
-        self._wheel_caster = 0.01
-        self._wheel_distance = 0.055
+        self._wheel_diameter = CONTROLLER_WHEEL_DIAMETER
+        self._wheel_caster = CONTROLLER_CASTER_OFFSET
+        self._wheel_distance = CONTROLLER_WHEEL_DISTANCE
 
         self._wheel_params = []
         self._num_wheels = len(wheel_configs)
@@ -31,7 +36,6 @@ class Controller:
             wheel_param.max_linear_velocity = 100.0 * wheel_param.angular_to_linear_velocity
 
             wheel_param.pivot_kp = 0.2
-            wheel_param._wheel_diameter = self._wheel_diameter
             wheel_param.max_pivot_error = np.pi * 0.25
 
             wheel_param.pivot_position = np.array([wheel_config.x, wheel_config.y])

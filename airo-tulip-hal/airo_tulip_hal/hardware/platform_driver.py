@@ -3,24 +3,17 @@
 import math
 import time
 from enum import Enum
+from threading import Lock
 from typing import List
 
 import pysoem
-from airo_tulip.hardware.constants import *
-from airo_tulip.hardware.controllers.velocity_platform_controller import VelocityPlatformController
-from airo_tulip.hardware.ethercat import *
-from airo_tulip.hardware.structs import WheelConfig
-from airo_tulip.hardware.util import *
+from airo_tulip.api.types import PlatformDriverType
+from airo_tulip_hal.hardware.constants import *
+from airo_tulip_hal.hardware.controllers.velocity_platform_controller import VelocityPlatformController
+from airo_tulip_hal.hardware.ethercat import *
+from airo_tulip_hal.hardware.structs import WheelConfig
+from airo_tulip_hal.hardware.util import *
 from loguru import logger
-
-
-class PlatformDriverType(Enum):
-    """Platform driver type (velocity or compliant modes)."""
-
-    VELOCITY = 1
-    COMPLIANT_WEAK = 2
-    COMPLIANT_MODERATE = 3
-    COMPLIANT_STRONG = 4
 
 
 class PlatformDriverState(Enum):
@@ -59,12 +52,24 @@ class PlatformDriver:
         self._step_count = 0
         self._timeout = 0
         self._timeout_message_printed = True
-        self._last_step_time = None
+
+        # Guards driver state that is mutated from the request thread (set_platform_velocity_target,
+        # set_driver_type) while the EtherCAT thread reads it in step().
+        self._lock = Lock()
 
         self._driver_type = controller_type
         self._vpc = VelocityPlatformController(self._wheel_configs)
 
-        self._wheel_controllers = [VelocityTorqueController(self._driver_type) for _ in range(self._num_wheels * 2)]
+        self._wheel_controllers = self._create_wheel_controllers(self._driver_type)
+
+    def _create_wheel_controllers(self, driver_type: PlatformDriverType) -> List["VelocityTorqueController"]:
+        """Create the per-wheel torque controllers for a driver type.
+
+        The torque controllers are only used in compliant modes, so in velocity mode no controllers
+        are created (returns an empty list)."""
+        if driver_type == PlatformDriverType.VELOCITY:
+            return []
+        return [VelocityTorqueController(driver_type) for _ in range(self._num_wheels * 2)]
 
     def set_platform_velocity_target(
         self,
@@ -86,57 +91,61 @@ class PlatformDriver:
             vel_a: Angular velocity.
             timeout: The platform will stop after this many seconds.
             only_align_drives: If true, the platform will only align the wheels in the correct orientation without driving into that directino."""
-        if math.sqrt(vel_x**2 + vel_y**2) > 0.5:
-            raise ValueError("Cannot set target linear velocity higher than 0.5 m/s")
-        if abs(vel_a) > math.pi / 4:
-            raise ValueError("Cannot set target angular velocity higher than pi/4 rad/s")
+        if math.sqrt(vel_x**2 + vel_y**2) > MAX_PLATFORM_LINEAR_VELOCITY:
+            raise ValueError(f"Cannot set target linear velocity higher than {MAX_PLATFORM_LINEAR_VELOCITY} m/s")
+        if abs(vel_a) > MAX_PLATFORM_ANGULAR_VELOCITY:
+            raise ValueError(f"Cannot set target angular velocity higher than {MAX_PLATFORM_ANGULAR_VELOCITY} rad/s")
         if timeout < 0.0:
             raise ValueError("Cannot set negative timeout")
 
-        self._vpc.set_platform_velocity_target(vel_x, vel_y, vel_a, only_align_drives)
+        with self._lock:
+            self._vpc.set_platform_velocity_target(vel_x, vel_y, vel_a, only_align_drives)
 
-        self._timeout = time.time() + timeout
-        self._timeout_message_printed = False
+            self._timeout = time.time() + timeout
+            self._timeout_message_printed = False
 
     def are_drives_aligned(self) -> bool:
         """Check if the drives are aligned with the last provided velocity command."""
-        encoder_pivots = [self._process_data[i].encoder_pivot for i in range(self._num_wheels)]
-        return self._vpc.are_drives_aligned(encoder_pivots)
+        with self._lock:
+            encoder_pivots = [self._process_data[i].encoder_pivot for i in range(self._num_wheels)]
+            return self._vpc.are_drives_aligned(encoder_pivots)
 
     def set_driver_type(self, driver_type: PlatformDriverType):
         """Set the driver type (velocity control or compliant control)."""
-        self._driver_type = driver_type
-        self._wheel_controllers = [VelocityTorqueController(driver_type) for _ in range(self._num_wheels * 2)]
+        with self._lock:
+            self._driver_type = driver_type
+            self._wheel_controllers = self._create_wheel_controllers(driver_type)
 
     def step(self) -> bool:
         """Perform a single step of the platform driver."""
-        self._step_count += 1
+        with self._lock:
+            self._step_count += 1
 
-        self._process_data = [self._get_process_data(i) for i in range(self._num_wheels)]
+            self._process_data = [self._get_process_data(i) for i in range(self._num_wheels)]
 
-        for i in range(len(self._process_data)):
-            pd = self._process_data[i]
-            logger.trace(f"pd {i} sensor_ts {pd.sensor_ts} vel_1 {pd.velocity_1} vel_2 {pd.velocity_2}")
+            for i in range(len(self._process_data)):
+                pd = self._process_data[i]
+                logger.trace(f"pd {i} sensor_ts {pd.sensor_ts} vel_1 {pd.velocity_1} vel_2 {pd.velocity_2}")
 
-        self._current_ts = self._process_data[0].sensor_ts
+            self._current_ts = self._process_data[0].sensor_ts
 
-        if self._timeout < time.time():
-            self._vpc.set_platform_velocity_target(0.0, 0.0, 0.0, only_align_drives=False)
-            if not self._timeout_message_printed:
-                logger.info("platform stopped early due to velocity target timeout")
-                self._timeout_message_printed = True
+            if self._timeout < time.time():
+                self._vpc.set_platform_velocity_target(0.0, 0.0, 0.0, only_align_drives=False)
+                if not self._timeout_message_printed:
+                    logger.info("platform stopped early due to velocity target timeout")
+                    self._timeout_message_printed = True
 
-        if self._state == PlatformDriverState.INIT:
-            return self._step_init()
-        if self._state == PlatformDriverState.READY:
-            return self._step_ready()
-        if self._state == PlatformDriverState.ACTIVE:
-            return self._step_active()
-        if self._state == PlatformDriverState.ERROR:
-            return self._step_error()
+            if self._state == PlatformDriverState.INIT:
+                return self._step_init()
+            if self._state == PlatformDriverState.READY:
+                return self._step_ready()
+            if self._state == PlatformDriverState.ACTIVE:
+                return self._step_active()
+            if self._state == PlatformDriverState.ERROR:
+                return self._step_error()
 
-        self._do_stop()
-        return True
+            self._do_stop()
+            return True
 
     def _step_init(self) -> bool:
         """Initialise the platform driver."""
@@ -318,6 +327,8 @@ class VelocityTorqueController:
             self.I = 1.0
             self._max_output = 2.5
             self._max_sum_error_vel = 2.0
+        else:
+            raise ValueError(f"VelocityTorqueController does not support driver type {driver_type}")
 
         self._prev_time = None
         self._prev_error_vel = None

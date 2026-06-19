@@ -4,7 +4,7 @@ import time
 from airo_tulip.api.client import KELORobile
 
 
-def test():
+def main():
     mobi = KELORobile("localhost", 49789)
 
     mobi.set_platform_velocity_target(0.2, 0.0, 0.0)
@@ -39,4 +39,4 @@ def test():
 
 
 if __name__ == "__main__":
-    test()
+    main()

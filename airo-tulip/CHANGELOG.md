@@ -7,15 +7,43 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## Unreleased
 
 ### Breaking changes
+- Split the project into two packages. `airo-tulip` now contains only the client (`KELORobile`) and the
+  shared API contract (`airo_tulip.api.messages`, `airo_tulip.api.types`); the hardware abstraction layer
+  and server moved to the new `airo-tulip-hal` package. As a result:
+    - Client imports are unchanged (`from airo_tulip.api.client import KELORobile`).
+    - Server-side imports change: `airo_tulip.api.server` → `airo_tulip_hal.server`, and
+      `airo_tulip.hardware.*` → `airo_tulip_hal.hardware.*`. Importing `airo_tulip.api.server` now raises a
+      helpful `ImportError` pointing to `airo-tulip-hal`.
+    - `PlatformDriverType` is now imported from `airo_tulip.api.types` (re-exported location), not
+      `airo_tulip.hardware.platform_driver`.
+    - Installing `airo-tulip` no longer pulls in `pysoem`; install `airo-tulip-hal` on the KELO CPU brick.
 
 ### Added
 - Added a check to the handshake to ensure that client and server are running the same version of `airo-tulip`.
+- New `airo-tulip-hal` package containing the hardware abstraction layer and `TulipServer`.
 
 ### Changed
+- Corrected the velocity controller's wheel distance from `0.055 m` to `0.080 m` to match the KELO C++
+  ground truth (`WheelModel.h`, `KELOdrive105`). The original value was a transcription error from the
+  initial untested C++→Python port.
+- Single-sourced drive geometry and safety-limit magic numbers into `constants.py`.
+- The driver now propagates initialisation/step failures: `RobilePlatform.step()` returns a status and
+  `TulipServer` aborts startup if EtherCAT initialisation fails and stops the loop on a step failure.
+- Guarded shared driver state with a lock against the request/EtherCAT thread race; the request loop now
+  always replies (so a failing handler can no longer wedge the server) and unknown messages return an error.
+- The client handshake now raises an informative `KELORobileError` on version/UUID mismatch instead of
+  using `assert` (which is stripped under `python -O`).
 
 ### Fixed
+- `reset_odometry()` now actually resets the reported pose (it previously wrote an unused attribute).
+- `WheelParamVelocity` no longer uses mutable numpy-array defaults, which made the package fail to import
+  on Python 3.11+; added the previously-undeclared `max_pivot_error` field.
+- Guarded against division by zero in velocity/odometry estimation when no time has elapsed.
+- `clip_angle` now normalizes angles that are multiple revolutions out of range.
 
 ### Removed
+- Removed the unused `pykalman` and `pyserial` dependencies, and dead code (`util.sign`, `WheelData`,
+  unused constants and fields).
 
 ## 0.4.0
 

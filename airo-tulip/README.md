@@ -20,14 +20,19 @@ why `airo-tulip` is implemented the way it is.
 
 ## How to use this package
 
-There are two layers to the `airo-tulip` package: the `hardware` module that interfaces with the KELO and other attached hardware,
-and the `api` module that allows (optionally remote) users of the library to interface with this `hardware` over a TCP connection.
-The code in the `hardware` module is supposed to be run on the KELO itself, while the code in the `api` module (more specifically in `api.client`)
-can be run from any device that can access the KELO over Ethernet or Wi-Fi. While it possible to use `airo-tulip` without
-`api`, by using `hardware.platform_driver` directly, this is not recommended, and we only document the usage through the `api` module.
+The project is split into two packages:
+
+- **`airo-tulip`** (this package) contains the client (`KELORobile`) and the shared API contract
+  (`airo_tulip.api.messages`, `airo_tulip.api.types`). Install it on any device that controls the robot
+  over the network (laptop, workstation, NUC). It does **not** depend on `pysoem` or any hardware library.
+- **`airo-tulip-hal`** contains the hardware abstraction layer (EtherCAT driver, monitor, controllers) and
+  the `TulipServer`. It runs on the KELO CPU brick. See [`../airo-tulip-hal/README.md`](../airo-tulip-hal/README.md).
+
+The client communicates with the server over a TCP connection (0MQ). This README documents the client side;
+for running the server, see the `airo-tulip-hal` README.
 
 **Note:** when interfacing with the server from a client on a remote machine, make sure that the `airo-tulip` versions
-match on client and server, or else you may observe unexpected behaviour or crashes.
+match on client and server, or else you may observe unexpected behaviour or crashes (this is checked during the handshake).
 
 Using this package implies some hardware and software set-up on the KELO mobile platform itself, which is documented
 in [`docs/kelo_setup.md`](docs/kelo_setup.md). If you simply use this library for robotics experiments, this set-up
@@ -92,64 +97,10 @@ conda activate airo-tulip-env
 pip install -e airo-tulip/
 ```
 
-### Running `airo-tulip` on the KELO
+### Running the server on the KELO
 
-`airo_tulip.api.server` provides a class `TulipServer` which initializes the KELO platform and accepts an incoming
-connection from a `airo_tulip.api.client.KELORobile`. To accept incoming connections from any device on the network,
-listen on the IPv4 address `0.0.0.0`. The `RobotConfiguration` that must be supplied, is based on how the KELO bricks
-are mounted. This information is received from KELO robotics together with your platform and is specific to your use case.
-The EtherCAT device is also specific to your platform set-up.
-
-To run the server, start it from a Python script:
-
-```python
-from airo_tulip.api.server import TulipServer, RobotConfiguration
-from airo_tulip.hardware.structs import WheelConfig
-
-def create_wheel_configs():
-    wheel_configs = []
-
-    wc0 = WheelConfig(
-        ethercat_number=3,
-        x=0.233,
-        y=0.1165,
-        a=1.57
-    )
-    wheel_configs.append(wc0)
-
-    wc1 = WheelConfig(
-        ethercat_number=5,
-        x=0.233,
-        y=-0.1165,
-        a=1.57
-    )
-    wheel_configs.append(wc1)
-
-    wc2 = WheelConfig(
-        ethercat_number=7,
-        x=-0.233,
-        y=-0.1165,
-        a=-1.57
-    )
-    wheel_configs.append(wc2)
-
-    wc3 = WheelConfig(
-        ethercat_number=9,
-        x=-0.233,
-        y=0.1165,
-        a=1.57
-    )
-    wheel_configs.append(wc3)
-
-    return wheel_configs
-
-# These values are specific to your platform!
-device = "eno1"
-wheel_configs = create_wheel_configs()
-
-server = TulipServer(RobotConfiguration(device, wheel_configs), "0.0.0.0")
-server.run()
-```
+The server (`TulipServer`) lives in the separate `airo-tulip-hal` package and runs on the KELO CPU brick.
+See [`../airo-tulip-hal/README.md`](../airo-tulip-hal/README.md) for how to configure and start it.
 
 ### Connecting to the `airo-tulip` server
 

@@ -1,5 +1,5 @@
-from airo_tulip.api.server import RobotConfiguration, TulipServer
-from airo_tulip.hardware.structs import WheelConfig
+from airo_tulip_hal.hardware.structs import WheelConfig
+from airo_tulip_hal.server import RobotConfiguration, TulipServer
 
 
 def start_tulip():

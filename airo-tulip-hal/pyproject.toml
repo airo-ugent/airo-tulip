@@ -3,13 +3,13 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "airo-tulip"
+name = "airo-tulip-hal"
 version = "0.5.0"
 authors = [
   { name = "Mathieu De Coster", email = "mathieu.decoster@ugent.be" },
   { name = "Thomas Van Acker", email = "thovacke.vanacker@ugent.be" }
 ]
-description = "Client and API contract for controlling the KELO Robile platform (see airo-tulip-hal for the hardware abstraction layer)."
+description = "Hardware abstraction layer and server for the KELO Robile platform, based on KELO tulip. Runs on the KELO CPU brick."
 readme = "README.md"
 requires-python = ">=3.9"
 classifiers = [
@@ -19,7 +19,9 @@ classifiers = [
 ]
 
 dependencies = [
+  "airo-tulip==0.5.0",
   "loguru>=0.7.2",
+  "pysoem>=1.1.6",
   "numpy",
   "pyzmq==26.0.3",
   "airo-typing>=2025.4.0"
@@ -29,5 +31,4 @@ dependencies = [
 Homepage = "https://github.com/airo-ugent/airo-tulip"
 Issues = "https://github.com/airo-ugent/airo-tulip/issues"
 
-[tools.setuptools]
-packages = ["airo_tulip"]
+# Package discovery is handled by setup.py (find_namespace_packages), matching the airo-tulip package.

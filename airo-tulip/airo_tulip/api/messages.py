@@ -2,8 +2,7 @@
 
 from dataclasses import dataclass
 
-from airo_tulip.hardware.platform_driver import PlatformDriverType
-from airo_tulip.hardware.structs import Attitude2DType
+from airo_tulip.api.types import Attitude2DType, PlatformDriverType
 from airo_typing import Vector3DType
 
 

@@ -6,10 +6,12 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "airo-tulip",
+    "airo-tulip-hal",
     "airo-tulip-dashboard",
     "airo-typing>=2025.4.0",
 ]
 
 [tool.uv.sources]
 airo-tulip = { path = "airo-tulip" }
+airo-tulip-hal = { path = "airo-tulip-hal" }
 airo-tulip-dashboard = { path = "dashboard" }

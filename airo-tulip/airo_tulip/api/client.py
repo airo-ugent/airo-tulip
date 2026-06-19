@@ -16,8 +16,7 @@ from airo_tulip.api.messages import (
     SetPlatformVelocityTargetMessage,
     StopServerMessage,
 )
-from airo_tulip.hardware.platform_driver import PlatformDriverType
-from airo_tulip.hardware.structs import Attitude2DType
+from airo_tulip.api.types import Attitude2DType, PlatformDriverType
 from airo_typing import Vector3DType
 from loguru import logger
 
@@ -62,7 +61,17 @@ class KELORobile:
 
         handshake_message = HandshakeMessage(str(uuid4()))
         handshake_reply = self._transceive_message(handshake_message)
-        assert handshake_reply.uuid == handshake_message.uuid and version("airo-tulip") == handshake_reply.lib_version
+        if handshake_reply.uuid != handshake_message.uuid:
+            raise KELORobileError(
+                f"Handshake failed: server replied with unexpected UUID "
+                f"(expected {handshake_message.uuid}, got {handshake_reply.uuid})."
+            )
+        client_version = version("airo-tulip")
+        if client_version != handshake_reply.lib_version:
+            raise KELORobileError(
+                f"airo-tulip version mismatch: client is running {client_version}, "
+                f"server is running {handshake_reply.lib_version}. Please ensure both match."
+            )
 
     def set_platform_velocity_target(
         self,

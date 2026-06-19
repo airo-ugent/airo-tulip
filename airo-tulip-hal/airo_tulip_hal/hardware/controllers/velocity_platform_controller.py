@@ -5,9 +5,10 @@ import time
 from typing import List, Tuple
 
 import numpy as np
-from airo_tulip.hardware.controllers.controller import Controller
-from airo_tulip.hardware.structs import Attitude2DType, PlatformLimits, WheelConfig, WheelParamVelocity
-from airo_tulip.hardware.util import clip, clip_angle, get_shortest_angle
+from airo_tulip.api.types import Attitude2DType
+from airo_tulip_hal.hardware.controllers.controller import Controller
+from airo_tulip_hal.hardware.structs import PlatformLimits, WheelConfig, WheelParamVelocity
+from airo_tulip_hal.hardware.util import clip, clip_angle, get_shortest_angle
 from airo_typing import Vector2DType
 
 
