@@ -1,47 +1,52 @@
 #!/usr/bin/env bash
 #
-# Install the airo-tulip packages and supporting services on a KELO CPU brick.
+# System-wide installer for airo-tulip on a KELO CPU brick.
 #
-# This script is idempotent: it is safe to re-run. It installs to the directory in which it lives.
-# The services run as the invoking user by default; override with AIRO_TULIP_USER=<user>.
+# Installs the server into /opt/airo-tulip, configuration into /etc/airo-tulip, and registers systemd
+# services so the Zenoh router and the airo-tulip server start on boot. The packages are installed
+# non-editable, so after installation the source clone is no longer needed and may be removed.
+#
+# For DEVELOPMENT (no system changes, no systemd), do NOT run this script — see the README.
 
 set -euo pipefail
 
 err() { echo "ERROR: $*" >&2; exit 1; }
 trap 'err "installation failed on line $LINENO."' ERR
 
-# Install location is this script's own directory (the repository root).
-INSTALL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$INSTALL_DIR"
+# Fixed system-wide locations.
+INSTALL_PREFIX="/opt/airo-tulip"
+VENV_DIR="$INSTALL_PREFIX/venv"
+SERVER_BIN="$VENV_DIR/bin/airo-tulip-server"
+CONFIG_DIR="/etc/airo-tulip"
+ROBOT_CONFIG="$CONFIG_DIR/robot.yaml"
+SYMLINK="/usr/local/bin/airo-tulip-server"
 
-SERVER_BIN="$INSTALL_DIR/.venv/bin/airo-tulip-server"
-ROBOT_CONFIG="$INSTALL_DIR/robot.yaml"
-
-# The user the services run as, and their home (for .kelorc / .bashrc).
-TARGET_USER="${AIRO_TULIP_USER:-$USER}"
-TARGET_HOME="$(getent passwd "$TARGET_USER" | cut -d: -f6 || true)"
-TARGET_HOME="${TARGET_HOME:-/home/$TARGET_USER}"
-KELORC="$TARGET_HOME/.kelorc"
-BASHRC="$TARGET_HOME/.bashrc"
-
-echo "Install dir: $INSTALL_DIR"
-echo "Services will run as user: $TARGET_USER (home: $TARGET_HOME)"
-
-# --- Preconditions ---
+# The source tree to build from (this script's directory). Only needed at install time.
+SOURCE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 command -v uv &> /dev/null || err "uv could not be found. Install it first: https://github.com/astral-sh/uv"
-echo "uv is installed."
+UV="$(command -v uv)"
 
-read -r -p "Continue installing to $INSTALL_DIR? (y/N) " RESPONSE
+echo "This will install airo-tulip system-wide:"
+echo "  server + venv : $INSTALL_PREFIX"
+echo "  configuration : $ROBOT_CONFIG"
+echo "  command       : $SYMLINK"
+echo "  services      : /etc/systemd/system/{zenoh,tulip}.service (run as root)"
+echo "It uses sudo and needs network access."
+read -r -p "Continue? (y/N) " RESPONSE
 [ "$RESPONSE" = "y" ] || { echo "Exiting..."; exit 0; }
 
-# --- Python environment (installs all workspace packages, incl. console scripts) ---
+# --- Build + install the packages into a venv under /opt (non-editable) ---
+echo "Creating virtual environment at $VENV_DIR ..."
+sudo mkdir -p "$INSTALL_PREFIX"
+sudo "$UV" venv --python 3.10 "$VENV_DIR"
+echo "Building and installing airo-tulip and airo-tulip-hal into $VENV_DIR ..."
+sudo "$UV" pip install --python "$VENV_DIR/bin/python" "$SOURCE_DIR/airo-tulip" "$SOURCE_DIR/airo-tulip-hal"
 
-echo "Running uv sync to create the virtual environment at $INSTALL_DIR/.venv ..."
-uv sync
+# Expose the server command system-wide.
+sudo ln -sf "$SERVER_BIN" "$SYMLINK"
 
 # --- Zenoh router (zenohd) ---
-
 if ! command -v zenohd &> /dev/null; then
     echo "Installing the Zenoh router (zenohd) from the Eclipse Zenoh apt repository..."
     echo "deb [trusted=yes] https://download.eclipse.org/zenoh/debian-repo/ /" \
@@ -53,70 +58,40 @@ else
 fi
 ZENOHD_PATH="$(command -v zenohd)"
 
-# --- Robot configuration ---
-# The server reads its platform config (EtherCAT device + drive layout) from a YAML file. Seed it from
-# the example on first install, but never clobber an existing (edited) config.
+# --- Configuration ---
+# Seed the platform config from the example on first install, but never clobber an edited one.
+sudo mkdir -p "$CONFIG_DIR"
 if [ ! -f "$ROBOT_CONFIG" ]; then
-    cp "$INSTALL_DIR/deploy/robot.example.yaml" "$ROBOT_CONFIG"
+    sudo cp "$SOURCE_DIR/deploy/robot.example.yaml" "$ROBOT_CONFIG"
     echo "Created $ROBOT_CONFIG from the example. EDIT IT for your platform before driving (EtherCAT device + wheel layout)."
 else
     echo "Using existing robot config at $ROBOT_CONFIG."
 fi
 
 # --- systemd services (rendered from deploy/*.service templates) ---
-# zenoh.service: the Zenoh router. tulip.service: the airo-tulip drive-control server (runs on boot;
-# the drives can be disabled at runtime to save energy via a KELORobile client).
-
 install_unit() {
     local name="$1"
     echo "Installing systemd unit: $name"
-    sed -e "s|__USER__|${TARGET_USER}|g" \
-        -e "s|__ZENOHD__|${ZENOHD_PATH}|g" \
+    sed -e "s|__ZENOHD__|${ZENOHD_PATH}|g" \
         -e "s|__SERVER_BIN__|${SERVER_BIN}|g" \
         -e "s|__CONFIG__|${ROBOT_CONFIG}|g" \
-        "$INSTALL_DIR/deploy/${name}" \
+        "$SOURCE_DIR/deploy/${name}" \
         | sudo tee "/etc/systemd/system/${name}" > /dev/null
 }
-
 install_unit zenoh.service
 install_unit tulip.service
 
 sudo systemctl daemon-reload
 echo "Enabling services on boot and (re)starting them..."
 sudo systemctl enable zenoh.service tulip.service
-# restart (not just start) so a re-run picks up any changes to the unit files.
+# restart (not just start) so a re-run picks up changes to the units or the reinstalled server.
 sudo systemctl restart zenoh.service
 sudo systemctl restart tulip.service
 
-# --- Environment (.kelorc + .bashrc), idempotent ---
-# Exposes the virtual environment (and any console scripts it provides) on PATH.
-
-read -r -p "Add airo-tulip environment variables to $KELORC and source it from $BASHRC? (y/N) " RESPONSE
-if [ "$RESPONSE" = "y" ]; then
-    MARKER_START="# >>> airo-tulip >>>"
-    MARKER_END="# <<< airo-tulip <<<"
-
-    touch "$KELORC"
-    # Replace any previously-installed block rather than appending or clobbering the whole file.
-    sed -i "/$MARKER_START/,/$MARKER_END/d" "$KELORC"
-    {
-        echo "$MARKER_START"
-        echo "export AIRO_TULIP_PATH=\"$INSTALL_DIR\""
-        echo "export PATH=\"$INSTALL_DIR/.venv/bin:\$PATH\""
-        echo "$MARKER_END"
-    } >> "$KELORC"
-    echo "Updated $KELORC."
-
-    touch "$BASHRC"
-    if ! grep -qF "source $KELORC" "$BASHRC"; then
-        printf '\n# Added by the airo-tulip installation script.\nsource %s\n' "$KELORC" >> "$BASHRC"
-        echo "Added 'source $KELORC' to $BASHRC."
-    else
-        echo "$BASHRC already sources $KELORC."
-    fi
-fi
-
-echo "Installation complete!"
+echo
+echo "Installation complete."
+echo "  - Edit $ROBOT_CONFIG for your platform, then: sudo systemctl restart tulip"
+echo "  - The source directory ($SOURCE_DIR) is no longer required and may be removed."
 read -r -p "Reboot now to complete the installation? (y/N) " RESPONSE
 if [ "$RESPONSE" = "y" ]; then
     sudo reboot now

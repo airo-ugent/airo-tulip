@@ -53,9 +53,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - The server is now launched by an `airo-tulip-server` console script that reads a YAML config file (EtherCAT
   device + drive layout + optional Zenoh/loop settings) instead of a hardcoded launch script. An example
   config ships in `deploy/robot.example.yaml`; `install.sh` seeds it to `<install_dir>/robot.yaml`.
-- `install.sh` now runs the airo-tulip server as a systemd service on boot, installs the systemd units from
-  `deploy/*.service`, and runs the server via the `airo-tulip-server` console script — removing the `bin/`
-  shell wrappers entirely. It is idempotent and `set -euo pipefail`-safe, and installs/starts the Zenoh router.
+- `install.sh` is now a **system-wide** installer: it builds and installs the packages non-editable into
+  `/opt/airo-tulip/venv`, puts config in `/etc/airo-tulip/robot.yaml`, symlinks the `airo-tulip-server`
+  console script into `/usr/local/bin`, and registers `zenoh`/`tulip` systemd services (run as root, since
+  the EtherCAT master needs raw-socket access). The source clone is only needed at install time and can be
+  removed afterwards. Development is now fully separate (`uv sync` + run locally, no system changes). The
+  installer is idempotent and `set -euo pipefail`-safe, and installs/starts the Zenoh router.
 - Corrected the velocity controller's wheel distance from `0.055 m` to `0.080 m` to match the KELO C++
   ground truth (`WheelModel.h`, `KELOdrive105`). The original value was a transcription error from the
   initial untested C++→Python port.

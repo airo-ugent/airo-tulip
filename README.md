@@ -2,33 +2,45 @@
 
 This repository contains:
 
-- The KELO robotics C++ implementation of the KELO Robile platform driver, called KELO Tulip (`./kelo_tulip`)
-- A Python reimplementation with altered and additional functionality by IDLab-AIRO (UGent-imec) for integration in Python projects without a ROS dependency, split into a lightweight client/contract package (`./airo-tulip`) and a hardware abstraction layer that runs on the KELO CPU brick (`./airo-tulip-hal`)
-- A folder `./utils` with utility scripts
-- A script `./install.sh` which installs the necessary dependencies for the KELO Tulip and AIRO Tulip packages and puts several commands on the path
+- `./kelo-tulip` — KELO Robotics' original C++ implementation of the KELO Robile platform driver (KELO Tulip). Kept as a reference.
+- `./airo-tulip` — a lightweight Python **client** package and the shared API contract. Install this on any machine that controls the robot over the network (laptop, workstation, NUC). It does **not** depend on the robot hardware libraries (no `pysoem`).
+- `./airo-tulip-hal` — the **hardware abstraction layer** and the server (`airo-tulip-server`). This runs on the KELO CPU brick and talks to the drives over EtherCAT.
+- `./deploy` — systemd unit templates and an example robot configuration, used by the installer.
+- `./install.sh` — system-wide installer for a KELO CPU brick (virtual environment, Zenoh router, configuration, and boot services).
 
-See the respective subdirectories for more information.
+The two Python packages are documented in their own READMEs: [`airo-tulip`](airo-tulip/README.md) (the client) and [`airo-tulip-hal`](airo-tulip-hal/README.md) (the server / hardware layer).
 
-## Installation
+The client and server communicate over [Zenoh](https://zenoh.io/): the brick runs a Zenoh router and the server, and clients connect to the router to drive the robot and read its state.
 
-You can run `./install.sh` to install the `airo-tulip` package and other commands to a KELO CPU brick running Ubuntu.
-This script will install airo-tulip to directory from which it is executed.
+## Installing on the KELO CPU brick
 
-There are some dependencies that need to be installed before you can install `airo-tulip` (normally these should be installed already):
+`install.sh` performs a **system-wide installation** that configures a KELO CPU brick (running Ubuntu) to run the robot server automatically on boot.
+
+### What "installing" means here
+
+The installer builds the packages and installs them into fixed **system locations** (`/opt`, `/etc`, `/usr/local/bin`, and systemd), independent of where you cloned the source. The packages are installed **non-editable**, so:
+
+- the source clone is only needed *during* installation and **can be deleted afterwards**;
+- editing the source has **no effect** on the installed/running robot (that's what development mode, below, is for) — you re-run the installer to deploy changes.
+
+This is a deliberate split: production installs are stable and system-managed; development is separate and never touches the system (see [Development](#development)).
+
+### Prerequisites
+
+These are normally already present on the brick (`gcc`/`make` are needed to build the `pysoem` EtherCAT extension):
 
 ```bash
 sudo apt-get update -y
 sudo apt-get install -y git gcc curl make
 ```
 
-There is one other dependency which should be installed manually: `uv`.
-As per the [official installation instructions](https://github.com/astral-sh/uv), you can install `uv` by running:
+And [`uv`](https://github.com/astral-sh/uv), the Python package/environment manager:
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-Then, the way to install `airo-tulip` is:
+### Install
 
 ```bash
 git clone https://github.com/airo-ugent/airo-tulip
@@ -36,9 +48,86 @@ cd airo-tulip
 ./install.sh
 ```
 
-## Usage
+The installer runs as your user and uses `sudo` for the steps that need it (building into `/opt`, installing the Zenoh router via `apt`, and registering systemd services). It is **idempotent** — safe to re-run. It needs network access.
 
-After installation, the Zenoh router and the airo-tulip server start automatically when the KELO CPU brick boots.
-You can then control the robot from any machine on the network with the `KELORobile` client (see
-[`airo-tulip/README.md`](airo-tulip/README.md)) — drive it, read odometry/status, and enable/disable the
-drives to save energy.
+### What it installs, and where everything goes
+
+| Location | What it is |
+|---|---|
+| `/opt/airo-tulip/venv/` | Virtual environment with the `airo-tulip` and `airo-tulip-hal` packages (non-editable) and the `airo-tulip-server` console script |
+| `/usr/local/bin/airo-tulip-server` | Symlink to the server console script, so it's on the system `PATH` |
+| `/etc/airo-tulip/robot.yaml` | Your platform configuration (EtherCAT device + drive layout), seeded from `deploy/robot.example.yaml` on first install and **never overwritten afterwards** |
+| `/etc/systemd/system/zenoh.service` | Boot service running the Zenoh router (`zenohd`) |
+| `/etc/systemd/system/tulip.service` | Boot service running `airo-tulip-server --config /etc/airo-tulip/robot.yaml` |
+| `zenohd` (system package) | The Zenoh router binary, from the Eclipse Zenoh apt repository |
+
+Both services run **as root**, because the EtherCAT master needs raw-socket access to the network interface.
+
+After installation (and a reboot), the brick automatically runs the Zenoh router and the server. You then control the robot from any machine on the network with the `KELORobile` client — see [`airo-tulip/README.md`](airo-tulip/README.md).
+
+### Configure your platform
+
+The drive layout and EtherCAT device are specific to each robot, so **edit `/etc/airo-tulip/robot.yaml` before driving** (the values come from KELO with your platform). See the comments in [`deploy/robot.example.yaml`](deploy/robot.example.yaml). After editing, restart the server:
+
+```bash
+sudo systemctl restart tulip
+```
+
+### Useful service commands
+
+```bash
+sudo systemctl status tulip      # is the server running?
+journalctl -u tulip -f           # follow the server logs
+sudo systemctl restart tulip     # apply configuration changes
+sudo systemctl stop tulip        # stop the server
+```
+
+(`zenoh` is the corresponding unit for the router.)
+
+## Updating and rolling back
+
+Because the install is non-editable, you update by **reinstalling a new version of the source** and re-running the installer:
+
+```bash
+cd airo-tulip            # a fresh clone, or your existing one
+git fetch --tags
+git checkout <tag>       # we recommend pinning to a release tag rather than tracking main
+./install.sh             # rebuilds and reinstalls into /opt; restarts the services
+```
+
+To **roll back**, check out the previous tag and run `./install.sh` again. Your `/etc/airo-tulip/robot.yaml` is never overwritten, so your platform configuration is preserved across updates and rollbacks.
+
+## Development
+
+Development is fully separate from installation: **do not run `install.sh`** — it makes no system changes, uses no systemd, and doesn't require root.
+
+A development checkout uses an editable virtual environment local to the clone, so your code edits take effect immediately:
+
+```bash
+git clone https://github.com/airo-ugent/airo-tulip
+cd airo-tulip
+uv sync                  # creates ./.venv with the packages installed editable
+```
+
+- **Client / library work** (on a laptop): import the packages from your own code, or see the package READMEs for `pip install -e` instructions.
+- **Running the server for testing** (on the robot hardware): provide a local config and run it in the foreground so you can watch the logs:
+
+  ```bash
+  cp deploy/robot.example.yaml robot.yaml   # then edit for your platform (git-ignored)
+  uv run airo-tulip-server --config robot.yaml
+  ```
+
+  This needs a Zenoh router reachable (run `zenohd` yourself, or connect a client in **peer mode**). It does not touch `/opt`, `/etc`, or systemd.
+- **Hardware-free testing**: the client and server can run against each other in peer mode without a router or the EtherCAT hardware (this is how the loopback tests work).
+
+If a brick already has a production install, stop the boot service first (`sudo systemctl stop tulip`) so it doesn't contend for the EtherCAT bus while you run a development server.
+
+## Uninstalling
+
+```bash
+sudo systemctl disable --now tulip zenoh
+sudo rm /etc/systemd/system/tulip.service /etc/systemd/system/zenoh.service
+sudo systemctl daemon-reload
+sudo rm -f /usr/local/bin/airo-tulip-server
+sudo rm -rf /opt/airo-tulip /etc/airo-tulip
+```
