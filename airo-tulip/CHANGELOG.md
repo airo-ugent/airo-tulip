@@ -7,6 +7,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ## Unreleased
 
 ### Breaking changes
+- Replaced the 0MQ REQ/REP transport with **Zenoh**, and redesigned the communication model along
+  ROS 2 lines:
+    - Velocity commands are now **streamed** (pub/sub) to the server and kept alive by a server-side
+      **watchdog** (stops the platform if no command arrives within `watchdog_timeout`, default 0.3 s).
+      The client streams the current setpoint at a fixed rate; `set_platform_velocity_target(...)`'s
+      `timeout` reverts the setpoint to zero client-side. `set_platform_velocity_target`/`align_drives`
+      no longer return a response (they're fire-and-forget); out-of-limit values raise locally and are
+      additionally **clamped** by the server (reported via the status stream's `last_command_rejected`).
+    - Odometry and a new, richer **platform status** (driver state, current mode, `drives_aligned`,
+      per-drive health: error flag, status registers, temperature, current, bus voltage, watchdog state)
+      are **streamed** from the server. `get_odometry`/`get_velocity`/`are_drives_aligned`/`get_status`
+      now return the latest streamed value (no per-call round-trip); odometry is timestamped.
+    - Discrete operations (handshake, `set_driver_type`, `reset_odometry`, `stop_server`) are Zenoh
+      **queryable** (request/reply) calls.
+    - The wire format is now **msgpack**, not pickle — removing the arbitrary-code-execution risk and
+      making the protocol language-agnostic.
+    - Connectivity is via a **Zenoh router** (`zenohd`) by default; `KELORobile(host)` and the server
+      connect to it (default `tcp/<host>:7447`). A router must be running (typically on the KELO CPU brick).
+    - `TulipServer`'s constructor changed: it no longer takes an IP/port to bind; it takes Zenoh session
+      options (router endpoint, robot id, watchdog timeout). `KELORobile`'s default port is now 7447.
 - Split the project into two packages. `airo-tulip` now contains only the client (`KELORobile`) and the
   shared API contract (`airo_tulip.api.messages`, `airo_tulip.api.types`); the hardware abstraction layer
   and server moved to the new `airo-tulip-hal` package. As a result:
@@ -21,6 +41,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Added
 - Added a check to the handshake to ensure that client and server are running the same version of `airo-tulip`.
 - New `airo-tulip-hal` package containing the hardware abstraction layer and `TulipServer`.
+- New shared modules `airo_tulip.api.codec` (msgpack (de)serialization) and `airo_tulip.api.transport`
+  (Zenoh session + key-expression helpers).
+- New client methods: `get_status()` (full platform health), `is_alive()` (telemetry-freshness liveness),
+  and `drive_aligned()` (align the drives, wait until aligned, then drive — no polling).
 
 ### Changed
 - Corrected the velocity controller's wheel distance from `0.055 m` to `0.080 m` to match the KELO C++
@@ -44,6 +68,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 ### Removed
 - Removed the unused `pykalman` and `pyserial` dependencies, and dead code (`util.sign`, `WheelData`,
   unused constants and fields).
+- Removed the `pyzmq` dependency (replaced by `eclipse-zenoh` + `msgpack`).
 
 ## 0.4.0
 

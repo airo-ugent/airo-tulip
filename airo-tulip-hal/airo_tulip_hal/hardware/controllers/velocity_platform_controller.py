@@ -226,20 +226,25 @@ class VelocityPlatformController(Controller):
 
         return pivot_error
 
-    def are_drives_aligned(self, encoder_pivots: List[float], max_pivot_error: float = 0.25) -> bool:
+    def are_drives_aligned(
+        self, encoder_pivots: List[float], max_pivot_error: float = 0.25, read_only: bool = False
+    ) -> bool:
         """Returns true when all drives are approximately aligned to drive in the correct direction.
 
         Args:
             encoder_pivots: Encoder pivot values for all drives.
             max_pivot_error: If ALL pivot errors are smaller than this angle (radians), the drives are considered aligned.
+            read_only: If True, do not mutate any controller state (used for status/telemetry reads, which
+                happen at the loop rate). If False (default), reset velocity ramping while unaligned.
 
         Returns:
             True when all drives are approximately aligned to drive in the correct direction."""
         for drive_index in range(len(self._wheel_params)):
             pivot_error = np.abs(self._compute_pivot_error(drive_index, encoder_pivots[drive_index]))
             if pivot_error > max_pivot_error:
-                # Reset velocity ramping so that we don't get sudden accelerations once drives are aligned.
-                self._time_last_ramping = None
+                if not read_only:
+                    # Reset velocity ramping so that we don't get sudden accelerations once drives are aligned.
+                    self._time_last_ramping = None
                 return False
         return True
 

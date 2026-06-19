@@ -29,10 +29,14 @@ communication. Requires Python 3.9+.
 
 ## Running the server on the KELO
 
-`airo_tulip_hal.server` provides `TulipServer`, which initialises the KELO platform and accepts an
-incoming connection from an `airo_tulip.api.client.KELORobile`. To accept connections from any device on
-the network, listen on `0.0.0.0`. The `RobotConfiguration` is specific to how the KELO bricks are mounted
-(provided by KELO robotics with your platform), as is the EtherCAT device name.
+`airo_tulip_hal.server` provides `TulipServer`, which initialises the KELO platform and exposes it over
+Zenoh. Client and server connect to a Zenoh **router** (`zenohd`), which by default runs on the KELO CPU
+brick (the server connects to `tcp/127.0.0.1:7447`). The `RobotConfiguration` is specific to how the KELO
+bricks are mounted (provided by KELO robotics with your platform), as is the EtherCAT device name.
+
+**Prerequisite:** a Zenoh router (`zenohd`) must be running. Install it from the
+[zenoh releases](https://github.com/eclipse-zenoh/zenoh/releases) and start it on
+the KELO CPU brick before launching the server.
 
 ```python
 from airo_tulip_hal.server import TulipServer, RobotConfiguration
@@ -50,7 +54,7 @@ def create_wheel_configs():
 
 # These values are specific to your platform!
 device = "eno1"
-server = TulipServer(RobotConfiguration(device, create_wheel_configs()), "0.0.0.0")
+server = TulipServer(RobotConfiguration(device, create_wheel_configs()))  # robot_id="default"
 server.run()
 ```
 

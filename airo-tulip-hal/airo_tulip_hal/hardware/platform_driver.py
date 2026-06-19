@@ -104,17 +104,32 @@ class PlatformDriver:
             self._timeout = time.time() + timeout
             self._timeout_message_printed = False
 
-    def are_drives_aligned(self) -> bool:
-        """Check if the drives are aligned with the last provided velocity command."""
+    def are_drives_aligned(self, read_only: bool = False) -> bool:
+        """Check if the drives are aligned with the last provided velocity command.
+
+        Args:
+            read_only: If True, do not mutate controller state (use for status/telemetry reads)."""
         with self._lock:
+            if len(self._process_data) < self._num_wheels:
+                return False
             encoder_pivots = [self._process_data[i].encoder_pivot for i in range(self._num_wheels)]
-            return self._vpc.are_drives_aligned(encoder_pivots)
+            return self._vpc.are_drives_aligned(encoder_pivots, read_only=read_only)
 
     def set_driver_type(self, driver_type: PlatformDriverType):
         """Set the driver type (velocity control or compliant control)."""
         with self._lock:
             self._driver_type = driver_type
             self._wheel_controllers = self._create_wheel_controllers(driver_type)
+
+    @property
+    def state(self) -> PlatformDriverState:
+        """The current platform driver state."""
+        return self._state
+
+    @property
+    def driver_type(self) -> PlatformDriverType:
+        """The current driver type (velocity or compliant mode)."""
+        return self._driver_type
 
     def step(self) -> bool:
         """Perform a single step of the platform driver."""

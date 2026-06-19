@@ -5,7 +5,7 @@ from airo_tulip.api.client import KELORobile
 
 
 def main():
-    mobi = KELORobile("localhost", 49789)
+    mobi = KELORobile("localhost")  # connects to a Zenoh router on localhost:7447
 
     mobi.set_platform_velocity_target(0.2, 0.0, 0.0)
     time.sleep(3)  # movement should timeout

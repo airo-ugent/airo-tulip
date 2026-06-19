@@ -104,7 +104,8 @@ See [`../airo-tulip-hal/README.md`](../airo-tulip-hal/README.md) for how to conf
 
 ### Connecting to the `airo-tulip` server
 
-Once you have started the server on the KELO, you can connect to it with an `api.client.KELORobile` instance:
+Once the server (and a Zenoh router) are running on the KELO, connect with an `api.client.KELORobile`
+instance. `KELORobile` connects to the Zenoh router at `tcp/<kelo_ip>:7447`:
 
 ```python
 from airo_tulip.api.client import KELORobile
@@ -119,7 +120,10 @@ You can then send commands to the KELO platform by calling the methods on the `c
 client.set_platform_velocity_target(0.5, 0.0, 0.0, timeout=1.0)
 ```
 
-to drive approximately 0.5 meters, at 0.5 meters per second, along the platform's +X axis.
+to drive at 0.5 m/s along the platform's +X axis. The velocity setpoint is streamed to the server and
+automatically reverts to zero after `timeout` seconds; to keep driving, call it again (or repeatedly).
+Read back the platform's state with `client.get_odometry()`, `client.get_velocity()`,
+`client.are_drives_aligned()`, and `client.get_status()` (driver mode, alignment, per-drive health).
 
 ### Mounted devices
 

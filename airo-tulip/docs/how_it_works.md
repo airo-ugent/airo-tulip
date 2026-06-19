@@ -21,11 +21,24 @@ The `RobilePlatform` class instantiates a `PlatformDriver` and a `PlatformMonito
 The `airo-tulip` package has a subpackage called `api`. When working with the KELO Robile platform, you want to run the `TulipServer` on boot, typically,
 so that commands can be sent over the network. The `TulipServer` takes a desired IP address and port, which can be used to connect to it via a client.
 
-The server is implemented via [0MQ](https://pyzmq.readthedocs.io/en/latest/), so it does not work over raw TCP sockets, but rather uses a higher level of abstraction.
-The server accepts messages, defined in `airo_tulip.api.messages`, which can be sent using `zmq.Socket.send_pyobj`: these messages are pickled,
-resp. unpickled, and contain the relevant information to drive the KELO Robile system via the `RobilePlatform` interface.
+The server is implemented on top of [Zenoh](https://zenoh.io/). Client and server connect (in `client`
+mode) to a Zenoh **router** (`zenohd`), which by default runs on the KELO CPU brick. The communication
+model follows ROS 2:
 
-We provide an example client implementation in `airo_tulip.api.client`.
+- **Commands are streamed** (pub/sub). The client publishes a velocity setpoint on
+  `airo_tulip/<robot_id>/cmd/velocity` at a fixed rate; the server applies the latest one and stops the
+  platform if no command arrives within a **watchdog** timeout. This is the same model as ROS 2's
+  `/cmd_vel` + `cmd_vel_timeout`.
+- **Telemetry is streamed** (pub/sub). The server publishes timestamped odometry on
+  `.../state/odometry` and platform status/health (driver state, mode, alignment, per-drive health) on
+  `.../state/status`. Clients subscribe and cache the latest value instead of polling.
+- **Discrete operations are request/reply** (Zenoh queryable): handshake, set driver type, reset
+  odometry, stop server, on `.../srv/*`.
+
+Messages are defined in `airo_tulip.api.messages` and serialized with **msgpack** (see
+`airo_tulip.api.codec`) — not pickle — so the wire format is safe and language-agnostic.
+
+We provide a client implementation in `airo_tulip.api.client` (`KELORobile`).
 The [airo-mono](https://github.com/airo-ugent/airo-mono) repository, more specifically `airo-robots`, also provides
 a wrapper for this implementation.
 

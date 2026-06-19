@@ -1,108 +1,106 @@
-"""These messages are used to communicate between client (KELORobile) and server (TulipServer)."""
+"""Wire messages exchanged between the client (KELORobile) and server (TulipServer).
 
-from dataclasses import dataclass
+All fields are primitives / lists / dicts so they serialize cleanly with msgpack (see ``codec.py``).
+Rich types (numpy arrays, ``PlatformDriverType``) are converted at the client/server boundary, not on
+the wire.
 
-from airo_tulip.api.types import Attitude2DType, PlatformDriverType
-from airo_typing import Vector3DType
+The communication model (see ``docs/how_it_works.md``):
+
+- ``VelocityCommand`` is *streamed* from client to server (pub/sub) and kept alive by a watchdog.
+- ``Odometry`` and ``PlatformState`` are *streamed* from server to client (pub/sub).
+- The remaining request/response pairs are *queryable* (request/reply) calls for discrete operations.
+"""
+
+from dataclasses import dataclass, field
+from typing import List, Optional
+
+# --- Streamed command: client -> server (pub/sub) ---
 
 
 @dataclass
-class RequestMessage:
-    """Base class for all request messages."""
+class VelocityCommand:
+    """A platform velocity setpoint. Streamed at a fixed rate; the server stops the platform if no
+    command arrives within its watchdog timeout."""
+
+    vx: float
+    vy: float
+    va: float
+    only_align_drives: bool = False
+
+
+# --- Streamed telemetry: server -> client (pub/sub) ---
 
 
 @dataclass
-class ResponseMessage:
-    """Base class for all response messages."""
+class Odometry:
+    """Estimated platform odometry. ``pose`` is [x, y, a] and ``twist`` is [vx, vy, va]."""
+
+    stamp_ns: int
+    pose: List[float]
+    twist: List[float]
 
 
 @dataclass
-class HandshakeMessage:
-    """A handshake message is used to establish a connection between client and server."""
+class PlatformState:
+    """Continuously published platform status / health.
+
+    ``drives`` is a list of per-drive dicts with keys:
+    ``index``, ``error`` (bool), ``status1``, ``status2`` (ints), ``temperature``, ``current``,
+    ``voltage_bus`` (floats).
+    ``last_command_rejected`` is ``None`` or a dict ``{reason, vx, vy, va}`` describing the most recent
+    command that was clamped to the safety limits."""
+
+    stamp_ns: int
+    driver_state: str
+    mode: int  # PlatformDriverType value
+    drives_aligned: bool
+    watchdog_active: bool
+    last_command_rejected: Optional[dict]
+    drives: List[dict] = field(default_factory=list)
+
+
+# --- Request/reply: queryable (discrete operations) ---
+
+
+@dataclass
+class HandshakeRequest:
+    """Sent by the client on connect to verify the server is reachable and version-compatible."""
 
     uuid: str
 
 
 @dataclass
 class HandshakeResponse:
-    """A handshake reply is used to confirm a connection between client and server."""
-
     uuid: str
     lib_version: str
+    robot_id: str
 
 
 @dataclass
-class AreDrivesAlignedMessage(RequestMessage):
-    """A message to check if the drives are aligned."""
+class SetDriverTypeRequest:
+    """Set the platform driver mode (velocity or compliant). ``driver_type`` is a PlatformDriverType value."""
+
+    driver_type: int
 
 
 @dataclass
-class SetPlatformVelocityTargetMessage(RequestMessage):
-    """A message to set the platform velocity target."""
-
-    vel_x: float
-    vel_y: float
-    vel_a: float
-    timeout: float
-    only_align_drives: bool
+class ResetOdometryRequest:
+    """Reset the platform's estimated pose and velocity to zero."""
 
 
 @dataclass
-class SetDriverTypeMessage(RequestMessage):
-    """A message to set the driver type (velocity mode or compliant mode)."""
-
-    driver_type: PlatformDriverType
+class StopServerRequest:
+    """Request the server to shut down."""
 
 
 @dataclass
-class StopServerMessage(RequestMessage):
-    """A message to stop the server."""
+class OkResponse:
+    """Indicates a request was handled successfully."""
 
 
 @dataclass
-class GetVelocityMessage(RequestMessage):
-    """A message to get the velocity of the robot."""
-
-
-@dataclass
-class GetOdometryMessage(RequestMessage):
-    """A message to get the odometry of the robot."""
-
-
-@dataclass
-class ResetOdometryMessage(RequestMessage):
-    """A message to reset the odometry of the robot."""
-
-
-@dataclass
-class OdometryResponse(ResponseMessage):
-    """A response message containing the odometry of the robot."""
-
-    odometry: Attitude2DType
-
-
-@dataclass
-class VelocityResponse(ResponseMessage):
-    """A response message containing the velocity of the robot."""
-
-    velocity: Vector3DType
-
-
-@dataclass
-class AreDrivesAlignedResponse(ResponseMessage):
-    """A response message containing the alignment status of the drives."""
-
-    aligned: bool
-
-
-@dataclass
-class ErrorResponse(ResponseMessage):
-    """A response message containing an error message."""
+class ErrorResponse:
+    """Indicates a request failed."""
 
     message: str
     cause: str
-
-
-@dataclass
-class OkResponse(ResponseMessage):
-    """A response message indicating that the request was successful."""

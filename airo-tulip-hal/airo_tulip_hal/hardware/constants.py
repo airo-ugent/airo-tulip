@@ -1,7 +1,8 @@
 """Constants taken directly from KELO:
 https://github.com/kelo-robotics/kelo_tulip/blob/1a8db0626b3d399b62b65b31c004e7b1831756d7/src/PlatformDriver.cpp"""
 
-import math
+# Re-exported from the shared API contract so the driver and the (HAL-free) client agree on the limits.
+from airo_tulip.api.types import MAX_PLATFORM_ANGULAR_VELOCITY, MAX_PLATFORM_LINEAR_VELOCITY  # noqa: F401
 
 # Drive geometry used by the odometry / pose estimation (see platform_monitor.py). These match the
 # values used by KELO's odometry in PlatformDriverROS.cpp: s_w = 0.01, d_w = 0.0775, r_w = 0.0524.
@@ -25,9 +26,8 @@ CONTROLLER_CASTER_OFFSET = CASTOR_OFFSET
 CURRENT_STOP = 1
 CURRENT_DRIVE = 20
 
-# Safety limits enforced on incoming platform velocity targets (see platform_driver.py).
-MAX_PLATFORM_LINEAR_VELOCITY = 0.5  # m/s
-MAX_PLATFORM_ANGULAR_VELOCITY = math.pi / 4  # rad/s
+# Safety limits (MAX_PLATFORM_LINEAR_VELOCITY, MAX_PLATFORM_ANGULAR_VELOCITY) are imported above from
+# the shared API contract and enforced on incoming platform velocity targets (see platform_driver.py).
 
 WHEEL_SET_POINT_MIN = 0.01
 WHEEL_SET_POINT_MAX = 35.0

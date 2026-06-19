@@ -21,7 +21,8 @@ classifiers = [
 dependencies = [
   "loguru>=0.7.2",
   "numpy",
-  "pyzmq==26.0.3",
+  "eclipse-zenoh>=1.0.0",
+  "msgpack>=1.0.0",
   "airo-typing>=2025.4.0"
 ]
 
