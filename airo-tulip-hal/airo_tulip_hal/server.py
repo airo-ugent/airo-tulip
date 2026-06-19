@@ -12,12 +12,15 @@ Communication model (ROS 2-style):
 By default it connects in client mode to a Zenoh router (typically running on the KELO CPU brick)."""
 
 import math
+import subprocess
 import time
 from threading import Event, Lock, Thread
 from typing import List, Optional
 
 from airo_tulip.api import codec
 from airo_tulip.api.messages import (
+    DisableDrivesRequest,
+    EnableDrivesRequest,
     HandshakeRequest,
     HandshakeResponse,
     Odometry,
@@ -25,6 +28,7 @@ from airo_tulip.api.messages import (
     PlatformState,
     ResetOdometryRequest,
     SetDriverTypeRequest,
+    ShutdownRequest,
     StopServerRequest,
     VelocityCommand,
 )
@@ -124,8 +128,11 @@ class TulipServer:
         self._queryables = [
             self._session.declare_queryable(self._keys.srv_handshake, self._on_handshake),
             self._session.declare_queryable(self._keys.srv_set_driver_type, self._on_set_driver_type),
+            self._session.declare_queryable(self._keys.srv_enable_drives, self._on_enable_drives),
+            self._session.declare_queryable(self._keys.srv_disable_drives, self._on_disable_drives),
             self._session.declare_queryable(self._keys.srv_reset_odometry, self._on_reset_odometry),
             self._session.declare_queryable(self._keys.srv_stop_server, self._on_stop_server),
+            self._session.declare_queryable(self._keys.srv_shutdown, self._on_shutdown),
         ]
 
     # --- Streamed command handling ---
@@ -207,6 +214,7 @@ class TulipServer:
                     driver_state=driver.state.name,
                     mode=driver.driver_type.value,
                     drives_aligned=driver.are_drives_aligned(read_only=True),
+                    drives_enabled=driver.drives_enabled,
                     watchdog_active=watchdog_active,
                     last_command_rejected=last_rejected,
                     drives=drives,
@@ -272,6 +280,25 @@ class TulipServer:
         assert isinstance(request, SetDriverTypeRequest)
         self._platform.driver.set_driver_type(PlatformDriverType(request.driver_type))
         self._reply(query, OkResponse())
+
+    def _on_enable_drives(self, query) -> None:
+        codec.decode(query.payload.to_bytes())  # EnableDrivesRequest
+        logger.info("Enabling drives.")
+        self._platform.driver.set_drives_enabled(True)
+        self._reply(query, OkResponse())
+
+    def _on_disable_drives(self, query) -> None:
+        codec.decode(query.payload.to_bytes())  # DisableDrivesRequest
+        logger.info("Disabling drives (motors de-energized to save energy).")
+        self._platform.driver.set_drives_enabled(False)
+        self._reply(query, OkResponse())
+
+    def _on_shutdown(self, query) -> None:
+        codec.decode(query.payload.to_bytes())  # ShutdownRequest
+        logger.info("Received shutdown request; shutting down the host in 1 minute.")
+        self._reply(query, OkResponse())
+        # Requires the server's user to have (passwordless) sudo rights for `shutdown`, or to run as root.
+        subprocess.run(["sudo", "shutdown", "-h", "+1"])
 
     def _on_reset_odometry(self, query) -> None:
         codec.decode(query.payload.to_bytes())  # ResetOdometryRequest

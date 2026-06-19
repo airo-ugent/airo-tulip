@@ -45,8 +45,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   (Zenoh session + key-expression helpers).
 - New client methods: `get_status()` (full platform health), `is_alive()` (telemetry-freshness liveness),
   and `drive_aligned()` (align the drives, wait until aligned, then drive — no polling).
+- Drive enable/disable: `enable_drives()` / `disable_drives()` client methods and server queryables, plus a
+  `shutdown_robot()` method (shuts down the robot's host). Disabling cuts motor current to save energy while
+  the server keeps running. `PlatformState` now reports `drives_enabled`. These ops are available directly on
+  the `KELORobile` client.
 
 ### Changed
+- The server is now launched by an `airo-tulip-server` console script that reads a YAML config file (EtherCAT
+  device + drive layout + optional Zenoh/loop settings) instead of a hardcoded launch script. An example
+  config ships in `deploy/robot.example.yaml`; `install.sh` seeds it to `<install_dir>/robot.yaml`.
+- `install.sh` now runs the airo-tulip server as a systemd service on boot, installs the systemd units from
+  `deploy/*.service`, and runs the server via the `airo-tulip-server` console script — removing the `bin/`
+  shell wrappers entirely. It is idempotent and `set -euo pipefail`-safe, and installs/starts the Zenoh router.
 - Corrected the velocity controller's wheel distance from `0.055 m` to `0.080 m` to match the KELO C++
   ground truth (`WheelModel.h`, `KELOdrive105`). The original value was a transcription error from the
   initial untested C++→Python port.
@@ -69,6 +79,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Removed the unused `pykalman` and `pyserial` dependencies, and dead code (`util.sign`, `WheelData`,
   unused constants and fields).
 - Removed the `pyzmq` dependency (replaced by `eclipse-zenoh` + `msgpack`).
+- Removed the `airo-tulip-dashboard` package and the UR cobot control scripts (`utils/start_ur`,
+  `utils/stop_ur`). UR control and a separate dashboard are out of scope — the robot is controlled through
+  the single Zenoh `KELORobile` API (which now includes enable/disable drives and shutdown). Also removed the
+  old TCP dashboard server, its handlers, `example_client.py`, and the `.sh` launch wrappers.
 
 ## 0.4.0
 

@@ -62,9 +62,21 @@ class Keys:
         return f"{self._base}/srv/set_driver_type"
 
     @property
+    def srv_enable_drives(self) -> str:
+        return f"{self._base}/srv/enable_drives"
+
+    @property
+    def srv_disable_drives(self) -> str:
+        return f"{self._base}/srv/disable_drives"
+
+    @property
     def srv_reset_odometry(self) -> str:
         return f"{self._base}/srv/reset_odometry"
 
     @property
     def srv_stop_server(self) -> str:
         return f"{self._base}/srv/stop_server"
+
+    @property
+    def srv_shutdown(self) -> str:
+        return f"{self._base}/srv/shutdown"

@@ -1,0 +1,21 @@
+# Example airo-tulip robot configuration.
+#
+# install.sh copies this to <install_dir>/robot.yaml (if not already present); edit that copy for your
+# platform. The tulip.service systemd unit runs `airo-tulip-server --config <install_dir>/robot.yaml`.
+
+# EtherCAT device the KELO drives are connected to (platform-specific).
+ethercat_device: eno1
+
+# Drive layout. Each entry is one drive: its EtherCAT slave number and its (x, y) position and mounting
+# angle (a) relative to the platform centre. These values come from KELO with your platform.
+wheels:
+  - { ethercat_number: 3, x: 0.233,  y: 0.1165,  a: 1.57 }
+  - { ethercat_number: 5, x: 0.233,  y: -0.1165, a: 1.57 }
+  - { ethercat_number: 7, x: -0.233, y: -0.1165, a: -1.57 }
+  - { ethercat_number: 9, x: -0.233, y: 0.1165,  a: 1.57 }
+
+# Optional settings (defaults shown). Remove or leave as-is unless you need to change them.
+robot_id: default                 # Zenoh key-expression namespace for this robot.
+router_endpoint: tcp/127.0.0.1:7447  # Zenoh router to connect to (a router on the brick by default).
+loop_frequency: 20.0              # EtherCAT loop frequency in Hz.
+watchdog_timeout: 0.3             # Stop the platform if no velocity command arrives within this many seconds.

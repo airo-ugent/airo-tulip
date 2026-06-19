@@ -14,6 +14,8 @@ from uuid import uuid4
 import numpy as np
 from airo_tulip.api import codec
 from airo_tulip.api.messages import (
+    DisableDrivesRequest,
+    EnableDrivesRequest,
     ErrorResponse,
     HandshakeRequest,
     HandshakeResponse,
@@ -21,6 +23,7 @@ from airo_tulip.api.messages import (
     PlatformState,
     ResetOdometryRequest,
     SetDriverTypeRequest,
+    ShutdownRequest,
     StopServerRequest,
     VelocityCommand,
 )
@@ -237,13 +240,25 @@ class KELORobile:
         """Set the mode of the platform driver (velocity or compliant)."""
         self._query(self._keys.srv_set_driver_type, SetDriverTypeRequest(driver_type.value))
 
+    def enable_drives(self) -> None:
+        """Enable (re-energize) the drives."""
+        self._query(self._keys.srv_enable_drives, EnableDrivesRequest())
+
+    def disable_drives(self) -> None:
+        """Disable the drives (cut motor current to save energy) while keeping the server running."""
+        self._query(self._keys.srv_disable_drives, DisableDrivesRequest())
+
     def reset_odometry(self) -> None:
         """Reset the platform's odometry to 0."""
         self._query(self._keys.srv_reset_odometry, ResetOdometryRequest())
 
     def stop_server(self) -> None:
-        """Stop the remote server."""
+        """Stop the remote server process."""
         self._query(self._keys.srv_stop_server, StopServerRequest())
+
+    def shutdown_robot(self) -> None:
+        """Shut down the robot's host machine."""
+        self._query(self._keys.srv_shutdown, ShutdownRequest())
 
     def close(self) -> None:
         """Stop streaming commands and close the connection to the server."""

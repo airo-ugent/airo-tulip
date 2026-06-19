@@ -4,7 +4,6 @@ This repository contains:
 
 - The KELO robotics C++ implementation of the KELO Robile platform driver, called KELO Tulip (`./kelo_tulip`)
 - A Python reimplementation with altered and additional functionality by IDLab-AIRO (UGent-imec) for integration in Python projects without a ROS dependency, split into a lightweight client/contract package (`./airo-tulip`) and a hardware abstraction layer that runs on the KELO CPU brick (`./airo-tulip-hal`)
-- A folder `./dashboard` which contains the implementation of a dashboard server that should run on the KELO CPU brick boot, that allows remote control of the KELO's peripherals such as the UR arm.
 - A folder `./utils` with utility scripts
 - A script `./install.sh` which installs the necessary dependencies for the KELO Tulip and AIRO Tulip packages and puts several commands on the path
 
@@ -39,5 +38,7 @@ cd airo-tulip
 
 ## Usage
 
-After the installation, a dashboard server will automatically be started when the KELO CPU brick boots, listening on port 49790.
-The server operates over TCP, and an example client can be found in `dashboard/airo_tulip_dashboard/example_client.py`.
+After installation, the Zenoh router and the airo-tulip server start automatically when the KELO CPU brick boots.
+You can then control the robot from any machine on the network with the `KELORobile` client (see
+[`airo-tulip/README.md`](airo-tulip/README.md)) — drive it, read odometry/status, and enable/disable the
+drives (to save energy) or shut the robot down.

@@ -54,6 +54,7 @@ class PlatformState:
     driver_state: str
     mode: int  # PlatformDriverType value
     drives_aligned: bool
+    drives_enabled: bool
     watchdog_active: bool
     last_command_rejected: Optional[dict]
     drives: List[dict] = field(default_factory=list)
@@ -84,13 +85,28 @@ class SetDriverTypeRequest:
 
 
 @dataclass
+class EnableDrivesRequest:
+    """Enable the drives (re-energize the motors)."""
+
+
+@dataclass
+class DisableDrivesRequest:
+    """Disable the drives (cut motor current to save energy) while keeping the server running."""
+
+
+@dataclass
 class ResetOdometryRequest:
     """Reset the platform's estimated pose and velocity to zero."""
 
 
 @dataclass
 class StopServerRequest:
-    """Request the server to shut down."""
+    """Request the server process to shut down."""
+
+
+@dataclass
+class ShutdownRequest:
+    """Request the robot's host machine to shut down."""
 
 
 @dataclass

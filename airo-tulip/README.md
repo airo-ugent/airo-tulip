@@ -9,8 +9,6 @@ In this README, we over the structure of the `airo-tulip` package and discuss so
 The `docs` folder contains additional documentation files (in no particular order):
 
 - `kelo_setup.md` on how to set up the KELO hardware and software, a prerequisite to using `airo-tulip`
-- `rerun.md` on how to use Rerun running on the remote KELO CPU brick
-- `virtual_display.md` on how to enable a virtual display for use in a VNC connection without needing to connect a display to the KELO CPU brick
 - `external_devices.md` on how to connect to other devices mounted on the KELO, with the KELO acting as the router
 - `how_it_works.md` on how the code base is structured and why
 
@@ -28,7 +26,7 @@ The project is split into two packages:
 - **`airo-tulip-hal`** contains the hardware abstraction layer (EtherCAT driver, monitor, controllers) and
   the `TulipServer`. It runs on the KELO CPU brick. See [`../airo-tulip-hal/README.md`](../airo-tulip-hal/README.md).
 
-The client communicates with the server over a TCP connection (0MQ). This README documents the client side;
+The client communicates with the server over Zenoh. This README documents the client side;
 for running the server, see the `airo-tulip-hal` README.
 
 **Note:** when interfacing with the server from a client on a remote machine, make sure that the `airo-tulip` versions
@@ -127,9 +125,9 @@ Read back the platform's state with `client.get_odometry()`, `client.get_velocit
 
 ### Mounted devices
 
-Without mounting external devices on the KELO, you can pretty much only drive around (which is cool, but not very useful).
-Refer to [`docs/external_devices.md`](docs/external_devices.md) for information on how to set up and access external devices
-such as a UR cobot with a Robotiq gripper.
+You can mount additional devices on the KELO (sensors, a more powerful compute unit, etc.) and reach them
+over the network through the brick. Refer to [`docs/external_devices.md`](docs/external_devices.md) for how
+to set up and access external devices.
 
 ### Odometry
 The default odometry is based on the drive encoders and is not always robust. We recommend using additional sensors such as a compass or flow sensor to improve the odometry.

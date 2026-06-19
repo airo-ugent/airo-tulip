@@ -20,8 +20,11 @@ _MESSAGE_TYPES = [
     messages.HandshakeRequest,
     messages.HandshakeResponse,
     messages.SetDriverTypeRequest,
+    messages.EnableDrivesRequest,
+    messages.DisableDrivesRequest,
     messages.ResetOdometryRequest,
     messages.StopServerRequest,
+    messages.ShutdownRequest,
     messages.OkResponse,
     messages.ErrorResponse,
 ]

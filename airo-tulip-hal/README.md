@@ -14,7 +14,7 @@ laptop / workstation         KELO CPU brick
 ┌──────────────────┐  TCP    ┌────────────────────────┐
 │ airo-tulip       │ ◀─────▶ │ airo-tulip-hal         │
 │  KELORobile      │  0MQ    │  TulipServer           │
-│  (no pysoem)     │         │  hardware / EtherCAT   │
+│                  │         │  hardware / EtherCAT   │
 └──────────────────┘         └────────────────────────┘
 ```
 
@@ -29,34 +29,35 @@ communication. Requires Python 3.9+.
 
 ## Running the server on the KELO
 
-`airo_tulip_hal.server` provides `TulipServer`, which initialises the KELO platform and exposes it over
-Zenoh. Client and server connect to a Zenoh **router** (`zenohd`), which by default runs on the KELO CPU
-brick (the server connects to `tcp/127.0.0.1:7447`). The `RobotConfiguration` is specific to how the KELO
-bricks are mounted (provided by KELO robotics with your platform), as is the EtherCAT device name.
+The server connects (over Zenoh) to a Zenoh **router** (`zenohd`), which by default runs on the KELO CPU
+brick. `install.sh` sets all of this up: it installs the router, seeds a `robot.yaml` config, and runs the
+server as a systemd service on boot.
 
 **Prerequisite:** a Zenoh router (`zenohd`) must be running. Install it from the
-[zenoh releases](https://github.com/eclipse-zenoh/zenoh/releases) and start it on
-the KELO CPU brick before launching the server.
+[zenoh releases](https://github.com/eclipse-zenoh/zenoh/releases) and start it on the KELO CPU brick
+(the install script does this for you).
 
-```python
-from airo_tulip_hal.server import TulipServer, RobotConfiguration
-from airo_tulip_hal.hardware.structs import WheelConfig
+The server is launched by the `airo-tulip-server` console script, which reads a YAML config describing
+your platform (the EtherCAT device and the drive layout — provided by KELO with your platform):
 
-
-def create_wheel_configs():
-    wheel_configs = []
-    wheel_configs.append(WheelConfig(ethercat_number=3, x=0.233, y=0.1165, a=1.57))
-    wheel_configs.append(WheelConfig(ethercat_number=5, x=0.233, y=-0.1165, a=1.57))
-    wheel_configs.append(WheelConfig(ethercat_number=7, x=-0.233, y=-0.1165, a=-1.57))
-    wheel_configs.append(WheelConfig(ethercat_number=9, x=-0.233, y=0.1165, a=1.57))
-    return wheel_configs
-
-
-# These values are specific to your platform!
-device = "eno1"
-server = TulipServer(RobotConfiguration(device, create_wheel_configs()))  # robot_id="default"
-server.run()
+```shell
+airo-tulip-server --config robot.yaml
 ```
+
+A documented example config is in [`../deploy/robot.example.yaml`](../deploy/robot.example.yaml):
+
+```yaml
+ethercat_device: eno1
+wheels:
+  - { ethercat_number: 3, x: 0.233,  y: 0.1165,  a: 1.57 }
+  - { ethercat_number: 5, x: 0.233,  y: -0.1165, a: 1.57 }
+  - { ethercat_number: 7, x: -0.233, y: -0.1165, a: -1.57 }
+  - { ethercat_number: 9, x: -0.233, y: 0.1165,  a: 1.57 }
+# Optional: robot_id, router_endpoint, loop_frequency, watchdog_timeout
+```
+
+If you prefer to embed the server in your own Python program, you can still construct
+`airo_tulip_hal.server.TulipServer` with a `RobotConfiguration` directly.
 
 Connect to it from a client as documented in the [`airo-tulip`](../airo-tulip/README.md) README.
 

@@ -121,6 +121,20 @@ class PlatformDriver:
             self._driver_type = driver_type
             self._wheel_controllers = self._create_wheel_controllers(driver_type)
 
+    def set_drives_enabled(self, enabled: bool) -> None:
+        """Enable or disable all drives.
+
+        When disabled, the platform driver no longer sends the enable bits to the drives, so the motors
+        receive no current (saving energy) while the server keeps running and reading sensors. Note that
+        the drives must be enabled for the platform to (re)gain motion."""
+        with self._lock:
+            self._wheel_enabled = [enabled] * self._num_wheels
+
+    @property
+    def drives_enabled(self) -> bool:
+        """Whether all drives are currently enabled."""
+        return all(self._wheel_enabled)
+
     @property
     def state(self) -> PlatformDriverState:
         """The current platform driver state."""

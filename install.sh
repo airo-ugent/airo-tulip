@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Install the airo-tulip packages and the supporting commands/services on a KELO CPU brick.
+# Install the airo-tulip packages and supporting services on a KELO CPU brick.
 #
 # This script is idempotent: it is safe to re-run. It installs to the directory in which it lives.
 # The services run as the invoking user by default; override with AIRO_TULIP_USER=<user>.
@@ -13,6 +13,9 @@ trap 'err "installation failed on line $LINENO."' ERR
 # Install location is this script's own directory (the repository root).
 INSTALL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$INSTALL_DIR"
+
+SERVER_BIN="$INSTALL_DIR/.venv/bin/airo-tulip-server"
+ROBOT_CONFIG="$INSTALL_DIR/robot.yaml"
 
 # The user the services run as, and their home (for .kelorc / .bashrc).
 TARGET_USER="${AIRO_TULIP_USER:-$USER}"
@@ -32,26 +35,10 @@ echo "uv is installed."
 read -r -p "Continue installing to $INSTALL_DIR? (y/N) " RESPONSE
 [ "$RESPONSE" = "y" ] || { echo "Exiting..."; exit 0; }
 
-# --- Python environment ---
+# --- Python environment (installs all workspace packages, incl. console scripts) ---
 
 echo "Running uv sync to create the virtual environment at $INSTALL_DIR/.venv ..."
 uv sync
-
-# --- Commands on PATH ---
-
-mkdir -p "$INSTALL_DIR/bin"
-
-copy_command() {
-    local name="$1"
-    cp "$INSTALL_DIR/utils/${name}.sh" "$INSTALL_DIR/bin/${name}"
-    cp "$INSTALL_DIR/utils/${name}.py" "$INSTALL_DIR/bin/${name}.py"
-    chmod +x "$INSTALL_DIR/bin/${name}"
-}
-
-for cmd in start_ur stop_ur start_tulip start_dashboard; do
-    echo "Installing command: $cmd"
-    copy_command "$cmd"
-done
 
 # --- Zenoh router (zenohd) ---
 
@@ -66,30 +53,43 @@ else
 fi
 ZENOHD_PATH="$(command -v zenohd)"
 
+# --- Robot configuration ---
+# The server reads its platform config (EtherCAT device + drive layout) from a YAML file. Seed it from
+# the example on first install, but never clobber an existing (edited) config.
+if [ ! -f "$ROBOT_CONFIG" ]; then
+    cp "$INSTALL_DIR/deploy/robot.example.yaml" "$ROBOT_CONFIG"
+    echo "Created $ROBOT_CONFIG from the example. EDIT IT for your platform before driving (EtherCAT device + wheel layout)."
+else
+    echo "Using existing robot config at $ROBOT_CONFIG."
+fi
+
 # --- systemd services (rendered from deploy/*.service templates) ---
+# zenoh.service: the Zenoh router. tulip.service: the airo-tulip drive-control server (runs on boot;
+# the drives can be disabled at runtime to save energy via a KELORobile client).
 
 install_unit() {
     local name="$1"
     echo "Installing systemd unit: $name"
     sed -e "s|__USER__|${TARGET_USER}|g" \
         -e "s|__ZENOHD__|${ZENOHD_PATH}|g" \
-        -e "s|__KELORC__|${KELORC}|g" \
-        -e "s|__START_DASHBOARD__|${INSTALL_DIR}/bin/start_dashboard|g" \
+        -e "s|__SERVER_BIN__|${SERVER_BIN}|g" \
+        -e "s|__CONFIG__|${ROBOT_CONFIG}|g" \
         "$INSTALL_DIR/deploy/${name}" \
         | sudo tee "/etc/systemd/system/${name}" > /dev/null
 }
 
 install_unit zenoh.service
-install_unit tulip-dashboard.service
+install_unit tulip.service
 
 sudo systemctl daemon-reload
 echo "Enabling services on boot and (re)starting them..."
-sudo systemctl enable zenoh.service tulip-dashboard.service
+sudo systemctl enable zenoh.service tulip.service
 # restart (not just start) so a re-run picks up any changes to the unit files.
 sudo systemctl restart zenoh.service
-sudo systemctl restart tulip-dashboard.service
+sudo systemctl restart tulip.service
 
 # --- Environment (.kelorc + .bashrc), idempotent ---
+# Exposes the virtual environment (and any console scripts it provides) on PATH.
 
 read -r -p "Add airo-tulip environment variables to $KELORC and source it from $BASHRC? (y/N) " RESPONSE
 if [ "$RESPONSE" = "y" ]; then
@@ -102,12 +102,11 @@ if [ "$RESPONSE" = "y" ]; then
     {
         echo "$MARKER_START"
         echo "export AIRO_TULIP_PATH=\"$INSTALL_DIR\""
-        echo "export PATH=\"$INSTALL_DIR/bin:\$PATH\""
+        echo "export PATH=\"$INSTALL_DIR/.venv/bin:\$PATH\""
         echo "$MARKER_END"
     } >> "$KELORC"
     echo "Updated $KELORC."
 
-    # Only add the source line to .bashrc if it isn't there yet.
     touch "$BASHRC"
     if ! grep -qF "source $KELORC" "$BASHRC"; then
         printf '\n# Added by the airo-tulip installation script.\nsource %s\n' "$KELORC" >> "$BASHRC"
