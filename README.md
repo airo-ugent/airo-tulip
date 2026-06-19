@@ -12,6 +12,22 @@ The two Python packages are documented in their own READMEs: [`airo-tulip`](airo
 
 The client and server communicate over [Zenoh](https://zenoh.io/): the brick runs a Zenoh router and the server, and clients connect to the router to drive the robot and read its state.
 
+## Packages and PyPI
+
+The two Python packages are distributed differently:
+
+- **`airo-tulip`** (the client + shared API contract) **is published to PyPI** at
+  <https://pypi.org/project/airo-tulip/>, so client machines can install it with `pip install airo-tulip`.
+  Maintainers publish a new release with [`airo-tulip/publish_pypi.sh`](airo-tulip/publish_pypi.sh), which
+  runs `uv build` and `uv publish`. Before publishing, bump the version in `airo-tulip/pyproject.toml` and
+  set `UV_PUBLISH_TOKEN` to a PyPI API token.
+- **`airo-tulip-hal`** (the hardware layer + server) **is not published to PyPI.** It only ever runs on the
+  KELO CPU brick and is built from this repository's source by `install.sh` (into `/opt/airo-tulip`), so a
+  `pip install` distribution would serve no purpose. Deploy and update it from source (see below).
+
+The client and server must run the **same `airo-tulip` version** — the connection handshake enforces this —
+so when you publish a new `airo-tulip` release, remember to update the deployed bricks to match.
+
 ## Installing on the KELO CPU brick
 
 `install.sh` performs a **system-wide installation** that configures a KELO CPU brick (running Ubuntu) to run the robot server automatically on boot.
