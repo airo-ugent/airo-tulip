@@ -105,11 +105,6 @@ class StopServerRequest:
 
 
 @dataclass
-class ShutdownRequest:
-    """Request the robot's host machine to shut down."""
-
-
-@dataclass
 class OkResponse:
     """Indicates a request was handled successfully."""
 

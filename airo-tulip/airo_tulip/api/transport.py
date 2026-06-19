@@ -76,7 +76,3 @@ class Keys:
     @property
     def srv_stop_server(self) -> str:
         return f"{self._base}/srv/stop_server"
-
-    @property
-    def srv_shutdown(self) -> str:
-        return f"{self._base}/srv/shutdown"

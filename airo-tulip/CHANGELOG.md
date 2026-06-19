@@ -45,10 +45,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   (Zenoh session + key-expression helpers).
 - New client methods: `get_status()` (full platform health), `is_alive()` (telemetry-freshness liveness),
   and `drive_aligned()` (align the drives, wait until aligned, then drive — no polling).
-- Drive enable/disable: `enable_drives()` / `disable_drives()` client methods and server queryables, plus a
-  `shutdown_robot()` method (shuts down the robot's host). Disabling cuts motor current to save energy while
-  the server keeps running. `PlatformState` now reports `drives_enabled`. These ops are available directly on
-  the `KELORobile` client.
+- Drive enable/disable: `enable_drives()` / `disable_drives()` client methods and server queryables.
+  Disabling cuts motor current to save energy while the server keeps running. `PlatformState` now reports
+  `drives_enabled`. These ops are available directly on the `KELORobile` client.
 
 ### Changed
 - The server is now launched by an `airo-tulip-server` console script that reads a YAML config file (EtherCAT

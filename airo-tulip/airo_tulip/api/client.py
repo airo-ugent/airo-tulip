@@ -23,7 +23,6 @@ from airo_tulip.api.messages import (
     PlatformState,
     ResetOdometryRequest,
     SetDriverTypeRequest,
-    ShutdownRequest,
     StopServerRequest,
     VelocityCommand,
 )
@@ -255,10 +254,6 @@ class KELORobile:
     def stop_server(self) -> None:
         """Stop the remote server process."""
         self._query(self._keys.srv_stop_server, StopServerRequest())
-
-    def shutdown_robot(self) -> None:
-        """Shut down the robot's host machine."""
-        self._query(self._keys.srv_shutdown, ShutdownRequest())
 
     def close(self) -> None:
         """Stop streaming commands and close the connection to the server."""

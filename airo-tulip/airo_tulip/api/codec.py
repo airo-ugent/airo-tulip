@@ -24,7 +24,6 @@ _MESSAGE_TYPES = [
     messages.DisableDrivesRequest,
     messages.ResetOdometryRequest,
     messages.StopServerRequest,
-    messages.ShutdownRequest,
     messages.OkResponse,
     messages.ErrorResponse,
 ]

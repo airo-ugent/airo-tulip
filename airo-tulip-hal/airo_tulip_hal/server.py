@@ -12,24 +12,19 @@ Communication model (ROS 2-style):
 By default it connects in client mode to a Zenoh router (typically running on the KELO CPU brick)."""
 
 import math
-import subprocess
 import time
 from threading import Event, Lock, Thread
 from typing import List, Optional
 
 from airo_tulip.api import codec
 from airo_tulip.api.messages import (
-    DisableDrivesRequest,
-    EnableDrivesRequest,
+    ErrorResponse,
     HandshakeRequest,
     HandshakeResponse,
     Odometry,
     OkResponse,
     PlatformState,
-    ResetOdometryRequest,
     SetDriverTypeRequest,
-    ShutdownRequest,
-    StopServerRequest,
     VelocityCommand,
 )
 from airo_tulip.api.transport import DEFAULT_ROUTER_PORT, Keys, open_session
@@ -126,13 +121,12 @@ class TulipServer:
         self._pub_state = self._session.declare_publisher(self._keys.state_platform)
         self._sub_cmd = self._session.declare_subscriber(self._keys.cmd_velocity, self._on_velocity_command)
         self._queryables = [
-            self._session.declare_queryable(self._keys.srv_handshake, self._on_handshake),
-            self._session.declare_queryable(self._keys.srv_set_driver_type, self._on_set_driver_type),
-            self._session.declare_queryable(self._keys.srv_enable_drives, self._on_enable_drives),
-            self._session.declare_queryable(self._keys.srv_disable_drives, self._on_disable_drives),
-            self._session.declare_queryable(self._keys.srv_reset_odometry, self._on_reset_odometry),
-            self._session.declare_queryable(self._keys.srv_stop_server, self._on_stop_server),
-            self._session.declare_queryable(self._keys.srv_shutdown, self._on_shutdown),
+            self._session.declare_queryable(self._keys.srv_handshake, self._guard(self._on_handshake)),
+            self._session.declare_queryable(self._keys.srv_set_driver_type, self._guard(self._on_set_driver_type)),
+            self._session.declare_queryable(self._keys.srv_enable_drives, self._guard(self._on_enable_drives)),
+            self._session.declare_queryable(self._keys.srv_disable_drives, self._guard(self._on_disable_drives)),
+            self._session.declare_queryable(self._keys.srv_reset_odometry, self._guard(self._on_reset_odometry)),
+            self._session.declare_queryable(self._keys.srv_stop_server, self._guard(self._on_stop_server)),
         ]
 
     # --- Streamed command handling ---
@@ -264,6 +258,22 @@ class TulipServer:
 
     # --- Queryable handlers ---
 
+    def _guard(self, handler):
+        """Wrap a queryable handler so that any failure is reported back to the client as an error reply
+        instead of being swallowed (which would leave the client waiting until its timeout)."""
+
+        def wrapped(query):
+            try:
+                handler(query)
+            except Exception as e:
+                logger.exception(f"Error handling query on {query.key_expr}.")
+                try:
+                    query.reply_err(f"{type(e).__name__}: {e}")
+                except Exception:
+                    logger.exception("Failed to send error reply.")
+
+        return wrapped
+
     def _reply(self, query, response) -> None:
         query.reply(query.key_expr, codec.encode(response))
 
@@ -271,13 +281,15 @@ class TulipServer:
         from importlib.metadata import version
 
         request = codec.decode(query.payload.to_bytes())
-        assert isinstance(request, HandshakeRequest)
+        if not isinstance(request, HandshakeRequest):
+            raise ValueError(f"Expected a HandshakeRequest, got {type(request).__name__}.")
         logger.info("Handling handshake request.")
         self._reply(query, HandshakeResponse(request.uuid, version("airo-tulip"), self._robot_id))
 
     def _on_set_driver_type(self, query) -> None:
         request = codec.decode(query.payload.to_bytes())
-        assert isinstance(request, SetDriverTypeRequest)
+        if not isinstance(request, SetDriverTypeRequest):
+            raise ValueError(f"Expected a SetDriverTypeRequest, got {type(request).__name__}.")
         self._platform.driver.set_driver_type(PlatformDriverType(request.driver_type))
         self._reply(query, OkResponse())
 
@@ -292,13 +304,6 @@ class TulipServer:
         logger.info("Disabling drives (motors de-energized to save energy).")
         self._platform.driver.set_drives_enabled(False)
         self._reply(query, OkResponse())
-
-    def _on_shutdown(self, query) -> None:
-        codec.decode(query.payload.to_bytes())  # ShutdownRequest
-        logger.info("Received shutdown request; shutting down the host in 1 minute.")
-        self._reply(query, OkResponse())
-        # Requires the server's user to have (passwordless) sudo rights for `shutdown`, or to run as root.
-        subprocess.run(["sudo", "shutdown", "-h", "+1"])
 
     def _on_reset_odometry(self, query) -> None:
         codec.decode(query.payload.to_bytes())  # ResetOdometryRequest

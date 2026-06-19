@@ -41,4 +41,4 @@ cd airo-tulip
 After installation, the Zenoh router and the airo-tulip server start automatically when the KELO CPU brick boots.
 You can then control the robot from any machine on the network with the `KELORobile` client (see
 [`airo-tulip/README.md`](airo-tulip/README.md)) — drive it, read odometry/status, and enable/disable the
-drives (to save energy) or shut the robot down.
+drives to save energy.

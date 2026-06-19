@@ -7,7 +7,7 @@ from airo_tulip.api.types import MAX_PLATFORM_ANGULAR_VELOCITY, MAX_PLATFORM_LIN
 # Drive geometry used by the odometry / pose estimation (see platform_monitor.py). These match the
 # values used by KELO's odometry in PlatformDriverROS.cpp: s_w = 0.01, d_w = 0.0775, r_w = 0.0524.
 WHEEL_DISTANCE = 0.0775
-WHEEL_DIAMETER = 0.104
+WHEEL_DIAMETER = 0.1048  # so WHEEL_RADIUS == 0.0524, matching KELO's odometry wheel radius (r_w).
 WHEEL_RADIUS = 0.5 * WHEEL_DIAMETER
 CASTOR_OFFSET = 0.01
 
