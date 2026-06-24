@@ -13,7 +13,7 @@ the KELO CPU brick installs `airo-tulip-hal`.
 laptop / workstation         KELO CPU brick
 ┌──────────────────┐  TCP    ┌────────────────────────┐
 │ airo-tulip       │ ◀─────▶ │ airo-tulip-hal         │
-│  KELORobile      │  0MQ    │  TulipServer           │
+│  KELORobile      │ Zenoh   │  TulipServer           │
 │                  │         │  hardware / EtherCAT   │
 └──────────────────┘         └────────────────────────┘
 ```
