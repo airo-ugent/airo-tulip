@@ -23,10 +23,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
       **queryable** (request/reply) calls.
     - The wire format is now **msgpack**, not pickle — removing the arbitrary-code-execution risk and
       making the protocol language-agnostic.
-    - Connectivity is via a **Zenoh router** (`zenohd`) by default; `KELORobile(host)` and the server
-      connect to it (default `tcp/<host>:7447`). A router must be running (typically on the KELO CPU brick).
+    - Connectivity is **peer**-to-peer by default: the server listens on `tcp/0.0.0.0:7447` and
+      `KELORobile(host)` connects directly to it at `tcp/<host>:7447` — no Zenoh router (`zenohd`)
+      required. A router can be used instead (set `mode="client"` / `router_endpoint`) for setups with
+      many clients or that span subnets.
     - `TulipServer`'s constructor changed: it no longer takes an IP/port to bind; it takes Zenoh session
-      options (router endpoint, robot id, watchdog timeout). `KELORobile`'s default port is now 7447.
+      options (mode, router endpoint, robot id, watchdog timeout). `KELORobile`'s default port is now 7447.
 - Split the project into two packages. `airo-tulip` now contains only the client (`KELORobile`) and the
   shared API contract (`airo_tulip.api.messages`, `airo_tulip.api.types`); the hardware abstraction layer
   and server moved to the new `airo-tulip-hal` package. As a result:
@@ -55,10 +57,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   config ships in `deploy/robot.example.yaml`; `install.sh` seeds it to `<install_dir>/robot.yaml`.
 - `install.sh` is now a **system-wide** installer: it builds and installs the packages non-editable into
   `/opt/airo-tulip/venv`, puts config in `/etc/airo-tulip/robot.yaml`, symlinks the `airo-tulip-server`
-  console script into `/usr/local/bin`, and registers `zenoh`/`tulip` systemd services (run as root, since
+  console script into `/usr/local/bin`, and registers a `tulip` systemd service (run as root, since
   the EtherCAT master needs raw-socket access). The source clone is only needed at install time and can be
   removed afterwards. Development is now fully separate (`uv sync` + run locally, no system changes). The
-  installer is idempotent and `set -euo pipefail`-safe, and installs/starts the Zenoh router.
+  installer is idempotent and `set -euo pipefail`-safe.
 - Corrected the velocity controller's wheel distance from `0.055 m` to `0.080 m` to match the KELO C++
   ground truth (`WheelModel.h`, `KELOdrive105`). The original value was a transcription error from the
   initial untested C++→Python port.

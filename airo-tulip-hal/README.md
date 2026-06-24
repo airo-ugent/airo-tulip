@@ -29,13 +29,13 @@ communication. Requires Python 3.9+.
 
 ## Running the server on the KELO
 
-The server connects (over Zenoh) to a Zenoh **router** (`zenohd`), which by default runs on the KELO CPU
-brick. `install.sh` sets all of this up: it installs the router, seeds a `robot.yaml` config, and runs the
-server as a systemd service on boot.
+By default the server runs in Zenoh **peer** mode: it listens on `tcp/0.0.0.0:7447` for direct client
+connections, so no Zenoh router (`zenohd`) is needed. `install.sh` sets all of this up: it seeds a
+`robot.yaml` config and runs the server as a systemd service on boot.
 
-**Prerequisite:** a Zenoh router (`zenohd`) must be running. Install it from the
-[zenoh releases](https://github.com/eclipse-zenoh/zenoh/releases) and start it on the KELO CPU brick
-(the install script does this for you).
+For setups with many clients or that span subnets, the server can instead connect to a Zenoh router in
+client mode (set `mode: client` and optionally `router_endpoint` in the config, and run `zenohd`
+yourself — see the [zenoh releases](https://github.com/eclipse-zenoh/zenoh/releases)).
 
 The server is launched by the `airo-tulip-server` console script, which reads a YAML config describing
 your platform (the EtherCAT device and the drive layout — provided by KELO with your platform):
@@ -53,7 +53,7 @@ wheels:
   - { ethercat_number: 5, x: 0.233,  y: -0.1165, a: 1.57 }
   - { ethercat_number: 7, x: -0.233, y: -0.1165, a: -1.57 }
   - { ethercat_number: 9, x: -0.233, y: 0.1165,  a: 1.57 }
-# Optional: robot_id, router_endpoint, loop_frequency, watchdog_timeout
+# Optional: robot_id, loop_frequency, watchdog_timeout (and mode/router_endpoint to use a router)
 ```
 
 If you prefer to embed the server in your own Python program, you can still construct

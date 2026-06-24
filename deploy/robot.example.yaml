@@ -16,6 +16,11 @@ wheels:
 
 # Optional settings (defaults shown). Remove or leave as-is unless you need to change them.
 robot_id: default                 # Zenoh key-expression namespace for this robot.
-router_endpoint: tcp/127.0.0.1:7447  # Zenoh router to connect to (a router on the brick by default).
 loop_frequency: 20.0              # EtherCAT loop frequency in Hz.
 watchdog_timeout: 0.3             # Stop the platform if no velocity command arrives within this many seconds.
+
+# Connectivity. By default the server runs in Zenoh "peer" mode and listens on tcp/0.0.0.0:7447, so
+# clients connect to it directly (no router needed). To instead route through a Zenoh router (e.g. to
+# fan out to many clients or bridge subnets), uncomment the following and run a router (zenohd):
+# mode: client
+# router_endpoint: tcp/127.0.0.1:7447  # Zenoh router to connect to in client mode.

@@ -2,8 +2,9 @@
 #
 # System-wide installer for airo-tulip on a KELO CPU brick.
 #
-# Installs the server into /opt/airo-tulip, configuration into /etc/airo-tulip, and registers systemd
-# services so the Zenoh router and the airo-tulip server start on boot. The packages are installed
+# Installs the server into /opt/airo-tulip, configuration into /etc/airo-tulip, and registers a systemd
+# service so the airo-tulip server starts on boot. The server runs in Zenoh peer mode and listens for
+# direct client connections, so no Zenoh router (zenohd) is needed. The packages are installed
 # non-editable, so after installation the source clone is no longer needed and may be removed.
 #
 # For DEVELOPMENT (no system changes, no systemd), do NOT run this script — see the README.
@@ -31,7 +32,7 @@ echo "This will install airo-tulip system-wide:"
 echo "  server + venv : $INSTALL_PREFIX"
 echo "  configuration : $ROBOT_CONFIG"
 echo "  command       : $SYMLINK"
-echo "  services      : /etc/systemd/system/{zenoh,tulip}.service (run as root)"
+echo "  service       : /etc/systemd/system/tulip.service (runs as root)"
 echo "It uses sudo and needs network access."
 read -r -p "Continue? (y/N) " RESPONSE
 [ "$RESPONSE" = "y" ] || { echo "Exiting..."; exit 0; }
@@ -46,18 +47,6 @@ sudo "$UV" pip install --python "$VENV_DIR/bin/python" "$SOURCE_DIR/airo-tulip" 
 # Expose the server command system-wide.
 sudo ln -sf "$SERVER_BIN" "$SYMLINK"
 
-# --- Zenoh router (zenohd) ---
-if ! command -v zenohd &> /dev/null; then
-    echo "Installing the Zenoh router (zenohd) from the Eclipse Zenoh apt repository..."
-    echo "deb [trusted=yes] https://download.eclipse.org/zenoh/debian-repo/ /" \
-        | sudo tee /etc/apt/sources.list.d/zenoh.list > /dev/null
-    sudo apt-get update -y
-    sudo apt-get install -y zenoh
-else
-    echo "zenohd is already installed."
-fi
-ZENOHD_PATH="$(command -v zenohd)"
-
 # --- Configuration ---
 # Seed the platform config from the example on first install, but never clobber an edited one.
 sudo mkdir -p "$CONFIG_DIR"
@@ -68,24 +57,21 @@ else
     echo "Using existing robot config at $ROBOT_CONFIG."
 fi
 
-# --- systemd services (rendered from deploy/*.service templates) ---
+# --- systemd service (rendered from the deploy/*.service template) ---
 install_unit() {
     local name="$1"
     echo "Installing systemd unit: $name"
-    sed -e "s|__ZENOHD__|${ZENOHD_PATH}|g" \
-        -e "s|__SERVER_BIN__|${SERVER_BIN}|g" \
+    sed -e "s|__SERVER_BIN__|${SERVER_BIN}|g" \
         -e "s|__CONFIG__|${ROBOT_CONFIG}|g" \
         "$SOURCE_DIR/deploy/${name}" \
         | sudo tee "/etc/systemd/system/${name}" > /dev/null
 }
-install_unit zenoh.service
 install_unit tulip.service
 
 sudo systemctl daemon-reload
-echo "Enabling services on boot and (re)starting them..."
-sudo systemctl enable zenoh.service tulip.service
-# restart (not just start) so a re-run picks up changes to the units or the reinstalled server.
-sudo systemctl restart zenoh.service
+echo "Enabling the service on boot and (re)starting it..."
+sudo systemctl enable tulip.service
+# restart (not just start) so a re-run picks up changes to the unit or the reinstalled server.
 sudo systemctl restart tulip.service
 
 echo

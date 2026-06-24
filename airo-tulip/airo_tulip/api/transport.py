@@ -1,19 +1,22 @@
 """Zenoh session setup and key-expression helpers shared by the client and server.
 
-The default deployment connects in **client** mode to a Zenoh **router** (`zenohd`), avoiding multicast
-discovery. The router typically runs on the KELO CPU brick. The session knobs are overridable (e.g. to
-run a peer-to-peer setup or for tests)."""
+The default deployment is **peer**-to-peer: the server listens and the client connects directly to it,
+with no Zenoh router (`zenohd`) in between. Multicast discovery is disabled, so endpoints are given
+explicitly. The session knobs are overridable to instead run in **client** mode against a router (e.g.
+to fan out to many clients or bridge subnets) or for tests."""
 
 import json
 from typing import List, Optional
 
 import zenoh
 
-DEFAULT_ROUTER_PORT = 7447
+DEFAULT_PORT = 7447
+# Backwards-compatible alias: the same port is used whether peering directly or via a router.
+DEFAULT_ROUTER_PORT = DEFAULT_PORT
 
 
 def open_session(
-    mode: str = "client",
+    mode: str = "peer",
     connect_endpoints: Optional[List[str]] = None,
     listen_endpoints: Optional[List[str]] = None,
     multicast: bool = False,
@@ -21,10 +24,10 @@ def open_session(
     """Open a Zenoh session.
 
     Args:
-        mode: Zenoh mode, "client" (connect to a router) or "peer".
+        mode: Zenoh mode, "peer" (connect directly to another peer) or "client" (connect to a router).
         connect_endpoints: Endpoints to connect to, e.g. ["tcp/10.10.0.1:7447"].
         listen_endpoints: Endpoints to listen on (peer mode).
-        multicast: Whether to enable multicast scouting (disabled by default; we rely on a router)."""
+        multicast: Whether to enable multicast scouting (disabled by default; we use explicit endpoints)."""
     config = zenoh.Config()
     config.insert_json5("mode", json.dumps(mode))
     if connect_endpoints:

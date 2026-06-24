@@ -26,7 +26,7 @@ from airo_tulip.api.messages import (
     StopServerRequest,
     VelocityCommand,
 )
-from airo_tulip.api.transport import DEFAULT_ROUTER_PORT, Keys, open_session
+from airo_tulip.api.transport import DEFAULT_PORT, Keys, open_session
 from airo_tulip.api.types import (
     MAX_PLATFORM_ANGULAR_VELOCITY,
     MAX_PLATFORM_LINEAR_VELOCITY,
@@ -52,30 +52,31 @@ class KELORobile:
     def __init__(
         self,
         robot_ip: str,
-        robot_port: int = DEFAULT_ROUTER_PORT,
+        robot_port: int = DEFAULT_PORT,
         *,
         robot_id: str = "default",
-        mode: str = "client",
+        mode: str = "peer",
         connect_endpoints: Optional[list] = None,
         listen_endpoints: Optional[list] = None,
         multicast: bool = False,
         publish_rate: float = 20.0,
         query_timeout: float = 2.0,
     ):
-        """Initialize the client and connect to the server (via a Zenoh router by default).
+        """Initialize the client and connect to the server (a direct peer connection by default).
 
         Args:
-            robot_ip: Host of the Zenoh router to connect to.
-            robot_port: Router port (default 7447).
+            robot_ip: Host to connect to: the robot server (peer mode, the default) or a router (client mode).
+            robot_port: Port to connect to (default 7447).
             robot_id: Namespace of the robot to talk to.
-            mode/connect_endpoints/listen_endpoints/multicast: advanced Zenoh session overrides.
+            mode: Zenoh mode, "peer" (connect directly to the server) or "client" (connect to a router).
+            connect_endpoints/listen_endpoints/multicast: advanced Zenoh session overrides.
             publish_rate: Rate (Hz) at which the current velocity setpoint is (re)published.
             query_timeout: Timeout (s) for request/reply calls."""
         self._keys = Keys(robot_id)
         self._query_timeout = query_timeout
         self._publish_period = 1.0 / publish_rate
 
-        if connect_endpoints is None and mode == "client":
+        if connect_endpoints is None and mode in ("peer", "client"):
             connect_endpoints = [f"tcp/{robot_ip}:{robot_port}"]
         logger.info(f"Opening Zenoh session (mode={mode}, connect={connect_endpoints}).")
         self._session = open_session(mode, connect_endpoints, listen_endpoints, multicast)

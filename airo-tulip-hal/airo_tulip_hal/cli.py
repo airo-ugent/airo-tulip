@@ -17,7 +17,7 @@ from airo_tulip_hal.server import RobotConfiguration, TulipServer
 from loguru import logger
 
 # Optional server settings that may appear in the config and map directly to TulipServer kwargs.
-_OPTIONAL_SERVER_KEYS = ("robot_id", "router_endpoint", "loop_frequency", "watchdog_timeout")
+_OPTIONAL_SERVER_KEYS = ("robot_id", "mode", "router_endpoint", "loop_frequency", "watchdog_timeout")
 
 
 def load_config(path: str) -> dict:

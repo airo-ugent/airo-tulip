@@ -9,7 +9,9 @@ Communication model (ROS 2-style):
 - It answers *queryable* (request/reply) calls for discrete operations: handshake, set driver type,
   reset odometry, stop server.
 
-By default it connects in client mode to a Zenoh router (typically running on the KELO CPU brick)."""
+By default it runs in **peer** mode and listens on ``tcp/0.0.0.0:7447`` so clients can connect to it
+directly, without a Zenoh router. It can instead run in client mode against a router (set
+``mode="client"`` and/or ``router_endpoint``)."""
 
 import math
 import time
@@ -27,7 +29,7 @@ from airo_tulip.api.messages import (
     SetDriverTypeRequest,
     VelocityCommand,
 )
-from airo_tulip.api.transport import DEFAULT_ROUTER_PORT, Keys, open_session
+from airo_tulip.api.transport import DEFAULT_PORT, Keys, open_session
 from airo_tulip.api.types import PlatformDriverType
 from airo_tulip_hal.hardware.constants import MAX_PLATFORM_LINEAR_VELOCITY, MAX_PLATFORM_ANGULAR_VELOCITY
 from airo_tulip_hal.hardware.ethercat import (
@@ -71,8 +73,8 @@ class TulipServer:
         robot_configuration: RobotConfiguration,
         *,
         robot_id: str = "default",
+        mode: str = "peer",
         router_endpoint: Optional[str] = None,
-        mode: str = "client",
         connect_endpoints: Optional[List[str]] = None,
         listen_endpoints: Optional[List[str]] = None,
         multicast: bool = False,
@@ -84,9 +86,12 @@ class TulipServer:
         Args:
             robot_configuration: The robot configuration.
             robot_id: Namespace for this robot's Zenoh key expressions.
-            router_endpoint: Zenoh router endpoint to connect to (default: tcp/127.0.0.1:7447).
-            mode: Zenoh mode ("client" to use a router, or "peer").
-            connect_endpoints/listen_endpoints/multicast: advanced Zenoh session overrides.
+            mode: Zenoh mode, "peer" (listen for direct client connections, the default) or "client"
+                (connect to a router).
+            router_endpoint: Zenoh router endpoint to connect to in client mode (default:
+                tcp/127.0.0.1:7447). Ignored in peer mode.
+            connect_endpoints/listen_endpoints/multicast: advanced Zenoh session overrides. In peer mode
+                the server listens on tcp/0.0.0.0:7447 unless ``listen_endpoints`` is given.
             loop_frequency: EtherCAT loop frequency (Hz).
             watchdog_timeout: Stop the platform if no velocity command arrives within this many seconds."""
         self._keys = Keys(robot_id)
@@ -102,10 +107,12 @@ class TulipServer:
 
         self._should_stop = Event()
 
-        # Zenoh session.
-        if connect_endpoints is None and mode == "client":
-            endpoint = router_endpoint or f"tcp/127.0.0.1:{DEFAULT_ROUTER_PORT}"
-            connect_endpoints = [endpoint]
+        # Zenoh session. In peer mode (the default) we listen for direct client connections; in client
+        # mode we connect to a router instead.
+        if mode == "client" and connect_endpoints is None:
+            connect_endpoints = [router_endpoint or f"tcp/127.0.0.1:{DEFAULT_PORT}"]
+        if mode == "peer" and listen_endpoints is None:
+            listen_endpoints = [f"tcp/0.0.0.0:{DEFAULT_PORT}"]
         logger.info(f"Opening Zenoh session (mode={mode}, connect={connect_endpoints}, listen={listen_endpoints}).")
         self._session = open_session(mode, connect_endpoints, listen_endpoints, multicast)
 

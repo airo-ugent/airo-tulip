@@ -6,7 +6,7 @@ from airo_tulip.api.types import PlatformDriverType
 
 
 def main():
-    mobi = KELORobile("localhost")  # connects to a Zenoh router on localhost:7447
+    mobi = KELORobile("localhost")  # connects directly to the server on localhost:7447 (peer mode)
 
     mobi.set_driver_type(PlatformDriverType.COMPLIANT_WEAK)
 

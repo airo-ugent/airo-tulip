@@ -1,8 +1,7 @@
 [Unit]
 # Installed by install.sh, which substitutes the placeholder tokens at install time.
 Description=AIRO-tulip server (KELO Robile drive control)
-After=network.target zenoh.service
-Wants=zenoh.service
+After=network.target
 StartLimitIntervalSec=0
 
 [Service]

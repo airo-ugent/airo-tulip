@@ -1,16 +1,18 @@
 # AIRO Tulip
 
-This repository contains:
+This repository contains two Python packages, one intended to run on the mobile robot (`airo-tulip-hal`) and the other intended to run on the computer driving the mobile robot (`airo-tulip`).
 
-- `./kelo-tulip` — KELO Robotics' original C++ implementation of the KELO Robile platform driver (KELO Tulip). Kept as a reference.
-- `./airo-tulip` — a lightweight Python **client** package and the shared API contract. Install this on any machine that controls the robot over the network (laptop, workstation, NUC). It does **not** depend on the robot hardware libraries (no `pysoem`).
-- `./airo-tulip-hal` — the **hardware abstraction layer** and the server (`airo-tulip-server`). This runs on the KELO CPU brick and talks to the drives over EtherCAT.
-- `./deploy` — systemd unit templates and an example robot configuration, used by the installer.
-- `./install.sh` — system-wide installer for a KELO CPU brick (virtual environment, Zenoh router, configuration, and boot services).
+In detail:
+
+- `./kelo-tulip`: KELO Robotics' original C++ implementation of the KELO Robile platform driver (KELO Tulip). Kept as a reference.
+- `./airo-tulip`: a lightweight Python **client** package and the shared API contract. Install this on any machine that controls the robot over the network (laptop, workstation, NUC). It does **not** depend on the robot hardware libraries (no `pysoem`).
+- `./airo-tulip-hal`: the **hardware abstraction layer** and the server (`airo-tulip-server`). This runs on the KELO CPU brick and talks to the drives over EtherCAT.
+- `./deploy`: systemd unit templates and an example robot configuration, used by the installer.
+- `./install.sh`: system-wide installer for a KELO CPU brick (virtual environment, configuration, and a boot service).
 
 The two Python packages are documented in their own READMEs: [`airo-tulip`](airo-tulip/README.md) (the client) and [`airo-tulip-hal`](airo-tulip-hal/README.md) (the server / hardware layer).
 
-The client and server communicate over [Zenoh](https://zenoh.io/): the brick runs a Zenoh router and the server, and clients connect to the router to drive the robot and read its state.
+The client and server communicate over [Zenoh](https://zenoh.io/): by default they connect **peer**-to-peer (the brick runs the server, which listens for direct client connections — no router needed), and clients connect to drive the robot and read its state. A Zenoh router (`zenohd`) can be used instead for setups with many clients or that span subnets.
 
 ## Packages and PyPI
 
@@ -64,7 +66,7 @@ cd airo-tulip
 ./install.sh
 ```
 
-The installer runs as your user and uses `sudo` for the steps that need it (building into `/opt`, installing the Zenoh router via `apt`, and registering systemd services). It is **idempotent** — safe to re-run. It needs network access.
+The installer runs as your user and uses `sudo` for the steps that need it (building into `/opt` and registering a systemd service). It is **idempotent** and thus safe to re-run. It needs network access.
 
 ### What it installs, and where everything goes
 
@@ -73,13 +75,11 @@ The installer runs as your user and uses `sudo` for the steps that need it (buil
 | `/opt/airo-tulip/venv/` | Virtual environment with the `airo-tulip` and `airo-tulip-hal` packages (non-editable) and the `airo-tulip-server` console script |
 | `/usr/local/bin/airo-tulip-server` | Symlink to the server console script, so it's on the system `PATH` |
 | `/etc/airo-tulip/robot.yaml` | Your platform configuration (EtherCAT device + drive layout), seeded from `deploy/robot.example.yaml` on first install and **never overwritten afterwards** |
-| `/etc/systemd/system/zenoh.service` | Boot service running the Zenoh router (`zenohd`) |
 | `/etc/systemd/system/tulip.service` | Boot service running `airo-tulip-server --config /etc/airo-tulip/robot.yaml` |
-| `zenohd` (system package) | The Zenoh router binary, from the Eclipse Zenoh apt repository |
 
-Both services run **as root**, because the EtherCAT master needs raw-socket access to the network interface.
+The service runs **as root**, because the EtherCAT master needs raw-socket access to the network interface.
 
-After installation (and a reboot), the brick automatically runs the Zenoh router and the server. You then control the robot from any machine on the network with the `KELORobile` client — see [`airo-tulip/README.md`](airo-tulip/README.md).
+After installation (and a reboot), the brick automatically runs the server, which listens for direct (peer) client connections on port 7447. You then control the robot from any machine on the network with the `KELORobile` client — see [`airo-tulip/README.md`](airo-tulip/README.md).
 
 ### Configure your platform
 
@@ -97,8 +97,6 @@ journalctl -u tulip -f           # follow the server logs
 sudo systemctl restart tulip     # apply configuration changes
 sudo systemctl stop tulip        # stop the server
 ```
-
-(`zenoh` is the corresponding unit for the router.)
 
 ## Updating and rolling back
 
@@ -133,7 +131,7 @@ uv sync                  # creates ./.venv with the packages installed editable
   uv run airo-tulip-server --config robot.yaml
   ```
 
-  This needs a Zenoh router reachable (run `zenohd` yourself, or connect a client in **peer mode**). It does not touch `/opt`, `/etc`, or systemd.
+  The server listens for direct (peer) client connections, so no router is needed. It does not touch `/opt`, `/etc`, or systemd.
 - **Hardware-free testing**: the client and server can run against each other in peer mode without a router or the EtherCAT hardware (this is how the loopback tests work).
 
 If a brick already has a production install, stop the boot service first (`sudo systemctl stop tulip`) so it doesn't contend for the EtherCAT bus while you run a development server.
@@ -141,8 +139,8 @@ If a brick already has a production install, stop the boot service first (`sudo 
 ## Uninstalling
 
 ```bash
-sudo systemctl disable --now tulip zenoh
-sudo rm /etc/systemd/system/tulip.service /etc/systemd/system/zenoh.service
+sudo systemctl disable --now tulip
+sudo rm /etc/systemd/system/tulip.service
 sudo systemctl daemon-reload
 sudo rm -f /usr/local/bin/airo-tulip-server
 sudo rm -rf /opt/airo-tulip /etc/airo-tulip

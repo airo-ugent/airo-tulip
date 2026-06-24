@@ -102,8 +102,8 @@ See [`../airo-tulip-hal/README.md`](../airo-tulip-hal/README.md) for how to conf
 
 ### Connecting to the `airo-tulip` server
 
-Once the server (and a Zenoh router) are running on the KELO, connect with an `api.client.KELORobile`
-instance. `KELORobile` connects to the Zenoh router at `tcp/<kelo_ip>:7447`:
+Once the server is running on the KELO, connect with an `api.client.KELORobile` instance. By default
+`KELORobile` connects directly to the server (Zenoh peer mode) at `tcp/<kelo_ip>:7447`:
 
 ```python
 from airo_tulip.api.client import KELORobile

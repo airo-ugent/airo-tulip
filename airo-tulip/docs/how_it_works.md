@@ -21,9 +21,12 @@ The `RobilePlatform` class instantiates a `PlatformDriver` and a `PlatformMonito
 The `airo-tulip` package has a subpackage called `api`. When working with the KELO Robile platform, you want to run the `TulipServer` on boot, typically,
 so that commands can be sent over the network. The `TulipServer` takes a desired IP address and port, which can be used to connect to it via a client.
 
-The server is implemented on top of [Zenoh](https://zenoh.io/). Client and server connect (in `client`
-mode) to a Zenoh **router** (`zenohd`), which by default runs on the KELO CPU brick. The communication
-model follows ROS 2:
+The server is implemented on top of [Zenoh](https://zenoh.io/). By default the client and server
+communicate **peer**-to-peer: the server (on the KELO CPU brick) listens on `tcp/0.0.0.0:7447` and the
+client connects directly to it, with no Zenoh router (`zenohd`) in between. For setups with many clients
+or that span subnets you can instead run a router and connect both ends in `client` mode (see the
+`mode`/`router_endpoint` options on `KELORobile` and `TulipServer`). The communication model follows
+ROS 2:
 
 - **Commands are streamed** (pub/sub). The client publishes a velocity setpoint on
   `airo_tulip/<robot_id>/cmd/velocity` at a fixed rate; the server applies the latest one and stops the
