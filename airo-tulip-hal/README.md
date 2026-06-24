@@ -20,12 +20,23 @@ laptop / workstation         KELO CPU brick
 
 ## Installation
 
+Unlike the [`airo-tulip`](../airo-tulip/README.md) client, this package is **not published to PyPI** — it
+only ever runs on the KELO CPU brick, where it is built from this repository's source. Install it with the
+repository's `install.sh`, which sets up a virtual environment, configuration, and a boot service on the
+brick:
+
 ```shell
-pip install airo-tulip-hal
+git clone https://github.com/airo-ugent/airo-tulip
+cd airo-tulip
+./install.sh
 ```
 
-This installs `airo-tulip` (the shared contract) as a dependency, along with `pysoem` for EtherCAT
-communication. Requires Python 3.9+.
+This pulls in `airo-tulip` (the shared contract) and `pysoem` (for EtherCAT communication) as
+dependencies. Requires Python 3.9+. See the repository [`README.md`](../README.md) for the full install,
+update, and uninstall instructions.
+
+For development, you can instead create an editable environment from a checkout with `uv sync` (see the
+repository README's *Development* section) — do **not** run `install.sh` for that.
 
 ## Running the server on the KELO
 

@@ -10,7 +10,7 @@ In detail:
 - `./deploy`: systemd unit templates and an example robot configuration, used by the installer.
 - `./install.sh`: system-wide installer for a KELO CPU brick (virtual environment, configuration, and a boot service).
 
-The two Python packages are documented in their own READMEs: [`airo-tulip`](airo-tulip/README.md) (the client) and [`airo-tulip-hal`](airo-tulip-hal/README.md) (the server / hardware layer).
+The two Python packages are documented in their own READMEs: [`airo-tulip`](airo-tulip/README.md) (the client) and [`airo-tulip-hal`](airo-tulip-hal/README.md) (the server / hardware layer). Task-oriented how-to guides for using both packages live in [`docs/`](docs/README.md): [getting started](docs/getting_started.md), [client usage](docs/client_usage.md), and [server usage](docs/server_usage.md).
 
 The client and server communicate over [Zenoh](https://zenoh.io/): by default they connect **peer**-to-peer (the brick runs the server, which listens for direct client connections — no router needed), and clients connect to drive the robot and read its state. A Zenoh router (`zenohd`) can be used instead for setups with many clients or that span subnets.
 
